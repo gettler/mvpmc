@@ -167,6 +167,11 @@ extern volatile video_callback_t *video_functions;
 extern video_callback_t file_functions;
 
 /**
+ * Video playback functions for playing files from the filesystem via VLC
+ */
+extern video_callback_t vlc_functions;
+
+/**
  * Is a video currently playing?
  */
 extern volatile int video_playing;
@@ -257,6 +262,17 @@ extern void video_set_root(void);
 extern void playlist_play(mvp_widget_t*);
 extern void playlist_next();
 extern void playlist_randomize(void);
+extern void timed_osd(int timeout); 
+
+extern int file_open(void);
+extern int file_read(char*, int);
+extern int fd_http;
+extern volatile long long jump_target;
+extern int display_on;
+extern int display_on_alt;
+extern void enable_osd(void);
+extern void disable_osd(void);
+extern void back_to_guide_menu();
 
 extern int gui_init(char*, char*);
 extern int mw_init(void);
@@ -403,6 +419,35 @@ typedef struct {
 	} attr;
 } theme_attr_t;
 
+// Stream input buffer size for http/vlc
+#define  LINE_SIZE 1024 
+
+// VLC specifics 
+#define VLC_VLM_PORT "4212"
+#define VLC_HTTP_PORT "5212"
+
+// VLC command types
+typedef enum {
+        VLC_CREATE_BROADCAST,
+        VLC_CONTROL,
+	VLC_PCTPOS,
+	VLC_DESTROY,
+	VLC_SEEK_PCT,
+	VLC_SEEK_SEC,
+} vlc_command_type_t;
+
+extern int using_vlc;
+extern int vlc_broadcast_enabled;
+extern char *vlc_server;
+extern int vlc_connect(FILE *outlog,char *url,int ContentType, int VlcCommandType, char *VlcCommandArg, int offset);
+extern int vlc_stop();
+extern int vlc_destroy();
+extern int vlc_cmd(char *cmd);
+extern int vlc_get_pct_pos();
+extern int vlc_seek_pct(int pos);
+extern int vlc_seek_pct_relative(int offset);
+extern int vlc_seek_sec_relative(int offset);
+
 extern theme_attr_t theme_attr[];
 
 extern int theme_parse(char *file);
@@ -479,7 +524,6 @@ extern int fb_next_image(int offset);
 
 extern void doexit(int sig);
 
-extern char *vlc_server;
 extern int mplayer_disable;
 extern int rfb_mode;
 extern int flicker;

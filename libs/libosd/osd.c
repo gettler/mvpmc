@@ -49,7 +49,7 @@ osd_font_t *osd_default_font = &font_CaslonRoman_1_25;
 
 int full_width = 720, full_height = 480;
 
-osd_surface_t *all[128];
+osd_surface_t *all[OSD_MAX_SURFACES];
 
 osd_surface_t *visible = NULL;
 
@@ -287,6 +287,41 @@ osd_draw_rect(osd_surface_t *surface, int x, int y, int w, int h,
 	return 0;
 }
 
+static int
+blit_copy(osd_surface_t *dstsfc, int dstx, int dsty,
+	  osd_surface_t *srcsfc, int srcx, int srcy, int w, int h)
+{
+	int x, y;
+	unsigned int c;
+
+	if ((srcsfc->fp->read_pixel == NULL) ||
+	    (dstsfc->fp->draw_pixel == NULL))
+		return -1;
+
+	if ((dstx <= 0) || ((dstx+w) >= dstsfc->width))
+		return -1;
+	if ((dsty <= 0) || ((dsty+h) >= dstsfc->height))
+		return -1;
+	if ((srcx <= 0) || ((srcx+w) >= srcsfc->width))
+		return -1;
+	if ((srcy <= 0) || ((srcy+h) >= srcsfc->height))
+		return -1;
+
+	for (x=0; x<w; x++) {
+		for (y=0; y<h; y++) {
+			c = srcsfc->fp->read_pixel(srcsfc, srcx+x, srcy+y);
+			if (dstsfc->fp->palette_add_color)
+				dstsfc->fp->palette_add_color(dstsfc, c);
+			if (dstsfc->fp->draw_pixel(dstsfc,
+						   dstx+x, dsty+y, c) != 0) {
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int
 osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	 osd_surface_t *srcsfc, int srcx, int srcy, int w, int h)
@@ -294,8 +329,10 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	if ((dstsfc == NULL) || (srcsfc == NULL))
 		return -1;
 
-	if (dstsfc->type != srcsfc->type)
-		return -1;
+	if (dstsfc->type != srcsfc->type) {
+		return blit_copy(dstsfc, dstx, dsty,
+				 srcsfc, srcx, srcy, w, h);
+	}
 
 	if (dstsfc == srcsfc)
 		return -1;
@@ -376,8 +413,10 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 		return fb_create(w, h, color);
 		break;
 	case OSD_CURSOR:
+		return cursor_create(w, h, color);
+		break;
 	case OSD_GFX:
-		return gfx_create(w, h, color, type);
+		return gfx_create(w, h, color);
 		break;
 	}
 
@@ -447,9 +486,9 @@ osd_destroy_surface(osd_surface_t *surface)
 		visible = NULL;
 
 	i = 0;
-	while ((all[i] != surface) && (i < 128))
+	while ((all[i] != surface) && (i < OSD_MAX_SURFACES))
 		i++;
-	if (i < 128)
+	if (i < OSD_MAX_SURFACES)
 		all[i] = NULL;
 
 	if (surface->fp->destroy)
@@ -465,7 +504,7 @@ osd_destroy_all_surfaces(void)
 {
 	int i;
 
-	for (i=0; i<128; i++) {
+	for (i=0; i<OSD_MAX_SURFACES; i++) {
 		if (all[i])
 			osd_destroy_surface(all[i]);
 	}
@@ -487,6 +526,169 @@ osd_palette_add_color(osd_surface_t *surface, unsigned int c)
 
 	if (surface->fp->palette_add_color)
 		return surface->fp->palette_add_color(surface, c);
+	else
+		return -1;
+}
+
+int
+osd_blend(osd_surface_t *surface, int x, int y, int w, int h,
+	  osd_surface_t *surface2, int x2, int y2, int w2, int h2,
+	  unsigned long colour)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->type != surface2->type)
+		return -1;
+
+	if (surface->fp->blend)
+		return surface->fp->blend(surface, x, y, w, h,
+					  surface2, x2, y2, w2, h2, colour);
+	else
+		return -1;
+}
+
+int
+osd_afillblt(osd_surface_t *surface,
+	     int x, int y, int w, int h, unsigned long colour)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->afillblt)
+		return surface->fp->afillblt(surface, x, y, w, h, colour);
+	else
+		return -1;
+}
+
+int
+osd_clip(osd_surface_t *surface, int left, int top, int right, int bottom)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->clip)
+		return surface->fp->clip(surface, left, top, right, bottom);
+	else
+		return -1;
+}
+
+int
+osd_get_visual_device_control(osd_surface_t *surface)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->get_dev_control)
+		return surface->fp->get_dev_control(surface);
+	else
+		return -1;
+}
+
+int
+osd_cur_set_attr(osd_surface_t *surface, int x, int y)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->set_attr)
+		return surface->fp->set_attr(surface, x, y);
+	else
+		return -1;
+}
+
+int
+osd_move(osd_surface_t *surface, int x, int y)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->move)
+		return surface->fp->move(surface, x, y);
+	else
+		return -1;
+}
+
+int
+osd_get_engine_mode(osd_surface_t *surface)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->get_engine_mode)
+		return surface->fp->get_engine_mode(surface);
+	else
+		return -1;
+}
+
+int
+osd_set_engine_mode(osd_surface_t *surface, int mode)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->set_engine_mode)
+		return surface->fp->set_engine_mode(surface, mode);
+	else
+		return -1;
+}
+
+int
+osd_reset_engine(osd_surface_t *surface)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->reset_engine)
+		return surface->fp->reset_engine(surface);
+	else
+		return -1;
+}
+
+int
+osd_set_display_control(osd_surface_t *surface, int type, int value)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->set_display_control)
+		return surface->fp->set_display_control(surface, type, value);
+	else
+		return -1;
+}
+
+int
+osd_get_display_control(osd_surface_t *surface, int type)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->get_display_control)
+		return surface->fp->get_display_control(surface, type);
+	else
+		return -1;
+}
+
+int
+osd_get_display_options(osd_surface_t *surface)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->get_display_options)
+		return surface->fp->get_display_options(surface);
+	else
+		return -1;
+}
+
+int
+osd_set_display_options(osd_surface_t *surface, unsigned char option)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->set_display_options)
+		return surface->fp->set_display_options(surface, option);
 	else
 		return -1;
 }

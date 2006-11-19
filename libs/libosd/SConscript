@@ -10,7 +10,7 @@ target = env['TARG']
 libdir = env['INSTLIBDIR']
 freetype = env['INSTINCDIR'] + '/freetype2'
 
-src = [ 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
+src = [ 'cursor.c', 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
 
 lib = env.StaticLibrary('osd', src,
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
