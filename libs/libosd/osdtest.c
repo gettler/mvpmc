@@ -87,7 +87,7 @@ test_sanity(char *name)
 	c2 = rand() | 0xff000000;
 	c3 = rand() | 0xff000000;
 
-	if (osd_drawtext(surface, 0, 0, "Hello World!", c1, c2, c3, NULL) < 0)
+	if (osd_draw_text(surface, 0, 0, "Hello World!", c1, c2, c3, NULL) < 0)
 		FAIL;
 
 	timer_end();
@@ -116,7 +116,7 @@ test_create_surfaces(char *name)
 		if (i == 0) {
 			if (osd_display_surface(surface) < 0)
 				FAIL;
-			if (osd_drawtext(surface, 100, 200,
+			if (osd_draw_text(surface, 100, 200,
 					 "Creating surfaces!",
 					 OSD_GREEN, OSD_BLACK, OSD_BLACK,
 					 NULL) < 0)
@@ -150,14 +150,13 @@ test_text(char *name)
 		FAIL;
 
 	for (i=0; i<height; i+=50) {
-		unsigned long c1, c2, c3;
+		unsigned long c1, c2;
 
 		c1 = rand() | 0xff000000;
 		c2 = rand() | 0xff000000;
-		c3 = rand() | 0xff000000;
 
-		if (osd_drawtext(surface, i, i, "Hello World!",
-				 c1, c2, c3, NULL) < 0)
+		if (osd_draw_text(surface, i+100, i, "Hello World!",
+				 c1, c2, 1, NULL) < 0)
 			FAIL;
 	}
 
@@ -622,10 +621,10 @@ main(int argc, char **argv)
 			timer_print();
 			if (tests[i].sleep) {
 				surface = osd_get_visible_surface();
-				osd_drawtext(surface, 100, 200, buf,
+				osd_draw_text(surface, 100, 200, buf,
 					     OSD_GREEN, OSD_BLACK, OSD_BLACK,
 					     NULL);
-				osd_drawtext(surface, 100, 80, tests[i].name,
+				osd_draw_text(surface, 100, 80, tests[i].name,
 					     OSD_GREEN, OSD_BLACK, OSD_BLACK,
 					     NULL);
 				sleep(tests[i].sleep);

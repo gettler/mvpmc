@@ -36,7 +36,7 @@
 #define PRINTF(x...)
 #endif
 
-#if 1
+#if 0
 /*
  * Currently, the following font is available.  Add more by using the
  * bdftobogl perl script that comes with bogl to convert X11 BDF fonts.
@@ -88,6 +88,8 @@ osd_draw_pixel_list(osd_surface_t *surface, int *x, int *y, int n,
 		    unsigned int c)
 {
 	int i;
+
+	// XXX: this should be implemented for each surface type
 
 	if (surface == NULL)
 		return -1;
@@ -305,6 +307,7 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 		return -1;
 }
 
+#if 0
 int
 osd_drawtext(osd_surface_t *surface, int x, int y, const char *str,
 	     unsigned int fg, unsigned int bg, int background, void *FONT)
@@ -363,6 +366,7 @@ osd_drawtext(osd_surface_t *surface, int x, int y, const char *str,
 
 	return 0;
 }
+#endif
 
 osd_surface_t*
 osd_create_surface(int w, int h, unsigned long color, osd_type_t type)

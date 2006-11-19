@@ -8,18 +8,21 @@ Import ('env')
 dir = env['BUILD_DIR']
 target = env['TARG']
 libdir = env['INSTLIBDIR']
+freetype = env['INSTINCDIR'] + '/freetype2'
 
-src = [ 'gfx.c', 'init.c', 'fb.c', 'osd.c', 'fonts/CaslonRoman-1.25.c']
+src = [ 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
 
-lib = env.StaticLibrary('osd', src, CPPPATH = [ env['INCDIR'], '.' ])
+lib = env.StaticLibrary('osd', src,
+                        CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
+				  freetype, '.' ])
 
 inst = env.Install(libdir, lib)
 
 if target == 'mvp':
 	osdtest = env.Program('osdtest',
 	      	              [ 'osdtest.c' ],
-	                      CPPPATH = [ env['INCDIR'] ],
-	                      LIBS = [ 'osd' ],
+	                      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'] ],
+	                      LIBS = [ 'osd', 'freetype' ],
 	                      LIBPATH = [ libdir ],
 	                      LINKFLAGS = [ '-static' ])
 	env.Depends(osdtest, lib)

@@ -114,8 +114,13 @@ fi
 
 if [ -f configure ] ; then
     ./configure --prefix=$INSTALL $CONFIG_OPTS
-    make
-    make install
+    if [ "`basename $PWD`" = "freetype-2.2.1" ] ; then
+        make -i
+	make -i install
+    else
+        make
+        make install
+    fi
     if [ "`basename $PWD`" = "jpeg-6b" ] ; then
 	make install-lib
     fi

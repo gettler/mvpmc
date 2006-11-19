@@ -35,6 +35,7 @@
 #define MVP_OSD_H
 
 typedef struct osd_surface_s osd_surface_t;
+typedef struct osd_font_s osd_font_t;
 
 typedef enum {
 	OSD_CURSOR=0,
@@ -206,9 +207,9 @@ extern int osd_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
  * \retval 0 success
  * \retval -1 error
  */
-extern int osd_drawtext(osd_surface_t *surface, int x, int y, const char *str,
-			unsigned int fg, unsigned int bg, 
-			int background, void *FONT);
+extern int osd_draw_text(osd_surface_t *surface, int x, int y, const char *str,
+			 unsigned int fg, unsigned int bg, 
+			 int background, osd_font_t *font);
 
 /**
  * Bit blast a rectangle from one drawing surface to another.
@@ -268,8 +269,12 @@ extern int osd_draw_indexed_image(osd_surface_t *surface,
 extern int osd_palette_add_color(osd_surface_t *surface, unsigned int c);
 extern int osd_palette_init(osd_surface_t *surface);
 
+extern osd_font_t* osd_load_font(char *file);
+extern int osd_destroy_font(osd_font_t *font);
+
 #endif /* MVP_OSD_H */
 
+#if 0
 #ifndef FONT_H
 #define FONT_H
 
@@ -286,3 +291,4 @@ typedef struct bogl_font {
 } osd_font_t;
 
 #endif /* FONT_H */
+#endif

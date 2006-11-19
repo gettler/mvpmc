@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, Jon Gettler
+ *  Copyright (C) 2006, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -20,16 +20,15 @@
 #ifndef FONT_H
 #define FONT_H
 
-/*
- * This structure is for compatibility with bogl fonts.  Use bdftobogl to
- * create new .c font files from X11 BDF fonts.
- */
-typedef struct bogl_font {
-	char *name;			/* Font name. */
-	int height;			/* Height in pixels. */
-	unsigned long *content;		/* 32-bit right-padded bitmap array. */
-	short *offset;			/* 256 offsets into content. */
-	unsigned char *width;		/* 256 character widths. */
-} osd_font_t;
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include FT_RENDER_H
+
+struct osd_font_s {
+	FT_Face face;
+	FT_Library library;
+	char *file;
+};
 
 #endif /* FONT_H */
