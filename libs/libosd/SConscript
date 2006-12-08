@@ -15,7 +15,7 @@ src = [ 'cursor.c', 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
 static = env.StaticLibrary('osd', src,
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
 				  freetype, '.' ])
-shared = env.StaticLibrary('osd', src,
+shared = env.SharedLibrary('osd', src,
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
 				  freetype, '.' ])
 
