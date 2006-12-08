@@ -12,11 +12,14 @@ freetype = env['INSTINCDIR'] + '/freetype2'
 
 src = [ 'cursor.c', 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
 
-lib = env.StaticLibrary('osd', src,
+static = env.StaticLibrary('osd', src,
+                        CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
+				  freetype, '.' ])
+shared = env.StaticLibrary('osd', src,
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
 				  freetype, '.' ])
 
-inst = env.Install(libdir, lib)
+inst = env.Install(libdir, [ static, shared ])
 
 if target == 'mvp':
 	osdtest = env.Program('osdtest',
@@ -25,6 +28,6 @@ if target == 'mvp':
 	                      LIBS = [ 'osd', 'freetype' ],
 	                      LIBPATH = [ libdir ],
 	                      LINKFLAGS = [ '-static' ])
-	env.Depends(osdtest, lib)
+	env.Depends(osdtest, static)
 
 Return('inst')
