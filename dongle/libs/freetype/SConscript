@@ -49,5 +49,7 @@ if not os.path.exists(file):
 
 env.SideEffect(['../../install/' + target + '/include/freetype/freetype.h'],
                 build)
+env.SideEffect(['../../install/' + target + '/include/ft2build.h'],
+                build)
 
 Return('build')
