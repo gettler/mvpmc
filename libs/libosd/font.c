@@ -80,6 +80,11 @@ osd_load_font(char *file)
 	if (FT_HAS_KERNING(font->face)) {
 		PRINTF("Font has kerning!\n");
 	}
+
+	font->height = -1;
+	font->ascent = 0;
+	font->descent = 0;
+
 	return font;
 }
 
@@ -119,7 +124,7 @@ draw_glyph(osd_surface_t *surface, FT_Glyph *glyph, int x, int y, int advance,
 	unsigned char *src = source->buffer;
 	int width = source->width;
 
-	printf("y %d  y_top %d  height %d %d\n",
+	PRINTF("y %d  y_top %d  height %d %d\n",
 	       y, y_top, height, bitmap->rows);
 
 	/*
@@ -258,6 +263,24 @@ render_glyphs(osd_font_t *font, const char *text)
 	return NULL;
 }
 
+static osd_font_t*
+get_default_font(void)
+{
+	if (default_font == NULL) {
+		char *font = getenv("OSDFONT");
+		if (font == NULL) {
+			default_font = osd_load_font("/etc/helvB18.pcf");
+		} else {
+			default_font = osd_load_font(font);
+		}
+		if (default_font == NULL)
+			return NULL;
+		PRINTF("Default font loaded\n");
+	}
+
+	return default_font;
+}
+
 int
 osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	      unsigned int fg, unsigned int bg, int background,
@@ -268,19 +291,12 @@ osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	int i;
 
 	if (font == NULL) {
-		if (default_font == NULL) {
-			char *font = getenv("OSDFONT");
-			if (font == NULL) {
-				default_font = osd_load_font("/etc/helvB18.pcf");
-			} else {
-				default_font = osd_load_font(font);
-			}
-			if (default_font == NULL)
-				return -1;
-			PRINTF("Default font loaded\n");
-		}
-		font = default_font;
+		if ((font=get_default_font()) == NULL)
+			return -1;
 	}
+
+	if (font->height == -1)
+		osd_font_height(font);
 
 	slot = font->face->glyph;
 
@@ -289,17 +305,15 @@ osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 
 	if (background) {
 		int w =  0;
-		int h = 14;
 
 		for (i=0; i<strlen(text); i++) {
 			w += g->advance[i];
 		}
 
-		/*
-		 * XXX: the font is in the wrong place!
-		 */
-		osd_fill_rect(surface, x, y-h, w, h, bg);
+		osd_fill_rect(surface, x, y, w, font->height, bg);
 	}
+
+	y += font->height - font->descent;
 
 	draw_glyphs(surface, g, x, y, fg, bg, background);
 
@@ -314,4 +328,202 @@ osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	}
 
 	return 0;
+}
+
+static int
+calculate_height(osd_font_t *font)
+{
+	glyph_str_t *g;
+	int i;
+	FT_Glyph *glyph;
+	FT_Face face;
+	FT_Error error;
+	int maxtop = 0, maxbottom = 0;
+
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	if (font == NULL)
+		return -1;
+
+	if ((g=(glyph_str_t*)malloc(sizeof(*g))) == NULL)
+		return -1;
+
+	if ((g->glyphs=(FT_Glyph*)malloc(sizeof(FT_Glyph))) == NULL)
+		goto err;
+	if ((g->advance=(int*)malloc(sizeof(int))) == NULL)
+		goto err;
+
+	glyph = g->glyphs;
+	face = font->face;
+
+	for (i=0; i<256; i++) {
+		FT_UInt index;
+		int top, bottom;
+		index = FT_Get_Char_Index (face, (FT_ULong)i);
+		error = FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
+		if (error) {
+			printf("%s(): FT_Load_Glyph() failed i = %d\n",
+			       __FUNCTION__, i);
+			continue;
+		}
+		error = FT_Get_Glyph(face->glyph, glyph);
+		g->advance[i] = (int)(face->glyph->advance.x >> 6);
+		top = (int)(face->glyph->metrics.horiBearingY >> 6);
+		bottom = (int)(face->glyph->metrics.height >> 6) - top;
+		if (error) {
+			printf("%s(): FT_Get_Glyph() failed i = %d\n",
+			       __FUNCTION__, i);
+			continue;
+		}
+		if (((FT_GlyphRec*)glyph)->format != ft_glyph_format_bitmap)
+		{
+			error = FT_Glyph_To_Bitmap(glyph,
+						   ft_render_mode_mono,
+						   0, 1);
+			if (error) {
+				printf("%s(): FT_Glyph_To_Bitmap() failed\n",
+				       __FUNCTION__);
+				goto err;
+			}
+		}
+
+		if (top > maxtop)
+			maxtop = top;
+		if (bottom > maxbottom)
+			maxbottom = bottom;
+	}
+
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	font->ascent = maxtop;
+	font->descent = maxbottom;
+
+	return maxtop + maxbottom;
+
+ err:
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	if (g) {
+		if (g->glyphs)
+			free(g->glyphs);
+		free(g);
+	}
+
+	return -1;
+}
+
+static int
+calculate_width(osd_font_t *font, char *text)
+{
+	glyph_str_t *g;
+	int i;
+	FT_Glyph *glyph;
+	FT_Face face;
+	FT_Error error;
+	int width = 0;
+
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	if ((font == NULL) || (text == NULL))
+		return -1;
+
+	if ((g=(glyph_str_t*)malloc(sizeof(*g))) == NULL)
+		return -1;
+
+	if ((g->glyphs=(FT_Glyph*)malloc(sizeof(FT_Glyph)*strlen(text))) == NULL)
+		goto err;
+	if ((g->advance=(int*)malloc(sizeof(int)*strlen(text))) == NULL)
+		goto err;
+
+	g->len = strlen(text);
+
+	glyph = g->glyphs;
+	face = font->face;
+
+	for (i=0; i<g->len; i++) {
+		FT_UInt index;
+		index = FT_Get_Char_Index (face, (FT_ULong)text[i]);
+		error = FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
+		if (error) {
+			printf("%s(): FT_Load_Glyph() failed i = %d\n",
+			       __FUNCTION__, i);
+			continue;
+		}
+		error = FT_Get_Glyph(face->glyph, glyph);
+		g->advance[i] = (int)(face->glyph->advance.x >> 6);
+		if (error) {
+			printf("%s(): FT_Get_Glyph() failed i = %d\n",
+			       __FUNCTION__, i);
+			continue;
+		}
+		if (((FT_GlyphRec*)glyph)->format != ft_glyph_format_bitmap)
+		{
+			error = FT_Glyph_To_Bitmap(glyph,
+						   ft_render_mode_mono,
+						   0, 1);
+			if (error) {
+				printf("%s(): FT_Glyph_To_Bitmap() failed\n",
+				       __FUNCTION__);
+				goto err;
+			}
+		}
+
+		width += g->advance[i];
+	}
+
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	return width;
+
+ err:
+	PRINTF("%s(): %d\n", __FUNCTION__, __LINE__);
+
+	if (g) {
+		if (g->glyphs)
+			free(g->glyphs);
+		free(g);
+	}
+
+	return -1;
+}
+
+int
+osd_font_height(osd_font_t *font)
+{
+	if (font == NULL) {
+		if ((font=get_default_font()) == NULL)
+			return -1;
+	}
+
+	/*
+	 * XXX: rewrite to use render_glyphs() instead (256 character string)
+	 */
+
+	if (font->height == -1) {
+		font->height = calculate_height(font);
+	}
+
+	/*
+	 * XXX: height is wrong!  it is the height above the baseline
+	 */
+
+	return font->height;
+}
+
+int
+osd_font_width(osd_font_t *font, char *text)
+{
+	if (text == NULL)
+		return -1;
+
+	if (font == NULL) {
+		if ((font=get_default_font()) == NULL)
+			return -1;
+	}
+
+	/*
+	 * XXX: rewrite to use render_glyphs() instead
+	 */
+
+	return calculate_width(font, text);
 }

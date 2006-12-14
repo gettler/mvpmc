@@ -272,6 +272,9 @@ extern int osd_palette_init(osd_surface_t *surface);
 extern osd_font_t* osd_load_font(char *file);
 extern int osd_destroy_font(osd_font_t *font);
 
+extern int osd_font_height(osd_font_t *font);
+extern int osd_font_width(osd_font_t *font, char *str);
+
 #endif /* MVP_OSD_H */
 
 #if 0

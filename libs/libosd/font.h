@@ -29,6 +29,9 @@ struct osd_font_s {
 	FT_Face face;
 	FT_Library library;
 	char *file;
+	int height;
+	int ascent;
+	int descent;
 };
 
 #endif /* FONT_H */
