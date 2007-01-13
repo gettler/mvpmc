@@ -41,7 +41,7 @@ build = env.Command('../../install/' + target + '/lib/libfreetype.a', 0,
                     '/freetype-2.2.1 -i ' + file + ' ' +
                     cross + ' ' +
                     '-I ' + pwd + '/../../install/' + target + ' '
-                    '-C --host=powerpc')
+                    '-C --host=powerpc-linux')
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)

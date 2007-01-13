@@ -115,6 +115,8 @@ fi
 if [ -f configure ] ; then
     ./configure --prefix=$INSTALL $CONFIG_OPTS
     if [ "`basename $PWD`" = "freetype-2.2.1" ] ; then
+	cp modules.cfg modules.cfg-orig
+	cp ../../modules.cfg .
         make -i
 	make -i install
     else

@@ -9,6 +9,7 @@ dir = env['BUILD_DIR']
 target = env['TARG']
 libdir = env['INSTLIBDIR']
 freetype = env['INSTINCDIR'] + '/freetype2'
+bindir = env['INSTBINDIR']
 
 src = [ 'cursor.c', 'font.c', 'gfx.c', 'init.c', 'fb.c', 'osd.c' ]
 
@@ -25,9 +26,10 @@ if target == 'mvp':
 	osdtest = env.Program('osdtest',
 	      	              [ 'osdtest.c' ],
 	                      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'] ],
-	                      LIBS = [ 'osd', 'freetype' ],
+	                      LIBS = [ 'osd', 'dl' ],
 	                      LIBPATH = [ libdir ],
-	                      LINKFLAGS = [ '-static' ])
+	                      LINKFLAGS = [ ])
+	inst2 = env.Install(bindir, osdtest)
 	env.Depends(osdtest, static)
 
 Return('inst')

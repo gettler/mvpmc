@@ -32,7 +32,7 @@ if target == 'mvp':
                              ['splash.c'],
                              CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                          '.', '../include' ],
-                             LIBS = ['osd', 'av', 'freetype'],
+                             LIBS = ['osd', 'av', 'dl'],
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 
@@ -58,7 +58,7 @@ mvpmc = mvp.Program('mvpmc',
                             'osd', 'av', 'demux', 'cmyth', 'vnc', 'mysqlclient',
                             'png12', 'z', 'jpeg', 'm', 'gcc', 'pthread',
                             'a52', 'm', 'vorbisidec', 'id3', 
-                            'ts_demux', 'dvbpsi', 'freetype'] + libx11,
+                            'ts_demux', 'dvbpsi', 'dl'] + libx11,
                     LIBPATH = [ libdir, mysql_libdir ] + libx11dir,
                     LINKFLAGS = linkflags)
 

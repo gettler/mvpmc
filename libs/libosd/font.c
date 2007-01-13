@@ -24,6 +24,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <string.h>
+#include <dlfcn.h>
 
 #include "mvp_osd.h"
 
@@ -53,11 +54,58 @@ static osd_font_t *default_font = NULL;
 
 #define MAX_NUM_GLYPHS 256
 
+static FT_Error (*dl_FT_Init_FreeType)(FT_Library*) = NULL;
+static FT_Error (*dl_FT_New_Face)(FT_Library, const char*, FT_Long, FT_Face*) = NULL;
+static FT_Error (*dl_FT_Done_Face)(FT_Face) = NULL;
+static FT_UInt (*dl_FT_Get_Char_Index)(FT_Face, FT_ULong) = NULL;
+static FT_Error (*dl_FT_Load_Glyph)(FT_Face, FT_UInt, FT_Int32) = NULL;
+static FT_Error (*dl_FT_Get_Glyph)(FT_GlyphSlot, FT_Glyph*) = NULL;
+static FT_Error (*dl_FT_Glyph_To_Bitmap)(FT_Glyph*, FT_Render_Mode, FT_Vector*, FT_Bool) = NULL;
+
+static void *handle = NULL;
+
+static int
+lib_open(void)
+{
+	if (handle == NULL) {
+		if ((handle=dlopen("libfreetype.so", RTLD_LAZY)) == NULL) {
+			return -1;
+		}
+
+		dl_FT_Init_FreeType = dlsym(handle, "FT_Init_FreeType");
+		dl_FT_New_Face = dlsym(handle, "FT_New_Face");
+		dl_FT_Done_Face = dlsym(handle, "FT_Done_Face");
+		dl_FT_Get_Char_Index = dlsym(handle, "FT_Get_Char_Index");
+		dl_FT_Load_Glyph = dlsym(handle, "FT_Load_Glyph");
+		dl_FT_Get_Glyph = dlsym(handle, "FT_Get_Glyph");
+		dl_FT_Glyph_To_Bitmap = dlsym(handle, "FT_Glyph_To_Bitmap");
+	}
+
+	return 0;
+}
+
+#if 0
+static int
+lib_close(void)
+{
+	if (handle) {
+		dlclose(handle);
+		handle = NULL;
+		return 0;
+	}
+
+	return -1;
+}
+#endif
+
 osd_font_t*
 osd_load_font(char *file)
 {
 	FT_Error error;
 	osd_font_t *font;
+
+	if (lib_open() < 0)
+		return NULL;
 
 	if ((font=(osd_font_t*)malloc(sizeof(*font))) == NULL)
 		return NULL;
@@ -65,12 +113,12 @@ osd_load_font(char *file)
 	memset(font, 0, sizeof(*font));
 	font->file = strdup(file);
 
-	error = FT_Init_FreeType(&font->library);
+	error = dl_FT_Init_FreeType(&font->library);
 
 	if (error)
 		return NULL;
 
-	error = FT_New_Face(font->library, file, 0, &font->face);
+	error = dl_FT_New_Face(font->library, file, 0, &font->face);
 
 	if (error)
 		return NULL;
@@ -91,7 +139,7 @@ osd_load_font(char *file)
 int
 osd_destroy_font(osd_font_t *font)
 {
-	FT_Done_Face(font->face);
+	dl_FT_Done_Face(font->face);
 
 	free(font->file);
 	free(font);
@@ -219,14 +267,14 @@ render_glyphs(osd_font_t *font, const char *text)
 
 	for (i=0; i<g->len; i++) {
 		FT_UInt index;
-		index = FT_Get_Char_Index (face, (FT_ULong)text[i]);
-		error = FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
+		index = dl_FT_Get_Char_Index (face, (FT_ULong)text[i]);
+		error = dl_FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
 		if (error) {
 			printf("%s(): FT_Load_Glyph() failed i = %d\n",
 			       __FUNCTION__, i);
 			continue;
 		}
-		error = FT_Get_Glyph(face->glyph, glyph);
+		error = dl_FT_Get_Glyph(face->glyph, glyph);
 		g->advance[i] = (int)(face->glyph->advance.x >> 6);
 		if (error) {
 			printf("%s(): FT_Get_Glyph() failed i = %d\n",
@@ -235,9 +283,9 @@ render_glyphs(osd_font_t *font, const char *text)
 		}
 		if (((FT_GlyphRec*)glyph)->format != ft_glyph_format_bitmap)
 		{
-			error = FT_Glyph_To_Bitmap(glyph,
-						   ft_render_mode_mono,
-						   0, 1);
+			error = dl_FT_Glyph_To_Bitmap(glyph,
+						      ft_render_mode_mono,
+						      0, 1);
 			if (error) {
 				printf("%s(): FT_Glyph_To_Bitmap() failed\n",
 				       __FUNCTION__);
@@ -359,14 +407,14 @@ calculate_height(osd_font_t *font)
 	for (i=0; i<256; i++) {
 		FT_UInt index;
 		int top, bottom;
-		index = FT_Get_Char_Index (face, (FT_ULong)i);
-		error = FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
+		index = dl_FT_Get_Char_Index (face, (FT_ULong)i);
+		error = dl_FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
 		if (error) {
 			printf("%s(): FT_Load_Glyph() failed i = %d\n",
 			       __FUNCTION__, i);
 			continue;
 		}
-		error = FT_Get_Glyph(face->glyph, glyph);
+		error = dl_FT_Get_Glyph(face->glyph, glyph);
 		g->advance[i] = (int)(face->glyph->advance.x >> 6);
 		top = (int)(face->glyph->metrics.horiBearingY >> 6);
 		bottom = (int)(face->glyph->metrics.height >> 6) - top;
@@ -377,9 +425,9 @@ calculate_height(osd_font_t *font)
 		}
 		if (((FT_GlyphRec*)glyph)->format != ft_glyph_format_bitmap)
 		{
-			error = FT_Glyph_To_Bitmap(glyph,
-						   ft_render_mode_mono,
-						   0, 1);
+			error = dl_FT_Glyph_To_Bitmap(glyph,
+						      ft_render_mode_mono,
+						      0, 1);
 			if (error) {
 				printf("%s(): FT_Glyph_To_Bitmap() failed\n",
 				       __FUNCTION__);
@@ -442,14 +490,14 @@ calculate_width(osd_font_t *font, char *text)
 
 	for (i=0; i<g->len; i++) {
 		FT_UInt index;
-		index = FT_Get_Char_Index (face, (FT_ULong)text[i]);
-		error = FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
+		index = dl_FT_Get_Char_Index (face, (FT_ULong)text[i]);
+		error = dl_FT_Load_Glyph(face, index, FT_LOAD_DEFAULT);
 		if (error) {
 			printf("%s(): FT_Load_Glyph() failed i = %d\n",
 			       __FUNCTION__, i);
 			continue;
 		}
-		error = FT_Get_Glyph(face->glyph, glyph);
+		error = dl_FT_Get_Glyph(face->glyph, glyph);
 		g->advance[i] = (int)(face->glyph->advance.x >> 6);
 		if (error) {
 			printf("%s(): FT_Get_Glyph() failed i = %d\n",
@@ -458,9 +506,9 @@ calculate_width(osd_font_t *font, char *text)
 		}
 		if (((FT_GlyphRec*)glyph)->format != ft_glyph_format_bitmap)
 		{
-			error = FT_Glyph_To_Bitmap(glyph,
-						   ft_render_mode_mono,
-						   0, 1);
+			error = dl_FT_Glyph_To_Bitmap(glyph,
+						      ft_render_mode_mono,
+						      0, 1);
 			if (error) {
 				printf("%s(): FT_Glyph_To_Bitmap() failed\n",
 				       __FUNCTION__);

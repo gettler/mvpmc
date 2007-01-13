@@ -13,7 +13,7 @@ echo STRIP $STRIP
 DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot"
 WRAPPER_DIRS="bin sbin etc usr/bin usr/sbin dev tmp lib proc mnt"
 
-BIN="busybox mvpmc ntpclient scp vpdread"
+BIN="busybox mvpmc ntpclient osdtest scp vpdread"
 WRAPPER_BIN="busybox splash"
 
 SBIN="dropbearmulti dropbear dropbearkey"
@@ -22,12 +22,12 @@ USRBIN=""
 
 USRSBIN=""
 
-LIB="libav.so libcmyth.so libdemux.so libosd.so libts_demux.so libvnc.so libwidget.so libvorbisidec.so.1.0.2 libvorbisidec.so.1"
-TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libgcc_s_nof.so.1 libpthread.so.0 libutil.so.0"
-LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0"
+LIB="libav.so libcmyth.so libdemux.so libosd.so libts_demux.so libvnc.so libwidget.so libvorbisidec.so.1.0.2 libvorbisidec.so.1 libfreetype.so.6.3.10 libfreetype.so.6 libfreetype.so"
+TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libgcc_s_nof.so.1 libpthread.so.0 libutil.so.0 libdl.so.0"
+LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 
 WRAPPERLIB="libav.so libosd.so"
-TWRAPPERLIB="libc.so.0 libcrypt.so.0 libgcc_s_nof.so.1"
+TWRAPPERLIB="libc.so.0 libcrypt.so.0 libgcc_s_nof.so.1 libdl-0.9.28.so libdl.so.0"
 
 rm -rf filesystem/install
 rm -rf filesystem/install_wrapper
