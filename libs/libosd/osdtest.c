@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, Jon Gettler
+ *  Copyright (C) 2004-2007, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -714,6 +714,92 @@ test_font(char *name)
 	return -1;
 }
 
+static int
+test_clip(char *name, osd_type_t type)
+{
+	osd_surface_t *surface = NULL;
+	osd_surface_t *cs = NULL;
+	osd_clip_t clip;
+	osd_clip_region_t reg[4];
+	char *msg = "Hello World!";
+
+	printf("testing %s\t\t", name);
+
+	timer_start();
+
+	if ((surface=osd_create_surface(width, height,
+					OSD_BLACK, type)) == NULL)
+		FAIL;
+
+	if (type == OSD_FB) {
+		if (osd_palette_add_color(surface, OSD_GREEN) < 0)
+			FAIL;
+		if (osd_palette_add_color(surface, OSD_RED) < 0)
+			FAIL;
+		if (osd_palette_add_color(surface, OSD_WHITE) < 0)
+			FAIL;
+	}
+
+	clip.n = 4;
+	clip.regs = reg;
+
+	reg[0].x = 300;
+	reg[0].y = 100;
+	reg[0].h = 50;
+	reg[0].w = 300;
+
+	reg[1].x = 300;
+	reg[1].y = 100;
+	reg[1].h = 200;
+	reg[1].w = 50;
+
+	reg[2].x = 600;
+	reg[2].y = 100;
+	reg[2].h = 200;
+	reg[2].w = 50;
+
+	reg[3].x = 300;
+	reg[3].y = 300;
+	reg[3].h = 50;
+	reg[3].w = 350;
+
+	if ((cs=osd_clip_set(surface, &clip)) == NULL)
+		FAIL;
+
+	if (osd_fill_rect(cs, 0, 0, width, height, OSD_RED) < 0)
+		FAIL;
+
+	if (osd_draw_text(cs, 300, 100, msg, OSD_WHITE, 0, 0, NULL) < 0)
+		FAIL;
+	if (osd_draw_text(cs, 300, 200, msg, OSD_WHITE, 0, 0, NULL) < 0)
+		FAIL;
+	if (osd_draw_text(cs, 300, 300, msg,
+			  OSD_WHITE, OSD_GREEN, 1, NULL) < 0)
+		FAIL;
+
+	if (osd_display_surface(surface) < 0)
+		FAIL;
+
+	timer_end();
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
+test_clip_gfx(char *name)
+{
+	return test_clip(name, OSD_GFX);
+}
+
+static int
+test_clip_fb(char *name)
+{
+	return test_clip(name, OSD_FB);
+}
+
 typedef struct {
 	char *name;
 	int sleep;
@@ -735,6 +821,8 @@ static tester_t tests[] = {
 	{ "framebuffer",	2,	test_fb },
 	{ "blit2",		2,	test_blit2 },
 	{ "color",		2,	test_color },
+	{ "clip",		2,	test_clip_gfx },
+	{ "clip2",		2,	test_clip_fb },
 	{ NULL, 0, NULL },
 };
 

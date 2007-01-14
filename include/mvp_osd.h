@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, Jon Gettler
+ *  Copyright (C) 2004-2007, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -52,6 +52,23 @@ typedef struct {
 	unsigned char *blue;
 	unsigned char *image;
 } osd_indexed_image_t;
+
+typedef struct {
+	int x;
+	int y;
+	int w;
+	int h;
+} osd_clip_region_t;
+
+typedef struct {
+	osd_clip_region_t *regs;
+	int n;
+} osd_clip_t;
+
+extern osd_surface_t *osd_clip_set(osd_surface_t *surface, osd_clip_t *clip);
+
+extern int osd_clip(osd_surface_t *surface,
+		    int left, int top, int right, int bottom);
 
 /**
  * Create a new drawing surface

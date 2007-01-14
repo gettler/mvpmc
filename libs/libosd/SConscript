@@ -30,6 +30,7 @@ if target == 'mvp':
 	                      LIBPATH = [ libdir ],
 	                      LINKFLAGS = [ ])
 	inst2 = env.Install(bindir, osdtest)
-	env.Depends(osdtest, static)
+	env.Depends(osdtest, shared)
+	env.Depends(inst2, inst)
 
 Return('inst')
