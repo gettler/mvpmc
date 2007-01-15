@@ -14,7 +14,7 @@ target = env['TARG']
 
 if target == 'mvp':
   cross = '-c ' + env['CROSS']
-  host = '--host=powerpc'
+  host = '"--host=powerpc-linux --enable-shared"'
   Carg = '-C '
 else:
   cross = ''
@@ -41,15 +41,15 @@ def GetSourceFile(url, output_dir, env):
 url = 'http://www.mvpmc.org/dl/jpegsrc.v6b.tar.gz'
 pwd = os.getcwd()
 
-build = env.Command('../../install/' + target + '/lib/libjpeg.a', 0,
+build = env.Command('../../install/' + target + '/lib/libjpeg.so', 0,
                     'scons/build_lib.sh -d ' + pwd + '/' + target +
                     '/jpeg-6b -i ' + file + ' ' +
                     cross + ' ' +
                     '-I ' + pwd + '/../../install/' + target + ' ' +
                     Carg + host + ' ' +
-                    '-p patches/jpegscale.patch ')
+                    '-p "patches/jpegscale.patch patches/configure.patch"')
 
-env.Depends(build, [ 'patches/jpegscale.patch' ] )
+env.Depends(build, [ 'patches/jpegscale.patch', 'patches/configure.patch' ] )
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)

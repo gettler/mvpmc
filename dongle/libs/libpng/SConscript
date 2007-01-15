@@ -14,7 +14,7 @@ target = env['TARG']
 
 if target == 'mvp':
   cross = '-c ' + env['CROSS']
-  host = '--host=powerpc'
+  host = '--host=powerpc-linux'
 else:
   cross = ''
   host = ''

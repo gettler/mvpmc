@@ -83,6 +83,7 @@ done
 export CROSS=$CROSS
 export CROSS_PREFIX=$CROSS
 export CC=${CROSS}gcc
+export RANLIB=${CROSS}ranlib
 export INSTALL_PREFIX=$INSTALL
 export TOPLEVEL=$INSTALL
 export LDFLAGS
@@ -113,6 +114,13 @@ if [ $AUTOCONF -eq 1 ] ; then
 fi
 
 if [ -f configure ] ; then
+    if [ "`basename $PWD`" = "jpeg-6b" ] ; then
+	if [ "$CROSS" != "" ] ; then
+	    # Lying seems easier than fixing ltconfig
+	    export HOST="freebsd3"
+	    export HOST_VERIFY="--no-verify"
+	fi
+    fi
     ./configure --prefix=$INSTALL $CONFIG_OPTS
     if [ "`basename $PWD`" = "freetype-2.2.1" ] ; then
 	cp modules.cfg modules.cfg-orig

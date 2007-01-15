@@ -41,7 +41,7 @@ build = env.Command('../../install/' + target + '/lib/libexpat.a', 0,
                     '/expat-1.95.8 -i ' + file + ' ' +
                     cross + ' ' +
                     '-I ' + pwd + '/../../install/' + target + ' '
-                    '-C --host=powerpc')
+                    '-C --host=powerpc-linux')
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)

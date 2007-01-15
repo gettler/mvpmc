@@ -41,7 +41,7 @@ if target == 'mvp':
                              CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                          '.', '../include' ],
                              LIBPATH = [ libdir ],
-                             LINKFLAGS = [ '-static' ])
+                             LINKFLAGS = [ ])
 			
 
 mvpmc = mvp.Program('mvpmc',
