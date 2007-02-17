@@ -41,7 +41,7 @@ build = env.Command('../../install/' + target + '/lib/libncurses.a', 0,
                     'scons/build_lib.sh -d ' + pwd + '/' + target +
                     '/ncurses-5.5 -i ' + file + ' ' +
                     cross + ' ' +
-                    '-C --host=ppcbe ' +
+                    '-C --host=powerpc-linux ' +
                     '-I ' + pwd + '/../../install/' + target + ' ')
 
 if not os.path.exists(file):

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, BtB, Jon Gettler
+ *  Copyright (C) 2004-2007, BtB, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -36,7 +36,7 @@
 #define PRINTF(x...)
 #endif
 
-#if 1
+#if 0
 /*
  * Currently, the following font is available.  Add more by using the
  * bdftobogl perl script that comes with bogl to convert X11 BDF fonts.
@@ -54,10 +54,33 @@ osd_surface_t *all[OSD_MAX_SURFACES];
 osd_surface_t *visible = NULL;
 
 int
+clip_visible(osd_surface_t *surface, int x, int y)
+{
+	int i;
+
+	if (surface->clip == NULL)
+		return 0;
+
+	for (i=0; i<surface->clip->n; i++) {
+		osd_clip_region_t *reg = surface->clip->regs+i;
+
+		if ((reg->x <= x) && ((reg->x+reg->w) > x) &&
+		    (reg->y <= y) && ((reg->y+reg->h) > y)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+int
 osd_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 {
 	if (surface == NULL)
 		return -1;
+
+	if (surface->clip && (clip_visible(surface, x, y) == 0))
+		return 0;
 
 	if (surface->fp->draw_pixel)
 		return surface->fp->draw_pixel(surface, x, y, c);
@@ -71,6 +94,9 @@ osd_draw_pixel_ayuv(osd_surface_t *surface, int x, int y, unsigned char a,
 {
 	if (surface == NULL)
 		return -1;
+
+	if (surface->clip && (clip_visible(surface, x, y) == 0))
+		return 0;
 
 	if (surface->fp->draw_pixel_ayuv) {
 		return surface->fp->draw_pixel_ayuv(surface, x, y, a, Y, U, V);
@@ -88,6 +114,8 @@ osd_draw_pixel_list(osd_surface_t *surface, int *x, int *y, int n,
 		    unsigned int c)
 {
 	int i;
+
+	// XXX: this should be implemented for each surface type
 
 	if (surface == NULL)
 		return -1;
@@ -221,6 +249,10 @@ osd_read_pixel(osd_surface_t *surface, int x, int y)
 	if (surface == NULL)
 		return -1;
 
+	/*
+	 * XXX: what about clipping?
+	 */
+
 	if (surface->fp->read_pixel)
 		return surface->fp->read_pixel(surface, x, y);
 	else
@@ -233,6 +265,10 @@ osd_draw_horz_line(osd_surface_t *surface, int x1, int x2, int y,
 {
 	if (surface == NULL)
 		return -1;
+
+	if (surface->clip) {
+		return osd_draw_line(surface, x1, y, x2, y, c);
+	}
 
 	if (surface->fp->draw_horz_line)
 		return surface->fp->draw_horz_line(surface, x1, x2, y, c);
@@ -247,6 +283,10 @@ osd_draw_vert_line(osd_surface_t *surface, int x, int y1, int y2,
 	if (surface == NULL)
 		return -1;
 
+	if (surface->clip) {
+		return osd_draw_line(surface, x, y1, x, y2, c);
+	}
+
 	if (surface->fp->draw_vert_line)
 		return surface->fp->draw_vert_line(surface, x, y1, y2, c);
 	else
@@ -259,6 +299,21 @@ osd_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 {
 	if (surface == NULL)
 		return -1;
+
+	if (surface->clip) {
+		int i, j;
+
+		/*
+		 * XXX: this should be optimized!
+		 */
+		for (i=0; i<w; i++) {
+			for (j=0; j<h; j++) {
+				osd_draw_pixel(surface, x+i, y+j, c);
+			}
+		}
+
+		return 0;
+	}
 
 	if (surface->fp->fill_rect)
 		return surface->fp->fill_rect(surface, x, y, w, h, c);
@@ -327,6 +382,10 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	if ((dstsfc == NULL) || (srcsfc == NULL))
 		return -1;
 
+	/*
+	 * XXX: what about clipping in source or destination?
+	 */
+
 	if (dstsfc->type != srcsfc->type) {
 		return blit_copy(dstsfc, dstx, dsty,
 				 srcsfc, srcx, srcy, w, h);
@@ -340,65 +399,6 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 					srcsfc, srcx, srcy, w, h);
 	else
 		return -1;
-}
-
-int
-osd_drawtext(osd_surface_t *surface, int x, int y, const char *str,
-	     unsigned int fg, unsigned int bg, int background, void *FONT)
-{
-	osd_font_t *font = FONT;
-	int h, n, i;
-	int Y, X, cx, swidth;
-
-	if (surface == NULL)
-		return -1;
-
-#if 1
-	if (font == NULL)
-		font = osd_default_font;
-#endif
-
-	n = strlen(str);
-	h = font->height;
-
-	swidth = 0;
-	for (i=0; i<n; i++) {
-		swidth += font->width[(int)str[i]];
-	}
-
-	if (background) {
-		int w = swidth / n;
-		osd_draw_rect(surface, x-w, y-h/2, (2*w)+swidth, h*2, bg, 1);
-	}
-
-	X = 0;
-	cx = 0;
-	for (i=0; i<n; i++) {
-		unsigned char c = str[i];
-		unsigned long *character = &font->content[font->offset[c]];
-		int w = font->width[c];
-		int pixels = 0;
-
-		PRINTF("draw '%c' width %d at x %d\n", c, w, x+cx);
-
-		for (X=0; X<w; X++) {
-			for (Y=0; Y<h; Y++) {
-				if ((character[Y] >> (32 - X)) & 0x1) {
-					osd_draw_pixel(surface, x+X+cx, y+Y,
-						       fg);
-					pixels++;
-				}
-			}
-		}
-
-		PRINTF("\tletter contained %d pixels\n", pixels);
-
-		cx += w;
-	}
-
-	PRINTF("drawing lines at %d and %d\n", y, y+h);
-
-	return 0;
 }
 
 osd_surface_t*
@@ -422,8 +422,10 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 int
 osd_set_screen_size(int w, int h)
 {
-	if ((w > 720) || (h > 576))
+	if ((w < 1) || (h < 1) ||
+	    (w > 720) || (h > 576)) {
 		return -1;
+	}
 
 	full_width = w;
 	full_height = h;
@@ -484,11 +486,16 @@ osd_destroy_surface(osd_surface_t *surface)
 	i = 0;
 	while ((all[i] != surface) && (i < OSD_MAX_SURFACES))
 		i++;
-	if (i < OSD_MAX_SURFACES)
+
+	/*
+	 * XXX: What about clipped surfaces?
+	 */
+	if (i < OSD_MAX_SURFACES) {
 		all[i] = NULL;
 
-	if (surface->fp->destroy)
-		surface->fp->destroy(surface);
+		if (surface->fp->destroy)
+			surface->fp->destroy(surface);
+	}
 
 	free(surface);
 
@@ -687,4 +694,46 @@ osd_set_display_options(osd_surface_t *surface, unsigned char option)
 		return surface->fp->set_display_options(surface, option);
 	else
 		return -1;
+}
+
+osd_surface_t*
+osd_clip_set(osd_surface_t *surface, osd_clip_t *clip)
+{
+	osd_surface_t *scopy = NULL;
+	osd_clip_t *ccopy = NULL;
+
+	if ((surface == NULL) || (clip == NULL))
+		return NULL;
+
+	if ((scopy=(osd_surface_t*)malloc(sizeof(*scopy))) == NULL) {
+		return NULL;
+	}
+	if ((ccopy=(osd_clip_t*)malloc(sizeof(*ccopy))) == NULL) {
+		return NULL;
+	}
+
+	memcpy(scopy, surface, sizeof(*scopy));
+
+	ccopy->n = clip->n;
+
+	if ((ccopy->regs=(osd_clip_region_t*)malloc(sizeof(osd_clip_region_t)*
+						    ccopy->n)) == NULL)
+		goto err;
+
+	memcpy(ccopy->regs, clip->regs, sizeof(osd_clip_region_t)*ccopy->n);
+
+	scopy->clip = ccopy;
+
+	return scopy;
+
+ err:
+	if (ccopy) {
+		if (ccopy->regs)
+			free(ccopy->regs);
+		free(ccopy);
+	}
+	if (scopy)
+		free(scopy);
+
+	return NULL;
 }

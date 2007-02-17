@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, BtB, Jon Gettler
+ *  Copyright (C) 2004-2007, BtB, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -34,6 +34,7 @@ typedef struct osd_func_s osd_func_t;
 #define full_height	__osd_full_height
 #define all		__osd_all
 #define visible		__osd_visible
+#define clip_visible	__osd_clip_visible
 
 struct osd_func_s {
 	int (*destroy)(osd_surface_t*);
@@ -78,6 +79,7 @@ struct osd_surface_s {
 	osd_func_t *fp;
 	int width;
 	int height;
+	osd_clip_t *clip;
 	union {
 		fb_data_t fb;
 		gfx_data_t gfx;

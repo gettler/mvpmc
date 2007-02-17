@@ -939,10 +939,10 @@ mvpmc_main(int argc, char **argv)
 	 * Make sure each copy of the child prints the version info.
 	 */
 	if (version != NULL) {
-		printf("MediaMVP Media Center\nVersion %s\n%s",
+		printf("MediaMVP Media Center\nVersion %s\n%s\n",
 		       version, compile_time);
 	} else {
-		printf("MediaMVP Media Center\nVersion Unknown\n%s",
+		printf("MediaMVP Media Center\nVersion Unknown\n%s\n",
 		       compile_time);
 	}
 

@@ -223,8 +223,6 @@ int displayOSDFile(char *filename);
 int connect_to_servers(void);
 Bool media_read_message(stream_t *stream);
 
-extern osd_font_t font_CaslonRoman_1_25;
-
 int mvp_server_init(void)
 {
     char buffer[30];
@@ -273,9 +271,9 @@ int mvp_server_init(void)
         surface = NULL;
         return -1;
     }
-    osd_drawtext(surface, 150, 150, "Please Wait",
+    osd_draw_text(surface, 150, 150, "Please Wait",
 		osd_rgba(93,200, 237, 255),
-		osd_rgba(0, 0, 0, 255), 1, &font_CaslonRoman_1_25);
+		osd_rgba(0, 0, 0, 255), 1, NULL);
 
     if (strcmp(mvp_server,"?")) {
         snprintf(buffer,sizeof(buffer),"Connecting to %s",mvp_server);
@@ -283,9 +281,9 @@ int mvp_server_init(void)
         snprintf(buffer,sizeof(buffer),"Connecting to first server");
     }
 
-    osd_drawtext(surface, 150, 190, buffer,
+    osd_draw_text(surface, 150, 190, buffer,
 		osd_rgba(93,200, 237, 255),
-		osd_rgba(0, 0, 0, 255), 1, &font_CaslonRoman_1_25);
+		 osd_rgba(0, 0, 0, 255), 1, NULL);
 
     osd_display_surface(surface);
 
@@ -327,9 +325,9 @@ int connect_to_servers(void)
     }
     c_server_host = c_addr;  /* Leak first time if configured... */
 
-    osd_drawtext(surface, 150, 230, "Starting Application   ",
+    osd_draw_text(surface, 150, 230, "Starting Application   ",
 		osd_rgba(93,200, 237, 255),
-		osd_rgba(0, 0, 0, 255), 1, &font_CaslonRoman_1_25);
+		osd_rgba(0, 0, 0, 255), 1, NULL);
 
     for (i=0;i<10;i++) {
         printf("RFB address %s:%d\n",c_server_host,c_gui_port);
@@ -479,9 +477,9 @@ void query_host_parameters(void)
         } else {
             attempts++;
             snprintf(buffer,sizeof(buffer),"Atempt ( %d / 30)  ",attempts);
-            osd_drawtext(surface, 150, 230, buffer,
+            osd_draw_text(surface, 150, 230, buffer,
         		osd_rgba(93,200, 237, 255),
-        		osd_rgba(0, 0, 0, 255), 1, &font_CaslonRoman_1_25);
+        		osd_rgba(0, 0, 0, 255), 1, NULL);
         }
     }
 }
@@ -1739,11 +1737,11 @@ Bool media_read_message(stream_t *stream)
             av_play();
             */
             if (stream->direction) {
-                osd_drawtext(surface, 100, 100, "Fast Forward",osd_rgba(255,255, 0, 255),MVPW_TRANSPARENT, 1, &font_CaslonRoman_1_25);
+                osd_draw_text(surface, 100, 100, "Fast Forward",osd_rgba(255,255, 0, 255),MVPW_TRANSPARENT, 1, NULL);
                 pauseFileAck(0x02);
                 RDCSendRequestAck(RDC_FORWARD,1);
             } else {
-                osd_drawtext(surface, 100, 100, "Rewind",osd_rgba(255,255, 255, 255),MVPW_TRANSPARENT, 1, &font_CaslonRoman_1_25);
+                osd_draw_text(surface, 100, 100, "Rewind",osd_rgba(255,255, 255, 255),MVPW_TRANSPARENT, 1, NULL);
                 pauseFileAck(0x03);
                 RDCSendRequestAck(RDC_REWIND,1);
             }

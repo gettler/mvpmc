@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# build libjpeg
+# build freetype
 #
 
 import os
@@ -14,14 +14,10 @@ target = env['TARG']
 
 if target == 'mvp':
   cross = '-c ' + env['CROSS']
-  host = '"--host=powerpc-linux --enable-shared"'
-  Carg = '-C '
 else:
   cross = ''
-  host = ''
-  Carg = ''
 
-file = downloads + '/jpegsrc.v6b.tar.gz'
+file = downloads + '/freetype-2.2.1.tar.gz'
 
 e = Environment()
 e.Tool('WGet', toolpath=['../../../scons'])
@@ -37,22 +33,23 @@ def GetSourceFile(url, output_dir, env):
   node = env.SourceCode( munged, env.WGet() )
   return node
 
-#url = 'http://www.ijg.org/files/jpegsrc.v6b.tar.gz'
-url = 'http://www.mvpmc.org/dl/jpegsrc.v6b.tar.gz'
+url = 'http://www.mvpmc.org/dl/freetype-2.2.1.tar.gz'
 pwd = os.getcwd()
 
-build = env.Command('../../install/' + target + '/lib/libjpeg.so', 0,
+build = env.Command('../../install/' + target + '/lib/libfreetype.a', 0,
                     'scons/build_lib.sh -d ' + pwd + '/' + target +
-                    '/jpeg-6b -i ' + file + ' ' +
+                    '/freetype-2.2.1 -i ' + file + ' ' +
                     cross + ' ' +
-                    '-I ' + pwd + '/../../install/' + target + ' ' +
-                    Carg + host + ' ' +
-                    '-p "patches/jpegscale.patch patches/configure.patch"')
-
-env.Depends(build, [ 'patches/jpegscale.patch', 'patches/configure.patch' ] )
+                    '-I ' + pwd + '/../../install/' + target + ' '
+                    '-C --host=powerpc-linux')
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)
 	env.Depends(build, dl)
+
+env.SideEffect(['../../install/' + target + '/include/freetype/freetype.h'],
+                build)
+env.SideEffect(['../../install/' + target + '/include/ft2build.h'],
+                build)
 
 Return('build')

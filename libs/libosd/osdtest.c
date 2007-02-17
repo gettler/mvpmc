@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, Jon Gettler
+ *  Copyright (C) 2004-2007, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -91,7 +91,7 @@ static int
 test_sanity(char *name)
 {
 	osd_surface_t *surface = NULL;
-	unsigned long c1, c2, c3;
+	unsigned long c1, c2;
 
 	printf("testing osd sanity\t");
 	timer_start();
@@ -101,9 +101,8 @@ test_sanity(char *name)
 
 	c1 = rand() | 0xff000000;
 	c2 = rand() | 0xff000000;
-	c3 = rand() | 0xff000000;
 
-	if (osd_drawtext(surface, 0, 0, "Hello World!", c1, c2, c3, NULL) < 0)
+	if (osd_draw_text(surface, 0, 0, "Hello World!", c1, c2, 1, NULL) < 0)
 		FAIL;
 
 	timer_end();
@@ -132,9 +131,9 @@ test_create_surfaces(char *name)
 		if (i == 0) {
 			if (osd_display_surface(surface) < 0)
 				FAIL;
-			if (osd_drawtext(surface, 100, 200,
+			if (osd_draw_text(surface, 100, 200,
 					 "Creating surfaces!",
-					 OSD_GREEN, OSD_BLACK, OSD_BLACK,
+					 OSD_GREEN, OSD_BLACK, 1,
 					 NULL) < 0)
 				FAIL;
 		} else {
@@ -166,14 +165,13 @@ test_text(char *name)
 		FAIL;
 
 	for (i=0; i<height; i+=50) {
-		unsigned long c1, c2, c3;
+		unsigned long c1, c2;
 
 		c1 = rand() | 0xff000000;
 		c2 = rand() | 0xff000000;
-		c3 = rand() | 0xff000000;
 
-		if (osd_drawtext(surface, i, i, "Hello World!",
-				 c1, c2, c3, NULL) < 0)
+		if (osd_draw_text(surface, i+100, i, "Hello World!",
+				 c1, c2, 1, NULL) < 0)
 			FAIL;
 	}
 
@@ -651,8 +649,8 @@ test_color(char *name)
 
 		c = colors[i].c;
 
-		if (osd_drawtext(surface, 300, y, colors[i].name,
-				 c, OSD_BLACK, 1, NULL) < 0)
+		if (osd_draw_text(surface, 300, y, colors[i].name,
+				  c, OSD_BLACK, 1, NULL) < 0)
 			FAIL;
 		if (osd_fill_rect(surface, 400, y, 100, 20, c) < 0)
 			FAIL;
@@ -670,6 +668,138 @@ test_color(char *name)
 	return -1;
 }
 
+static int
+test_font(char *name)
+{
+	osd_surface_t *surface = NULL;
+	int w, h;
+	char *str = "Test: ABC xyz 012 pqg @#$";
+	char buf[128];
+
+	printf("testing %s\t\t", name);
+
+	timer_start();
+
+	if ((surface=osd_create_surface(width, height, OSD_BLACK, OSD_GFX)) == NULL)
+		FAIL;
+
+	h = osd_font_height(NULL);
+	w = osd_font_width(NULL, str);
+
+	if ((w <= 0) || (h <= 0))
+		FAIL;
+
+	if (osd_fill_rect(surface, 300, 100+h, w, h, OSD_RED) < 0)
+		FAIL;
+	if (osd_fill_rect(surface, 300+w, 100, 30, h, OSD_RED) < 0)
+		FAIL;
+
+	if (osd_draw_text(surface, 300, 100, str,
+			  OSD_WHITE, OSD_BLACK, 0, NULL) < 0)
+		FAIL;
+
+	snprintf(buf, sizeof(buf), "font width is %d, height is %d", w, h);
+	if (osd_draw_text(surface, 300, 200, buf,
+			  OSD_WHITE, OSD_BLACK, 1, NULL) < 0)
+		FAIL;
+
+	if (osd_display_surface(surface) < 0)
+		FAIL;
+
+	timer_end();
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
+test_clip(char *name, osd_type_t type)
+{
+	osd_surface_t *surface = NULL;
+	osd_surface_t *cs = NULL;
+	osd_clip_t clip;
+	osd_clip_region_t reg[4];
+	char *msg = "Hello World!";
+
+	printf("testing %s\t\t", name);
+
+	timer_start();
+
+	if ((surface=osd_create_surface(width, height,
+					OSD_BLACK, type)) == NULL)
+		FAIL;
+
+	if (type == OSD_FB) {
+		if (osd_palette_add_color(surface, OSD_GREEN) < 0)
+			FAIL;
+		if (osd_palette_add_color(surface, OSD_RED) < 0)
+			FAIL;
+		if (osd_palette_add_color(surface, OSD_WHITE) < 0)
+			FAIL;
+	}
+
+	clip.n = 4;
+	clip.regs = reg;
+
+	reg[0].x = 300;
+	reg[0].y = 100;
+	reg[0].h = 50;
+	reg[0].w = 300;
+
+	reg[1].x = 300;
+	reg[1].y = 100;
+	reg[1].h = 200;
+	reg[1].w = 50;
+
+	reg[2].x = 600;
+	reg[2].y = 100;
+	reg[2].h = 200;
+	reg[2].w = 50;
+
+	reg[3].x = 300;
+	reg[3].y = 300;
+	reg[3].h = 50;
+	reg[3].w = 350;
+
+	if ((cs=osd_clip_set(surface, &clip)) == NULL)
+		FAIL;
+
+	if (osd_fill_rect(cs, 0, 0, width, height, OSD_RED) < 0)
+		FAIL;
+
+	if (osd_draw_text(cs, 300, 100, msg, OSD_WHITE, 0, 0, NULL) < 0)
+		FAIL;
+	if (osd_draw_text(cs, 300, 200, msg, OSD_WHITE, 0, 0, NULL) < 0)
+		FAIL;
+	if (osd_draw_text(cs, 300, 300, msg,
+			  OSD_WHITE, OSD_GREEN, 1, NULL) < 0)
+		FAIL;
+
+	if (osd_display_surface(surface) < 0)
+		FAIL;
+
+	timer_end();
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
+test_clip_gfx(char *name)
+{
+	return test_clip(name, OSD_GFX);
+}
+
+static int
+test_clip_fb(char *name)
+{
+	return test_clip(name, OSD_FB);
+}
+
 typedef struct {
 	char *name;
 	int sleep;
@@ -680,6 +810,7 @@ static tester_t tests[] = {
 	{ "sanity",		0,	test_sanity },
 	{ "surfaces",		0,	test_create_surfaces },
 	{ "text",		2,	test_text },
+	{ "font",		2,	test_font },
 	{ "rectangles",		2,	test_rectangles },
 	{ "circles",		2,	test_circles },
 	{ "lines",		2,	test_lines },
@@ -690,6 +821,8 @@ static tester_t tests[] = {
 	{ "framebuffer",	2,	test_fb },
 	{ "blit2",		2,	test_blit2 },
 	{ "color",		2,	test_color },
+	{ "clip",		2,	test_clip_gfx },
+	{ "clip2",		2,	test_clip_fb },
 	{ NULL, 0, NULL },
 };
 
@@ -754,11 +887,11 @@ main(int argc, char **argv)
 			timer_print();
 			if (tests[i].sleep) {
 				surface = osd_get_visible_surface();
-				osd_drawtext(surface, 100, 200, buf,
-					     OSD_GREEN, OSD_BLACK, OSD_BLACK,
+				osd_draw_text(surface, 100, 200, buf,
+					     OSD_GREEN, OSD_BLACK, 1,
 					     NULL);
-				osd_drawtext(surface, 100, 80, tests[i].name,
-					     OSD_GREEN, OSD_BLACK, OSD_BLACK,
+				osd_draw_text(surface, 100, 80, tests[i].name,
+					     OSD_GREEN, OSD_BLACK, 1,
 					     NULL);
 				sleep(tests[i].sleep);
 			}

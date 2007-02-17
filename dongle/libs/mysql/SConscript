@@ -14,7 +14,7 @@ target = env['TARG']
 
 if target == 'mvp':
   cross = '-c ' + env['CROSS']
-  host_configs = '--host=ppcbe --with-other-libc='+crossroot+'/lib'
+  host_configs = '--host=powerpc-linux --with-other-libc='+crossroot+'/lib'
 else:
   cross = ''
   host_configs = ''

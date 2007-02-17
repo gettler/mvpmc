@@ -1,0 +1,11 @@
+--- jpeg-6b.orig/configure	2007-01-14 18:33:32.000000000 -0600
++++ jpeg-6b/configure	2007-01-14 18:33:41.000000000 -0600
+@@ -1559,7 +1559,7 @@
+   if test "x$LTSTATIC" = xno; then
+     disable_static="--disable-static"
+   fi
+-  $srcdir/ltconfig $disable_shared $disable_static $srcdir/ltmain.sh
++  $srcdir/ltconfig $HOST_VERIFY $disable_shared $disable_static $srcdir/ltmain.sh $HOST
+ fi
+ 
+ # Select memory manager depending on user input.

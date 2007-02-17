@@ -42,7 +42,7 @@ build = env.Command('../../install/' + target + '/lib/liba52.a', 0,
                     '/a52dec-0.7.5-cvs -i ' + file + ' ' +
                     cross + ' ' +
                     '-I ' + pwd + '/../../install/' + target + ' ' +
-                    "-C '--host=powerpc --enable-fixed'")
+                    "-C '--host=powerpc-linux --enable-fixed --enable-shared=yes'")
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)
