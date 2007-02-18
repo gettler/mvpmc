@@ -300,7 +300,7 @@ osd_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 	if (surface == NULL)
 		return -1;
 
-	if (surface->clip) {
+	if ((surface->clip) || (surface->fp->fill_rect == NULL)) {
 		int i, j;
 
 		/*
@@ -315,10 +315,11 @@ osd_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 		return 0;
 	}
 
-	if (surface->fp->fill_rect)
+	if (surface->fp->fill_rect) {
 		return surface->fp->fill_rect(surface, x, y, w, h, c);
-	else
+	} else {
 		return -1;
+	}
 }
 
 int
@@ -405,18 +406,25 @@ osd_surface_t*
 osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 {
 	switch (type) {
+#if defined(MVPMC_MG35)
+	case OSD_GFX:
+#endif
+#if !defined(MVPMC_HOST)
 	case OSD_FB:
 		return fb_create(w, h, color);
 		break;
+#endif
+#if defined(MVPMC_MEDIAMVP)
 	case OSD_CURSOR:
 		return cursor_create(w, h, color);
 		break;
 	case OSD_GFX:
 		return gfx_create(w, h, color);
 		break;
+#endif /* MVPMC_MEDIAMVP */
+	default:
+		return NULL;
 	}
-
-	return NULL;
 }
 
 int

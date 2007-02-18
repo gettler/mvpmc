@@ -25,6 +25,7 @@ if os.path.exists(toolchains) == 0:
 #
 # parse the TARGET= option
 #    mvp
+#    mg35
 #    host
 #    kernel
 #
@@ -37,10 +38,20 @@ if target == 'mvp':
 	env.Replace(CROSS = cross)
 	env.Replace(CC = cross + 'gcc')
 	env.Replace(CROSSPATH = crossroot + '/' + powerpc + '/bin')
-	cppflags = ''
+	cppflags = '-DMVPMC_MEDIAMVP'
+	ldflags = ''
+elif target == 'mg35':
+	# DSLinux toolchain is at http://dslinux.org/wiki/Compiling_DSLinux
+	cppflags = '-DMVPMC_MG35'
+	ldflags = '-Wl,-elf2flt'
+	crossroot = '/usr/local/dslinux-toolchain-2006-11-04-i686'
+	cross = crossroot + '/bin/' + 'arm-linux-elf-'
+	env.Replace(CROSS = cross)
+	env.Replace(CC = cross + 'gcc')
 elif target == 'host':
 	cppflags = '-DMVPMC_HOST'
-	crossroot='';
+	crossroot = ''
+	ldflags = ''
 elif target == 'kernel':
 	print "kernel build"
 	powerpc = 'powerpc-405-linux-uclibc'
@@ -71,6 +82,7 @@ env.Replace(TARG = target)
 env.Replace(DOWNLOADS = home + '/downloads')
 env.Replace(TOPLEVEL = pwd)
 env.Replace(CPPFLAGS = cppflags)
+env.Replace(LDFLAGS = ldflags)
 
 Export('env','crossroot')
 
@@ -92,6 +104,9 @@ if target == 'kernel':
 		print "build kernel cross-compiler"
 		gcc = env.SConscript(gccbuild)
 		env.Depends(kern, gcc)
+elif target == 'mg35':
+	env.SConscript('dongle/libs/SConscript')
+	env.SConscript('libs/SConscript')
 else:
 	#
 	# do the application build

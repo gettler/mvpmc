@@ -31,10 +31,7 @@
 #define __initdata
 #include <linux/linux_logo.h>
 
-#if !defined(__powerpc__)
-#error unsupported architecture
-#endif
-
+#if defined(MVPMC_MEDIAMVP)
 #define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
 
 #define OSD_WHITE	OSD_COLOR(255,255,255,255)
@@ -47,19 +44,44 @@
 #define OSD_PURPLE	OSD_COLOR(255,0,234,255)
 #define OSD_BROWN	OSD_COLOR(118,92,0,255)
 #define OSD_CYAN	OSD_COLOR(0,255,234,255)
+#elif defined(MVPMC_MG35)
+#define OSD_COLOR(r,g,b,a)	((r<<24) | (b<<16) | (g<<8) | a)
+
+#define OSD_WHITE	OSD_COLOR(255,255,255,255)
+#define OSD_RED		OSD_COLOR(255,0,0,255)
+#define OSD_BLUE	OSD_COLOR(0,0,255,255)
+#define OSD_GREEN	OSD_COLOR(0,255,0,255)
+#define OSD_BLACK	OSD_COLOR(0,0,0,255)
+#define OSD_YELLOW	OSD_COLOR(255,255,0,255)
+#define OSD_ORANGE	OSD_COLOR(255,180,0,255)
+#define OSD_PURPLE	OSD_COLOR(255,0,234,255)
+#define OSD_BROWN	OSD_COLOR(118,92,0,255)
+#define OSD_CYAN	OSD_COLOR(0,255,234,255)
+#else
+#error unknown architecture
+#endif
 
 typedef struct {
 	unsigned int c;
 	char name[24];
 } color_name_t;
 
+#if defined(MVPMC_MG35)
+static int width = 640, height = 465;
+#else
 static int width = 720, height = 480;
+#endif
 
 static char *test = NULL;
 
-static unsigned long lr;
+static int lr;
 
-static struct timeval start, end, delta;
+#if defined(MVPMC_MG35)
+#define timer_start() fflush(stdout)
+#define timer_end()
+#define timer_print() sprintf(buf, "finished\n"); printf(buf)
+#else
+struct timeval start, end, delta;
 
 #define timer_start()	fflush(stdout); gettimeofday(&start, NULL)
 
@@ -69,22 +91,26 @@ static struct timeval start, end, delta;
 			snprintf(buf, sizeof(buf), "%5.2f seconds\n", \
 			         delta.tv_sec + (delta.tv_usec/1000000.0)); \
 			printf(buf)
+#endif
 
 #define FAIL		{ \
-				__dummy_func(); \
-				asm ("mflr %0" : "=r" (lr)); \
+				lr = __LINE__; \
 				goto err; \
 			}
-
-void
-__dummy_func(void)
-{
-}
 
 static void
 fb_clear(void)
 {
-	osd_create_surface(width, height, OSD_BLACK, OSD_FB);
+	osd_surface_t *surface;
+
+	surface = osd_create_surface(width, height, OSD_BLACK, OSD_FB);
+
+#if 0
+	if (surface) {
+		osd_display_surface(surface);
+		osd_destroy_surface(surface);
+	}
+#endif
 }
 
 static int
@@ -132,8 +158,7 @@ test_create_surfaces(char *name)
 			if (osd_display_surface(surface) < 0)
 				FAIL;
 			if (osd_draw_text(surface, 100, 200,
-					 "Creating surfaces!",
-					 OSD_GREEN, OSD_BLACK, 1,
+					 "Creating surfaces!", OSD_GREEN, 0, 1,
 					 NULL) < 0)
 				FAIL;
 		} else {
@@ -190,15 +215,18 @@ static int
 test_rectangles(char *name)
 {
 	int i;
+#if defined(MVPMC_MG35)
+	int n = 50;
+#else
 	int n = 500;
+#endif
 	osd_surface_t *surface = NULL;
 
 	printf("drawing %d rectangles\t", n);
 
 	timer_start();
 
-	if ((surface=osd_create_surface(width, height,
-					0, OSD_GFX)) == NULL)
+	if ((surface=osd_create_surface(width, height, 0, OSD_GFX)) == NULL)
 		FAIL;
 
 	if (osd_display_surface(surface) < 0)
@@ -212,7 +240,7 @@ test_rectangles(char *name)
 		y = rand() % height;
 		w = rand() % (width - x);
 		h = rand() % (height - y);
-		c = rand() | 0xff000000;
+		c = rand();
 
 		if (osd_fill_rect(surface, x, y, w, h, c) < 0)
 			FAIL;
@@ -526,6 +554,7 @@ test_cursor(char *name)
 static int
 test_fb(char *name)
 {
+#if defined(LINUX_LOGO_COLORS)
 	osd_surface_t *surface = NULL;
 	osd_indexed_image_t image;
 	int x, y;
@@ -562,12 +591,14 @@ test_fb(char *name)
 	return 0;
 
  err:
+#endif /* LINUX_LOGO_COLORS */
 	return -1;
 }
 
 static int
 test_blit2(char *name)
 {
+#if defined(LINUX_LOGO_COLORS)
 	osd_surface_t *fb = NULL;
 	osd_surface_t *osd = NULL;
 	osd_indexed_image_t image;
@@ -616,6 +647,7 @@ test_blit2(char *name)
 	return 0;
 
  err:
+#endif /* LINUX_LOGO_COLORS */
 	return -1;
 }
 
@@ -626,6 +658,7 @@ test_color(char *name)
 	osd_surface_t *surface = NULL;
 	color_name_t colors[] = {
 		{ OSD_WHITE, "white" },
+		{ OSD_BLACK, "black" },
 		{ OSD_RED, "red" },
 		{ OSD_BLUE, "blue" },
 		{ OSD_GREEN, "green" },
@@ -650,7 +683,7 @@ test_color(char *name)
 		c = colors[i].c;
 
 		if (osd_draw_text(surface, 300, y, colors[i].name,
-				  c, OSD_BLACK, 1, NULL) < 0)
+				  c, 0, 1, NULL) < 0)
 			FAIL;
 		if (osd_fill_rect(surface, 400, y, 100, 20, c) < 0)
 			FAIL;
@@ -888,15 +921,15 @@ main(int argc, char **argv)
 			if (tests[i].sleep) {
 				surface = osd_get_visible_surface();
 				osd_draw_text(surface, 100, 200, buf,
-					     OSD_GREEN, OSD_BLACK, 1,
+					     OSD_GREEN, 0, 1,
 					     NULL);
 				osd_draw_text(surface, 100, 80, tests[i].name,
-					     OSD_GREEN, OSD_BLACK, 1,
+					     OSD_GREEN, 0, 1,
 					     NULL);
 				sleep(tests[i].sleep);
 			}
 		} else {
-			printf("failed at 0x%.8lx\n", lr);
+			printf("failed at line %d\n", lr);
 			ret = -1;
 		}
 		osd_destroy_all_surfaces();

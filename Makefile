@@ -11,6 +11,9 @@ mvp:
 host:
 	scons -Q -j 2 TARGET=host
 
+mg35:
+	scons -Q -j 2 TARGET=mg35
+
 kernel:
 	scons -Q TARGET=kernel
 
@@ -26,6 +29,7 @@ cscope:
 clean:
 	scons -c TARGET=mvp
 	scons -c TARGET=host
+	scons -c TARGET=mg35
 	rm -rf `find libs -name obj -type d`
 	rm -rf `find src -name obj -type d`
 	rm -f dongle.bin.mvpmc.ver
@@ -47,6 +51,7 @@ distclean: clean
 	rm -rf tools/squashfs/squashfs2.2-r2
 	rm -rf `find dongle -name mvp -type d`
 	rm -rf `find dongle -name host -type d`
+	rm -rf `find dongle -name mg35 -type d`
 	rm -rf `find . -name .sconsign -type f`
 	rm -rf home
 	rm -rf doc/html

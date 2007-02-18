@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006, Jon Gettler
+ *  Copyright (C) 2006-2007, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -68,6 +68,7 @@ static int
 lib_open(void)
 {
 	if (handle == NULL) {
+#if !defined(MVPMC_MG35)
 		if ((handle=dlopen("libfreetype.so", RTLD_LAZY)) == NULL) {
 			return -1;
 		}
@@ -79,6 +80,15 @@ lib_open(void)
 		dl_FT_Load_Glyph = dlsym(handle, "FT_Load_Glyph");
 		dl_FT_Get_Glyph = dlsym(handle, "FT_Get_Glyph");
 		dl_FT_Glyph_To_Bitmap = dlsym(handle, "FT_Glyph_To_Bitmap");
+#else
+		dl_FT_Init_FreeType = FT_Init_FreeType;
+		dl_FT_New_Face = FT_New_Face;
+		dl_FT_Done_Face = FT_Done_Face;
+		dl_FT_Get_Char_Index = FT_Get_Char_Index;
+		dl_FT_Load_Glyph = FT_Load_Glyph;
+		dl_FT_Get_Glyph = FT_Get_Glyph;
+		dl_FT_Glyph_To_Bitmap = FT_Glyph_To_Bitmap;
+#endif
 	}
 
 	return 0;
@@ -317,7 +327,11 @@ get_default_font(void)
 	if (default_font == NULL) {
 		char *font = getenv("OSDFONT");
 		if (font == NULL) {
+#if defined(MVPMC_MEDIAMVP)
 			default_font = osd_load_font("/etc/helvB18.pcf");
+#elif defined(MVPMC_MG35)
+			default_font = osd_load_font("/cdrom/init/helvB18.pcf");
+#endif
 		} else {
 			default_font = osd_load_font(font);
 		}

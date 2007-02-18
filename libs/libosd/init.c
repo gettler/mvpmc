@@ -108,7 +108,9 @@ gfx_init(void)
 		conv_RV[i] = 1.370 * ((double)i - 128);
 	}
 
+#if defined(MVPMC_MEDIAMVP)
 	cursor_init();
+#endif
 }
 
 /*
@@ -178,6 +180,11 @@ yuv2rgb(unsigned char y, unsigned char u, unsigned char v,
 int
 osd_open(void)
 {
+#if defined(MVPMC_MG35)
+	if (overlay_init() < 0)
+		return -1;
+#endif
+
 	return 0;
 }
 

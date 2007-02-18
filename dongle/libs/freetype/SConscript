@@ -14,8 +14,13 @@ target = env['TARG']
 
 if target == 'mvp':
   cross = '-c ' + env['CROSS']
+  host = '-C --host=powerpc-linux'
+elif target == 'mg35':
+  cross = '-c ' + env['CROSS']
+  host = '-C --host=arm-linux'
 else:
   cross = ''
+  host = ''
 
 file = downloads + '/freetype-2.2.1.tar.gz'
 
@@ -40,14 +45,14 @@ build = env.Command('../../install/' + target + '/lib/libfreetype.a', 0,
                     'scons/build_lib.sh -d ' + pwd + '/' + target +
                     '/freetype-2.2.1 -i ' + file + ' ' +
                     cross + ' ' +
-                    '-I ' + pwd + '/../../install/' + target + ' '
-                    '-C --host=powerpc-linux')
+                    '-I ' + pwd + '/../../install/' + target + ' ' +
+                    host)
 
 if not os.path.exists(file):
 	dl = GetSourceFile(url, '#' + downloads, e)
 	env.Depends(build, dl)
 
-env.SideEffect(['../../install/' + target + '/include/freetype/freetype.h'],
+env.SideEffect(['../../install/' + target + '/include/freetype2/freetype/freetype.h'],
                 build)
 env.SideEffect(['../../install/' + target + '/include/ft2build.h'],
                 build)

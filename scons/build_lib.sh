@@ -139,13 +139,19 @@ if [ -f configure ] ; then
 	    export HOST_VERIFY="--no-verify"
 	fi
     fi
-    ./configure --prefix=$INSTALL $CONFIG_OPTS
     if [ "`basename $PWD`" = "freetype-2.2.1" ] ; then
+	if [ "$CONFIG_OPTS" = "--host=arm-linux" ] ; then
+	    ./configure --prefix=$INSTALL $CONFIG_OPTS --disable-shared
+	else
+	    ./configure --prefix=$INSTALL $CONFIG_OPTS
+	fi
 	cp modules.cfg modules.cfg-orig
 	cp ../../modules.cfg .
+	export LDFLAGS="-Wl,-elf2flt"
         make -i
 	make -i install
     else
+	./configure --prefix=$INSTALL $CONFIG_OPTS
         make
         make install
     fi

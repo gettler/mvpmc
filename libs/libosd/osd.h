@@ -26,9 +26,13 @@
 
 typedef struct osd_func_s osd_func_t;
 
+#if defined(MVPMC_MEDIAMVP)
 #include "fb.h"
 #include "gfx.h"
 #include "cursor.h"
+#elif defined(MVPMC_MG35)
+#include "mg35.h"
+#endif
 
 #define full_width	__osd_full_width
 #define full_height	__osd_full_height
@@ -81,9 +85,13 @@ struct osd_surface_s {
 	int height;
 	osd_clip_t *clip;
 	union {
+#if defined(MVPMC_MEDIAMVP)
 		fb_data_t fb;
 		gfx_data_t gfx;
 		cursor_data_t cursor;
+#elif defined(MVPMC_MG35)
+		overlay_data_t overlay;
+#endif
 	} data;
 };
 
@@ -134,4 +142,4 @@ extern osd_surface_t *visible;
 
 #define OSD_MAX_SURFACES	128
 
-#endif /* STBGFX_H */
+#endif /* OSD_H */
