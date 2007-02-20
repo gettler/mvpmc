@@ -41,7 +41,7 @@ def GetSourceFile(url, output_dir, env):
 url = 'http://www.mvpmc.org/dl/jpegsrc.v6b.tar.gz'
 pwd = os.getcwd()
 
-build = env.Command('../../install/' + target + '/lib/libjpeg.so', 0,
+build = env.Command('../../install/' + target + '/lib/libjpeg.a', 0,
                     'scons/build_lib.sh -d ' + pwd + '/' + target +
                     '/jpeg-6b -i ' + file + ' ' +
                     cross + ' ' +
