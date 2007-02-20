@@ -10,6 +10,7 @@ dongle/filesystem/install_wrapper
 dongle/install
 dongle/libs/*/host
 dongle/libs/*/mvp
+dongle/libs/*/mg35
 dongle/kernel/linux-2.4.31/linux-2.4.31
 dongle/kernel/linux-2.4.31/mvpstb
 dongle/kernel/linux-2.4.31/unionfs-1.0.14
