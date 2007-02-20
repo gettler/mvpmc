@@ -1,12 +1,32 @@
+/*
+ *  Copyright (C) 2004-2007, Eric Lund, Jon Gettler
+ *  http://www.mvpmc.org/
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #ifndef __MVP_ATOMIC_H
 #define __MVP_ATOMIC_H
+
+typedef	volatile unsigned int mvp_atomic_t;
 
 /**
  * Atomically incremente a reference count variable.
  * \param valp address of atomic variable
  * \return incremented reference count
  */
-typedef	unsigned mvp_atomic_t;
 static inline unsigned
 __mvp_atomic_increment(mvp_atomic_t *valp)
 {
@@ -36,6 +56,21 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
 		      : "=&r" (__val)
 		      : "r" (valp)
 		      : "cc", "memory");
+#elif defined __arm__
+	int tmp1, tmp2;
+	int inc = 1;
+	__asm__ __volatile__ (
+		"\n"
+		"0:"
+		"ldr     %0, [%3]\n"
+		"add     %1, %0, %4\n"
+		"swp     %2, %1, [%3]\n"
+		"cmp     %0, %2\n"
+		"swpne   %0, %2, [%3]\n"
+		"bne     0b\n"
+		: "=&r"(tmp1), "=&r"(__val), "=&r"(tmp2) 
+		: "r" (valp), "r"(inc) 
+		: "cc", "memory");
 #else
 	/*
 	 * Don't know how to atomic increment for a generic architecture
@@ -81,6 +116,21 @@ __mvp_atomic_decrement(mvp_atomic_t *valp)
 		      : "=&r" (__val)
 		      : "r" (valp)
 		      : "cc", "memory");
+#elif defined __arm__
+	int tmp1, tmp2;
+	int inc = -1;
+	__asm__ __volatile__ (
+		"\n"
+		"0:"
+		"ldr     %0, [%3]\n"
+		"add     %1, %0, %4\n"
+		"swp     %2, %1, [%3]\n"
+		"cmp     %0, %2\n"
+		"swpne   %0, %2, [%3]\n"
+		"bne     0b\n"
+		: "=&r"(tmp1), "=&r"(__val), "=&r"(tmp2) 
+		: "r" (valp), "r"(inc) 
+		: "cc", "memory");
 #elif defined __sparcv9__
 	mvp_atomic_t __newval, __oldval = (*valp);
 	do
