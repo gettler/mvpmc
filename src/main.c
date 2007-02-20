@@ -516,6 +516,11 @@ mvpmc_main(int argc, char **argv)
 		saved_argv[i] = strdup(argv[i]);
 
 	tzset();
+
+	/*
+	 * setup the plug-in loader
+	 */
+	plugin_setup();
     
 	/*
 	 * Allocate a shared memory region so that config options can

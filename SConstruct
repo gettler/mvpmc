@@ -40,6 +40,7 @@ if target == 'mvp':
 	env.Replace(CROSSPATH = crossroot + '/' + powerpc + '/bin')
 	cppflags = '-DMVPMC_MEDIAMVP'
 	ldflags = ''
+	env.Replace(LINKMODE = 'dynamic')
 elif target == 'mg35':
 	# DSLinux toolchain is at http://dslinux.org/wiki/Compiling_DSLinux
 	cppflags = '-DMVPMC_MG35'
@@ -48,10 +49,12 @@ elif target == 'mg35':
 	cross = crossroot + '/bin/' + 'arm-linux-elf-'
 	env.Replace(CROSS = cross)
 	env.Replace(CC = cross + 'gcc')
+	env.Replace(LINKMODE = 'static')
 elif target == 'host':
 	cppflags = '-DMVPMC_HOST'
 	crossroot = ''
 	ldflags = ''
+	env.Replace(LINKMODE = 'dynamic')
 elif target == 'kernel':
 	print "kernel build"
 	powerpc = 'powerpc-405-linux-uclibc'

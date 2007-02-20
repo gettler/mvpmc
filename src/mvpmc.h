@@ -544,4 +544,6 @@ extern void av_wss_redraw();
 
 extern int wireless;
 
+extern int plugin_setup(void);
+
 #endif /* MVPMC_H */

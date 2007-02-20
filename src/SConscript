@@ -13,8 +13,16 @@ mysql_libdir = mvp['INSTLIBDIR'] + '/mysql'
 target = mvp['TARG']
 toplevel = mvp['TOPLEVEL']
 bindir = mvp['INSTBINDIR']
+linkmode = mvp['LINKMODE']
 
 mvp.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
+
+#
+# Dynamically loadable plug-ins are not available on all platforms
+#
+if linkmode == 'dynamic':
+	mvp.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+	
 
 version = os.system(toplevel + '/src/version.sh ' + toplevel + ' ' + toplevel + '/src')
 
@@ -47,7 +55,7 @@ mvpmc = mvp.Program('mvpmc',
 		     'emulate.c', 'fb.c', 'gui.c', 'http_stream.c', 'main.c',
 		     'mclient.c', 'mclient_mvpmc.c', 'mclient_cli.c',
 		     'mythtv.c', 'mythtv_livetv.c', 'tvguide.c',
-		     'playlist.c', 'replaytv.c', 'theme.c', 'video.c',
+		     'playlist.c', 'plugin.c', 'replaytv.c', 'theme.c', 'video.c',
 		     'version.c', 'vlc_control.c', 'web_config.c', 'wss.c' ] +
 		    mvpapps,
                     CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
