@@ -79,6 +79,11 @@ osd_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 	if (surface == NULL)
 		return -1;
 
+	if ((x < 0) || (x >= surface->width))
+		return -1;
+	if ((y < 0) || (y >= surface->height))
+		return -1;
+
 	if (surface->clip && (clip_visible(surface, x, y) == 0))
 		return 0;
 
