@@ -674,7 +674,7 @@ test_color(char *name)
 			FAIL;
 		if (osd_fill_rect(surface, 400, y, 100, 20, c) < 0)
 			FAIL;
-		y += 50;
+		y += 45;
 	}
 
 	if (osd_display_surface(surface) < 0)

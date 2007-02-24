@@ -41,20 +41,37 @@ if target == 'mvp':
 	cppflags = '-DMVPMC_MEDIAMVP'
 	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
+	env.Replace(GTKCFLAGS = '')
+	env.Replace(GTKLDFLAGS = '')
 elif target == 'mg35':
 	# DSLinux toolchain is at http://dslinux.org/wiki/Compiling_DSLinux
 	cppflags = '-DMVPMC_MG35'
 	ldflags = '-Wl,-elf2flt'
 	crossroot = '/usr/local/dslinux-toolchain-2006-11-04-i686'
 	cross = crossroot + '/bin/' + 'arm-linux-elf-'
+	cc = cross + 'gcc'
 	env.Replace(CROSS = cross)
-	env.Replace(CC = cross + 'gcc')
+	env.Replace(CC = cc)
 	env.Replace(LINKMODE = 'static')
+	env.Replace(GTKCFLAGS = '')
+	env.Replace(GTKLDFLAGS = '')
+	if os.path.exists(cc) == 0:
+		print "ARM cross-compiler '%s' not found"%cc
+		print "Please see http://dslinux.org/wiki/Compiling_DSLinux"
+		sys.exit(1)
 elif target == 'host':
 	cppflags = '-DMVPMC_HOST'
 	crossroot = ''
 	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
+	fd = os.popen('pkg-config --cflags gtk+-2.0 gthread-2.0')
+	gtkcflags = fd.readline()[:-2]
+	fd.close()
+	fd = os.popen('pkg-config --libs gtk+-2.0 gthread-2.0')
+	gtkldflags = fd.readline()[:-2]
+	fd.close()
+	env.Replace(GTKCFLAGS = gtkcflags)
+	env.Replace(GTKLDFLAGS = gtkldflags)
 elif target == 'kernel':
 	print "kernel build"
 	powerpc = 'powerpc-405-linux-uclibc'

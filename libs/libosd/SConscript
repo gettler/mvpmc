@@ -11,6 +11,8 @@ libdir = env['INSTLIBDIR']
 freetype = env['INSTINCDIR'] + '/freetype2'
 bindir = env['INSTBINDIR']
 ldflags = env['LDFLAGS']
+gtkcflags = env['GTKCFLAGS']
+gtkldflags = env['GTKLDFLAGS']
 
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
@@ -21,23 +23,23 @@ elif target == 'mvp':
 	src = [ common, 'cursor.c', 'gfx.c', 'fb.c' ]
 	dl = 'dl'
 else:
-	src = [ common ]
+	src = [ common, 'gtk.c' ]
 	dl = ''
+
+env.Append(CCFLAGS = ' ' + gtkcflags)
 
 static = env.StaticLibrary('osd', src,
 			   CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
 				       freetype, '.' ])
 
-if target != 'host':
-	osdtest = env.Program('osdtest',
-			      [ 'osdtest.c' ],
-			      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
-			      LIBS = [ 'osd', 'freetype', dl ],
-			      LIBPATH = [ libdir ],
-			      LINKFLAGS = [ ldflags ])
-	inst2 = env.Install(bindir, osdtest)
+osdtest = env.Program('osdtest',
+		      [ 'osdtest.c' ],
+		      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
+		      LIBS = [ 'osd', 'freetype', dl ],
+		      LIBPATH = [ libdir ],
+		      LINKFLAGS = ldflags + ' ' + gtkldflags )
 
-if target != 'mg35':
+if target == 'mvp':
 	shared = env.SharedLibrary('osd', src,
 				   CPPPATH = [ env['INCDIR'],
 					       env['INSTINCDIR'],
@@ -46,10 +48,7 @@ if target != 'mg35':
 else:
 	inst = env.Install(libdir, [ static ])
 
-if target == 'mvp':
-	env.Depends(osdtest, shared)
+inst2 = env.Install(bindir, osdtest)
+env.Depends(osdtest, inst)
 
-if target != 'host':
-	env.Depends(inst2, inst)
-
-Return('inst')
+Return('inst2')
