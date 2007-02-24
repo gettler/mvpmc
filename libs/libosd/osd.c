@@ -87,10 +87,20 @@ osd_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 	if (surface->clip && (clip_visible(surface, x, y) == 0))
 		return 0;
 
-	if (surface->fp->draw_pixel)
+	if (surface->fp->draw_pixel) {
 		return surface->fp->draw_pixel(surface, x, y, c);
-	else
+	} else if (surface->fp->draw_pixel_ayuv) {
+		unsigned char a, r, g, b, Y, U, V;
+
+		a = (c >> 24) & 0xff;
+		r = (c >> 16) & 0xff;
+		g = (c >> 8) & 0xff;
+		b = c & 0xff;
+		rgb2yuv(r, g, b, &Y, &U, &V);
+		return surface->fp->draw_pixel_ayuv(surface, x, y, a, Y, U, V);
+	} else {
 		return -1;
+	}
 }
 
 int
@@ -105,12 +115,14 @@ osd_draw_pixel_ayuv(osd_surface_t *surface, int x, int y, unsigned char a,
 
 	if (surface->fp->draw_pixel_ayuv) {
 		return surface->fp->draw_pixel_ayuv(surface, x, y, a, Y, U, V);
-	} else {
+	} else if (surface->fp->draw_pixel) {
 		unsigned char r, g, b;
 		unsigned int c;
 		yuv2rgb(Y, U, V, &r, &g, &b);
 		c = rgba2c(r, g, b, a);
 		return osd_draw_pixel(surface, x, y, c);
+	} else {
+		return -1;
 	}
 }
 
