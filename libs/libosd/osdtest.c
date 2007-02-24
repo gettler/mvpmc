@@ -202,11 +202,7 @@ static int
 test_rectangles(char *name)
 {
 	int i;
-#if defined(MVPMC_MG35)
-	int n = 50;
-#else
 	int n = 500;
-#endif
 	osd_surface_t *surface = NULL;
 
 	printf("drawing %d rectangles\t", n);

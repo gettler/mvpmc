@@ -777,6 +777,7 @@ osd_clip_set(osd_surface_t *surface, osd_clip_t *clip)
 	memcpy(ccopy->regs, clip->regs, sizeof(osd_clip_region_t)*ccopy->n);
 
 	scopy->clip = ccopy;
+	scopy->real = surface;
 
 	return scopy;
 

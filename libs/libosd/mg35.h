@@ -20,7 +20,8 @@
 #ifndef OSD_MG35_H
 #define OSD_MG35_H
 
-#define IOCTL_RM_INIT	0x3e1
+#define IOCTL_RM_VID_CLEAR	0x3cf
+#define IOCTL_RM_INIT		0x3e1
 
 typedef struct {
 	unsigned char *addr;

@@ -38,6 +38,12 @@ static rm_info_t info;
 static int
 overlay_add_color(osd_surface_t *surface, unsigned int c)
 {
+	if (surface->real) {
+		if (overlay_add_color(surface->real, c) < 0) {
+			return -1;
+		}
+	}
+
 	if (surface->data.overlay.colors == 256) {
 		return -1;
 	}
@@ -51,6 +57,10 @@ static int
 find_color(osd_surface_t *surface, unsigned int c)
 {
 	int i;
+
+	if (surface->data.overlay.palette == NULL) {
+		return -1;
+	}
 
 	for (i=0; i<surface->data.overlay.colors; i++) {
 		if (c == surface->data.overlay.palette[i])
@@ -86,6 +96,66 @@ overlay_draw_pixel_ayuv(osd_surface_t *surface, int x, int y,
 }
 
 static int
+overlay_draw_horz_line(osd_surface_t *surface, int x1, int x2, int y,
+		       unsigned int c)
+{
+	unsigned char a, r, g, b, Y, U, V;
+	int tmp, pixel, C;
+
+	if ((y < 0) || (y >= surface->height)) {
+		return -1;
+	}
+
+	if (x1 > x2) {
+		tmp = x1;
+		x1 = x2;
+		x2 = tmp;
+	}
+
+	if (x2 >= surface->width) {
+		x2 = surface->width-1;
+	}
+
+	if (x1 < 0) {
+		x1 = 0;
+	}
+
+	if (x1 >= x2) {
+		return -1;
+	}
+
+	a = (c >> 24) & 0xff;
+	r = (c >> 16) & 0xff;
+	g = (c >> 8) & 0xff;
+	b = c & 0xff;
+	rgb2yuv(r, g, b, &Y, &U, &V);
+	C = ((V<<24) | (U<<16) | (Y<<8) | a);
+
+	if ((pixel=find_color(surface, C)) == -1) {
+		if ((pixel=overlay_add_color(surface, C)) < 0) {
+			return -1;
+		}
+	}
+
+	memset(surface->data.overlay.data+(y*surface->width)+x1, pixel, x2-x1);
+
+	return 0;
+}
+
+static int
+overlay_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
+		  unsigned int c)
+{
+	int i;
+
+	for (i=0; i<h; i++) {
+		osd_draw_horz_line(surface, x, x+w, y+i, c);
+	}
+
+	return 0;
+}
+
+static int
 overlay_display_surface(osd_surface_t *surface)
 {
 	if (surface == visible) {
@@ -96,12 +166,17 @@ overlay_display_surface(osd_surface_t *surface)
 		return -1;
 	}
 
-	memcpy(overlay->palette, surface->data.overlay.palette,
-	       sizeof(unsigned long)*256);
-	memset(overlay->data, 0, overlay->width * overlay->height);
+	if (surface->data.overlay.palette) {
+		memcpy(overlay->palette, surface->data.overlay.palette,
+		       sizeof(unsigned long)*256);
+		free(surface->data.overlay.palette);
+	}
 
-	free(surface->data.overlay.palette);
-	free(surface->data.overlay.data);
+	if (surface->data.overlay.data) {
+		memcpy(overlay->data, surface->data.overlay.data,
+		       surface->width * surface->height);
+		free(surface->data.overlay.data);
+	}
 
 	surface->data.overlay.palette = overlay->palette;
 	surface->data.overlay.data = overlay->data;
@@ -138,6 +213,8 @@ overlay_destroy_surface(osd_surface_t *surface)
 
 static osd_func_t fp = {
 	.draw_pixel_ayuv = overlay_draw_pixel_ayuv,
+	.draw_horz_line = overlay_draw_horz_line,
+	.fill_rect = overlay_fill_rect,
 	.display = overlay_display_surface,
 	.undisplay = overlay_undisplay_surface,
 	.destroy = overlay_destroy_surface,
@@ -171,7 +248,6 @@ overlay_create(int w, int h, unsigned long color)
 	surface->width = w;
 	surface->height = h;
 
-#if 0
 	if ((surface->data.overlay.palette=
 	     malloc(sizeof(unsigned long)*256)) == NULL) {
 		return NULL;
@@ -179,13 +255,8 @@ overlay_create(int w, int h, unsigned long color)
 	if ((surface->data.overlay.data= malloc(w*h)) == NULL) {
 		return NULL;
 	}
-#else
-	surface->data.overlay.palette = overlay->palette;
-	surface->data.overlay.data = overlay->data;
-	visible = surface;
-#endif
-
-	memset(surface->data.overlay.palette, 0, sizeof(unsigned long)*256);
+	memset(surface->data.overlay.palette, 0,
+	       sizeof(unsigned long)*256);
 	memset(surface->data.overlay.data, 0, w*h);
 
 	i = 0;
@@ -194,7 +265,7 @@ overlay_create(int w, int h, unsigned long color)
 	if (i < OSD_MAX_SURFACES)
 		all[i] = surface;
 
-	osd_fill_rect(surface, 0, 0, w, h, 0);
+	osd_fill_rect(surface, 0, 0, w, h, color);
 
 	return surface;
 }
@@ -207,6 +278,9 @@ overlay_init(void)
 	}
 
 	if (ioctl(fd, IOCTL_RM_INIT, &info) < 0) {
+		goto err;
+	}
+	if (ioctl(fd, IOCTL_RM_VID_CLEAR, 0) < 0) {
 		goto err;
 	}
 

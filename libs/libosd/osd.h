@@ -86,6 +86,7 @@ struct osd_surface_s {
 	int width;
 	int height;
 	osd_clip_t *clip;
+	struct osd_surface_s *real;
 	union {
 #if defined(MVPMC_MEDIAMVP)
 		fb_data_t fb;
