@@ -110,6 +110,11 @@ osd_draw_pixel_ayuv(osd_surface_t *surface, int x, int y, unsigned char a,
 	if (surface == NULL)
 		return -1;
 
+	if ((x < 0) || (x >= surface->width))
+		return -1;
+	if ((y < 0) || (y >= surface->height))
+		return -1;
+
 	if (surface->clip && (clip_visible(surface, x, y) == 0))
 		return 0;
 
@@ -323,10 +328,28 @@ osd_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 		/*
 		 * XXX: this should be optimized!
 		 */
-		for (i=0; i<w; i++) {
-			for (j=0; j<h; j++) {
-				osd_draw_pixel(surface, x+i, y+j, c);
+		if (surface->fp->draw_pixel) {
+			for (i=0; i<w; i++) {
+				for (j=0; j<h; j++) {
+					osd_draw_pixel(surface, x+i, y+j, c);
+				}
 			}
+		} else if (surface->fp->draw_pixel_ayuv) {
+			unsigned char a, r, g, b, Y, U, V;
+
+			a = (c >> 24) & 0xff;
+			r = (c >> 16) & 0xff;
+			g = (c >> 8) & 0xff;
+			b = c & 0xff;
+			rgb2yuv(r, g, b, &Y, &U, &V);
+			for (i=0; i<w; i++) {
+				for (j=0; j<h; j++) {
+					osd_draw_pixel_ayuv(surface, x+i, y+j,
+							    a, Y, U, V);
+				}
+			}
+		} else {
+			return -1;
 		}
 
 		return 0;
