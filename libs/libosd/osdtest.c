@@ -60,9 +60,13 @@ static char *test = NULL;
 static int lr;
 
 #if defined(MVPMC_MG35)
-#define timer_start() fflush(stdout)
-#define timer_end()
-#define timer_print() sprintf(buf, "finished\n"); printf(buf)
+struct timeval start, end, delta;
+#define timer_start()	fflush(stdout); gettimeofday(&start, NULL)
+#define timer_end()	gettimeofday(&end, NULL)
+#define timer_print()	timersub(&end,&start,&delta); \
+			snprintf(buf, sizeof(buf), "%lu.%.2lu seconds\n", \
+			         delta.tv_sec, delta.tv_usec/10000); \
+			printf(buf)
 #else
 struct timeval start, end, delta;
 
