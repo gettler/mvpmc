@@ -445,6 +445,7 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 osd_surface_t*
 osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 {
+	extern osd_surface_t* gtk_create(int w, int h, unsigned long color);
 	switch (type) {
 #if defined(MVPMC_MG35)
 	case OSD_GFX:
@@ -462,6 +463,11 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 		return gfx_create(w, h, color);
 		break;
 #endif /* MVPMC_MEDIAMVP */
+#if defined(MVPMC_HOST)
+	case OSD_GFX:
+		return gtk_create(w, h, color);
+		break;
+#endif
 	default:
 		return NULL;
 	}

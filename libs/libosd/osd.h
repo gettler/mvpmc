@@ -32,6 +32,8 @@ typedef struct osd_func_s osd_func_t;
 #include "cursor.h"
 #elif defined(MVPMC_MG35)
 #include "mg35.h"
+#elif defined(MVPMC_HOST)
+#include <gtk/gtk.h>
 #endif
 
 #define full_width	__osd_full_width
@@ -91,6 +93,8 @@ struct osd_surface_s {
 		cursor_data_t cursor;
 #elif defined(MVPMC_MG35)
 		overlay_data_t overlay;
+#elif defined(MVPMC_HOST)
+		GdkDrawable *drawable;
 #endif
 	} data;
 };

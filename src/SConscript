@@ -14,8 +14,11 @@ target = mvp['TARG']
 toplevel = mvp['TOPLEVEL']
 bindir = mvp['INSTBINDIR']
 linkmode = mvp['LINKMODE']
+gtkcflags = env['GTKCFLAGS']
+gtkldflags = env['GTKLDFLAGS']
 
 mvp.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
+env.Append(CCFLAGS = ' ' + gtkcflags)
 
 #
 # Dynamically loadable plug-ins are not available on all platforms
@@ -31,7 +34,7 @@ if target == 'host':
 	libFLAC = []
 	libx11 = ['X11', 'pthread', 'rt', 'Xau', 'dl', 'Xdmcp']
 	libs = []
-	linkflags = '-static'
+	linkflags = ''
 	mvpapps = []
 else:
 	libx11dir = []
@@ -68,7 +71,7 @@ mvpmc = mvp.Program('mvpmc',
                             'id3', 'ts_demux', 'dvbpsi', 'dl'
                            ] + libFLAC + libx11 + libs,
                     LIBPATH = [ libdir, mysql_libdir ] + libx11dir,
-                    LINKFLAGS = linkflags)
+                    LINKFLAGS = linkflags + ' ' + gtkldflags)
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])
