@@ -31,7 +31,6 @@
 #define __initdata
 #include <linux/linux_logo.h>
 
-#if defined(MVPMC_MEDIAMVP)
 #define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
 
 #define OSD_WHITE	OSD_COLOR(255,255,255,255)
@@ -44,22 +43,6 @@
 #define OSD_PURPLE	OSD_COLOR(255,0,234,255)
 #define OSD_BROWN	OSD_COLOR(118,92,0,255)
 #define OSD_CYAN	OSD_COLOR(0,255,234,255)
-#elif defined(MVPMC_MG35)
-#define OSD_COLOR(r,g,b,a)	((r<<24) | (b<<16) | (g<<8) | a)
-
-#define OSD_WHITE	OSD_COLOR(255,255,255,255)
-#define OSD_RED		OSD_COLOR(255,0,0,255)
-#define OSD_BLUE	OSD_COLOR(0,0,255,255)
-#define OSD_GREEN	OSD_COLOR(0,255,0,255)
-#define OSD_BLACK	OSD_COLOR(0,0,0,255)
-#define OSD_YELLOW	OSD_COLOR(255,255,0,255)
-#define OSD_ORANGE	OSD_COLOR(255,180,0,255)
-#define OSD_PURPLE	OSD_COLOR(255,0,234,255)
-#define OSD_BROWN	OSD_COLOR(118,92,0,255)
-#define OSD_CYAN	OSD_COLOR(0,255,234,255)
-#else
-#error unknown architecture
-#endif
 
 typedef struct {
 	unsigned int c;
@@ -77,9 +60,13 @@ static char *test = NULL;
 static int lr;
 
 #if defined(MVPMC_MG35)
-#define timer_start() fflush(stdout)
-#define timer_end()
-#define timer_print() sprintf(buf, "finished\n"); printf(buf)
+struct timeval start, end, delta;
+#define timer_start()	fflush(stdout); gettimeofday(&start, NULL)
+#define timer_end()	gettimeofday(&end, NULL)
+#define timer_print()	timersub(&end,&start,&delta); \
+			snprintf(buf, sizeof(buf), "%lu.%.2lu seconds\n", \
+			         delta.tv_sec, delta.tv_usec/10000); \
+			printf(buf)
 #else
 struct timeval start, end, delta;
 

@@ -67,9 +67,12 @@ draw_pixel(osd_surface_t *surface, int x, int y, unsigned char pixel)
 }
 
 static int
-overlay_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
+overlay_draw_pixel_ayuv(osd_surface_t *surface, int x, int y,
+			unsigned char a, unsigned char Y,
+			unsigned char U, unsigned char V)
 {
 	int pixel;
+	unsigned int c = ((V<<24) | (U<<16) | (Y<<8) | a);
 
 	if ((pixel=find_color(surface, c)) == -1) {
 		if ((pixel=overlay_add_color(surface, c)) < 0) {
@@ -134,7 +137,7 @@ overlay_destroy_surface(osd_surface_t *surface)
 }
 
 static osd_func_t fp = {
-	.draw_pixel = overlay_draw_pixel,
+	.draw_pixel_ayuv = overlay_draw_pixel_ayuv,
 	.display = overlay_display_surface,
 	.undisplay = overlay_undisplay_surface,
 	.destroy = overlay_destroy_surface,
