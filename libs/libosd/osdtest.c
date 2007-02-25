@@ -31,6 +31,12 @@
 #define __initdata
 #include <linux/linux_logo.h>
 
+#if !defined(LINUX_LOGO_COLORS)
+#undef __initdata
+#define __initdata
+#include "../../src/splash.h"
+#endif
+
 #define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
 
 #define OSD_WHITE	OSD_COLOR(255,255,255,255)
@@ -92,7 +98,7 @@ fb_clear(void)
 
 	surface = osd_create_surface(width, height, OSD_BLACK, OSD_FB);
 
-#if 0
+#if defined(MVPMC_MG35)
 	if (surface) {
 		osd_display_surface(surface);
 		osd_destroy_surface(surface);
@@ -202,7 +208,7 @@ static int
 test_rectangles(char *name)
 {
 	int i;
-	int n = 500;
+	int n = 200;
 	osd_surface_t *surface = NULL;
 
 	printf("drawing %d rectangles\t", n);
@@ -553,8 +559,13 @@ test_fb(char *name)
 		FAIL;
 
 	image.colors = LINUX_LOGO_COLORS;
+#if defined(LOGO_H)
+	image.width = LOGO_W;
+	image.height = LOGO_H;
+#else
 	image.width = 80;
 	image.height = 80;
+#endif
 	image.red = linux_logo_red;
 	image.green = linux_logo_green;
 	image.blue = linux_logo_blue;
@@ -585,7 +596,7 @@ test_blit2(char *name)
 	osd_surface_t *fb = NULL;
 	osd_surface_t *osd = NULL;
 	osd_indexed_image_t image;
-	int x, y;
+	int x, y, w, h;
 
 	printf("testing blit2\t\t");
 
@@ -601,8 +612,13 @@ test_blit2(char *name)
 		FAIL;
 
 	image.colors = LINUX_LOGO_COLORS;
+#if defined(LOGO_H)
+	image.width = LOGO_W;
+	image.height = LOGO_H;
+#else
 	image.width = 80;
 	image.height = 80;
+#endif
 	image.red = linux_logo_red;
 	image.green = linux_logo_green;
 	image.blue = linux_logo_blue;
@@ -614,13 +630,16 @@ test_blit2(char *name)
 	if (osd_draw_indexed_image(fb, &image, x, y) < 0)
 		FAIL;
 
-	if (osd_blit(osd, x-80, y, fb, x, y, 80, 80) < 0)
+	w = image.width;
+	h = image.height;
+
+	if (osd_blit(osd, x-w, y, fb, x, y, w, h) < 0)
 		FAIL;
-	if (osd_blit(osd, x+80, y, fb, x, y, 80, 80) < 0)
+	if (osd_blit(osd, x+w, y, fb, x, y, w, h) < 0)
 		FAIL;
-	if (osd_blit(osd, x, y-80, fb, x, y, 80, 80) < 0)
+	if (osd_blit(osd, x, y-h, fb, x, y, w, h) < 0)
 		FAIL;
-	if (osd_blit(osd, x, y+80, fb, x, y, 80, 80) < 0)
+	if (osd_blit(osd, x, y+h, fb, x, y, w, h) < 0)
 		FAIL;
 
 	fb_clear();

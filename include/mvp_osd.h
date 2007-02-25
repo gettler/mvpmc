@@ -292,6 +292,40 @@ extern int osd_destroy_font(osd_font_t *font);
 extern int osd_font_height(osd_font_t *font);
 extern int osd_font_width(osd_font_t *font, char *str);
 
+extern void rgb2yuv(unsigned char r, unsigned char g, unsigned char b,
+		    unsigned char *y, unsigned char *u, unsigned char *v);
+extern void yuv2rgb(unsigned char y, unsigned char u, unsigned char v,
+		    unsigned char *r, unsigned char *g, unsigned char *b);
+
+static inline unsigned int
+rgba2yuva(unsigned int c)
+{
+	unsigned char a, r, g, b, Y, U, V;
+
+	a = (c >> 24) & 0xff;
+	r = (c >> 16) & 0xff;
+	g = (c >> 8) & 0xff;
+	b = c & 0xff;
+	rgb2yuv(r, g, b, &Y, &U, &V);
+
+	return ((V<<24) | (U<<16) | (Y<<8) | a);
+}
+
+static inline unsigned int
+yuva2rgba(unsigned int c)
+{
+	unsigned char Y, U, V, r, g, b, a;
+
+	Y = (c >> 8) & 0xff;
+	U = (c >> 16) & 0xff;
+	V = (c >> 24) & 0xff;
+	a = c & 0xff;
+
+	yuv2rgb(Y, U, V, &r, &g, &b);
+
+	return (a<<24) | (r<<16) | (g<<8) | b;
+}
+
 #endif /* MVP_OSD_H */
 
 #if 0

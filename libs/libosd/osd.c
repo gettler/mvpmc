@@ -388,26 +388,21 @@ blit_copy(osd_surface_t *dstsfc, int dstx, int dsty,
 	int x, y;
 	unsigned int c;
 
-	if ((srcsfc->fp->read_pixel == NULL) ||
-	    (dstsfc->fp->draw_pixel == NULL))
-		return -1;
-
-	if ((dstx <= 0) || ((dstx+w) >= dstsfc->width))
-		return -1;
-	if ((dsty <= 0) || ((dsty+h) >= dstsfc->height))
-		return -1;
-	if ((srcx <= 0) || ((srcx+w) >= srcsfc->width))
-		return -1;
-	if ((srcy <= 0) || ((srcy+h) >= srcsfc->height))
+	if (srcsfc->fp->read_pixel == NULL)
 		return -1;
 
 	for (x=0; x<w; x++) {
 		for (y=0; y<h; y++) {
-			c = srcsfc->fp->read_pixel(srcsfc, srcx+x, srcy+y);
-			if (dstsfc->fp->palette_add_color)
-				dstsfc->fp->palette_add_color(dstsfc, c);
-			if (dstsfc->fp->draw_pixel(dstsfc,
-						   dstx+x, dsty+y, c) != 0) {
+			if ((srcx+x < 0) || (srcx+x >= srcsfc->width))
+				continue;
+			if ((srcy+y < 0) || (srcy+y >= srcsfc->height))
+				continue;
+			if ((dstx+x < 0) || (dstx+x >= dstsfc->width))
+				continue;
+			if ((dsty+y < 0) || (dsty+y >= dstsfc->height))
+				continue;
+			c = osd_read_pixel(srcsfc, srcx+x, srcy+y);
+			if (osd_draw_pixel(dstsfc, dstx+x, dsty+y, c) != 0) {
 				return -1;
 			}
 		}
@@ -427,7 +422,8 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	 * XXX: what about clipping in source or destination?
 	 */
 
-	if (dstsfc->type != srcsfc->type) {
+	if ((dstsfc->type != srcsfc->type) ||
+	    (dstsfc->fp->blit == NULL)) {
 		return blit_copy(dstsfc, dstx, dsty,
 				 srcsfc, srcx, srcy, w, h);
 	}

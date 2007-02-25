@@ -54,6 +54,16 @@ overlay_add_color(osd_surface_t *surface, unsigned int c)
 }
 
 static int
+overlay_add_color_rgb(osd_surface_t *surface, unsigned int c)
+{
+	unsigned int C;
+
+	C = rgba2yuva(c);
+
+	return overlay_add_color(surface, C);
+}
+
+static int
 find_color(osd_surface_t *surface, unsigned int c)
 {
 	int i;
@@ -93,6 +103,18 @@ overlay_draw_pixel_ayuv(osd_surface_t *surface, int x, int y,
 	draw_pixel(surface, x, y, (unsigned char)pixel);
 
 	return 0;
+}
+
+unsigned int
+overlay_read_pixel(osd_surface_t *surface, int x, int y)
+{
+	unsigned char pixel;
+	unsigned int c;
+
+	pixel = surface->data.overlay.data[(y*surface->width)+x];
+	c = surface->data.overlay.palette[pixel];
+
+	return yuva2rgba(c);
 }
 
 static int
@@ -138,6 +160,35 @@ overlay_draw_horz_line(osd_surface_t *surface, int x1, int x2, int y,
 	}
 
 	memset(surface->data.overlay.data+(y*surface->width)+x1, pixel, x2-x1);
+
+	return 0;
+}
+
+static int
+overlay_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
+		   int x, int y)
+{
+	int i, X, Y;
+	unsigned long c, C;
+
+	surface->data.overlay.colors = 0;
+
+	for (i=0; i<image->colors; i++) {
+		c = osd_rgba(image->red[i],
+			     image->green[i],
+			     image->blue[i], 255);
+		C = rgba2yuva(c);
+		if (overlay_add_color(surface, C) < 0) {
+			return -1;
+		}
+	}
+
+	for (X=0; X<image->width; X++) {
+		for (Y=0; Y<image->height; Y++) {
+			draw_pixel(surface, x+X, y+Y,
+				   image->image[(Y*image->width)+X]-32);
+		}
+	}
 
 	return 0;
 }
@@ -212,8 +263,11 @@ overlay_destroy_surface(osd_surface_t *surface)
 }
 
 static osd_func_t fp = {
+	.palette_add_color = overlay_add_color_rgb,
 	.draw_pixel_ayuv = overlay_draw_pixel_ayuv,
+	.read_pixel = overlay_read_pixel,
 	.draw_horz_line = overlay_draw_horz_line,
+	.draw_indexed_image = overlay_draw_image,
 	.fill_rect = overlay_fill_rect,
 	.display = overlay_display_surface,
 	.undisplay = overlay_undisplay_surface,

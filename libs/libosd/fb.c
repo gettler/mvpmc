@@ -100,7 +100,9 @@ fb_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 	int pixel;
 
 	if ((pixel=find_color(surface, c)) == -1) {
-		return -1;
+		if ((pixel=fb_add_color(surface, c)) < 0) {
+			return -1;
+		}
 	}
 
 	draw_pixel(surface, x, y, (unsigned char)pixel);

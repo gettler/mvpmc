@@ -354,6 +354,10 @@ osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	glyph_str_t *g;
 	int i;
 
+	if (surface == NULL) {
+		return -1;
+	}
+
 	if (font == NULL) {
 		if ((font=get_default_font()) == NULL)
 			return -1;
