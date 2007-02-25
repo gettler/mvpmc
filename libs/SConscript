@@ -7,6 +7,7 @@ target = env['TARG']
 dir = env['BUILD_DIR']
 
 SConscript('libosd/SConscript', build_dir='libosd/'+dir, duplicate=0)
+SConscript('libinput/SConscript', build_dir='libinput/'+dir, duplicate=0)
 
 if target != 'mg35':
 	SConscript('libav/SConscript', build_dir='libav/'+dir, duplicate=0)
