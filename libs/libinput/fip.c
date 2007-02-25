@@ -45,6 +45,10 @@ input_open_kbd(int flags)
 		return NULL;
 	}
 
+	if (ioctl(fd, 0x00450003, 0) < 0) {
+		return NULL;
+	}
+
 	if ((input=(input_t*)malloc(sizeof(*input))) == NULL) {
 		return NULL;
 	}
