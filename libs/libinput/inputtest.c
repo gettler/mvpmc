@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "input.h"
 
@@ -39,12 +40,22 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-	printf("Waiting...");
-	fflush(stdout);
+	printf("Press any key (stop to quit):\n");
 
-	key = input_read(handle);
+	while (1) {
+		const char *name;
+		key = input_read(handle);
+		name = input_key_name(key);
+		if (name == NULL) {
+			fprintf(stderr, "Unknown key 0x%.8x!\n", key);
+			exit(1);
+		}
+		printf("\t0x%.8x\t%s\n", key, name);
 
-	printf("key is 0x%.8x\n", key);
+		if (strstr(name, "Stop") != NULL) {
+			break;
+		}
+	}
 
 	return 0;
 }

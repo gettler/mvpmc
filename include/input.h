@@ -33,5 +33,6 @@ extern int input_init(void);
 extern input_t* input_open(input_type_t type, int flags);
 extern int input_read(input_t *handle);
 extern int input_test(input_t *handle);
+extern const char *input_key_name(int key);
 
 #endif /* INPUT_H */

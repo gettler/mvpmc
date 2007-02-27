@@ -46,3 +46,9 @@ input_read_kbd(input_t *handle)
 {
 	return -1;
 }
+
+const char*
+input_key_name(int key)
+{
+	return NULL;
+}

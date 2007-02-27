@@ -40,6 +40,7 @@ input_open_kbd(int flags)
 {
 	input_t *input;
 	unsigned int f = O_RDONLY;
+	int fd;
 
 	if ((f & INPUT_BLOCKING) == 0)
 		f |= O_NONBLOCK;
@@ -77,4 +78,10 @@ input_read_kbd(input_t *handle)
 	}
 
 	return key;
+}
+
+const char*
+input_key_name(int key)
+{
+	return NULL;
 }

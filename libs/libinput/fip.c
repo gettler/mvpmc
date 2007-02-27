@@ -29,6 +29,62 @@
 #include "input.h"
 #include "input_local.h"
 
+#include "fip.h"
+
+static fip_key_t codes[] = {
+	{ KEY_FIP_UP, "FIP Up" },
+	{ KEY_FIP_DOWN, "FIP Down" },
+	{ KEY_FIP_LEFT, "FIP Left" },
+	{ KEY_FIP_RIGHT, "FIP Right" },
+	{ KEY_FIP_ENTER, "FIP Enter" },
+	{ KEY_FIP_POWER, "FIP Power" },
+	{ KEY_FIP_PLAY, "FIP Play/Pause" },
+	{ KEY_FIP_STOP, "FIP Stop/Init" },
+	{ KEY_IR_POWER, "IR Power" },
+	{ KEY_IR_MENU, "IR Menu" },
+	{ KEY_IR_TITLE, "IR Title" },
+	{ KEY_IR_SETUP, "IR Setup" },
+	{ KEY_IR_ANGLE, "IR Angle" },
+	{ KEY_IR_REPEAT, "IR Repeat" },
+	{ KEY_IR_ABREPEAT, "IR A-B Repeat" },
+	{ KEY_IR_SLOW, "IR Slow" },
+	{ KEY_IR_FILEINFO, "IR File Info" },
+	{ KEY_IR_TIMESRCH, "IR Time Search" },
+	{ KEY_IR_BCONT, "IR Brt. Cont" },
+	{ KEY_IR_MEDIA, "IR Media Type" },
+	{ KEY_IR_UP, "IR Up" },
+	{ KEY_IR_DOWN, "IR Down" },
+	{ KEY_IR_LEFT, "IR Left" },
+	{ KEY_IR_RIGHT, "IR Right" },
+	{ KEY_IR_ENTER, "IR Enter" },
+	{ KEY_IR_MAINPAGE, "IR Main Page" },
+	{ KEY_IR_PLAY, "IR Play/Pause" },
+	{ KEY_IR_STOP, "IR Stop" },
+	{ KEY_IR_REWIND, "IR Rewind" },
+	{ KEY_IR_FF, "IR Fast Forward" },
+	{ KEY_IR_PREV, "IR Prev" },
+	{ KEY_IR_NEXT, "IR Next" },
+	{ KEY_IR_VIDEO, "IR Video" },
+	{ KEY_IR_AUDIO, "IR Audio" },
+	{ KEY_IR_SUBTITLE, "IR Subtitle" },
+	{ KEY_IR_SCRSIZE, "IR Screen Size" },
+	{ KEY_IR_ONE, "IR 1" },
+	{ KEY_IR_TWO, "IR 2" },
+	{ KEY_IR_THREE, "IR 3" },
+	{ KEY_IR_FOUR, "IR 4" },
+	{ KEY_IR_FIVE, "IR 5" },
+	{ KEY_IR_SIX, "IR 6" },
+	{ KEY_IR_SEVEN, "IR 7" },
+	{ KEY_IR_EIGHT, "IR 8" },
+	{ KEY_IR_NINE, "IR 9" },
+	{ KEY_IR_ZERO, "IR 0" },
+	{ KEY_IR_VOLUP, "IR Volume Up" },
+	{ KEY_IR_VOLDOWN, "IR Volume Down" },
+	{ KEY_IR_MUTE, "IR Mute" },
+	{ KEY_IR_CANCEL, "IR Cancel" },
+	{ 0, NULL },
+};
+
 int
 input_init_local(void)
 {
@@ -77,4 +133,19 @@ input_read_kbd(input_t *handle)
 		return -1;
 
 	return key;
+}
+
+const char*
+input_key_name(int key)
+{
+	int i = 0;
+
+	while (codes[i].name != NULL) {
+		if (codes[i].code == key) {
+			return codes[i].name;
+		}
+		i++;
+	}
+
+	return NULL;
 }
