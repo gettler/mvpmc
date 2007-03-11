@@ -1,0 +1,10 @@
+#!/usr/bin/python
+#
+
+Import('env')
+
+target = env['TARG']
+dir = env['BUILD_DIR']
+
+SConscript('osd/SConscript', build_dir='osd/'+dir, duplicate=0)
+SConscript('html/SConscript', build_dir='html/'+dir, duplicate=0)

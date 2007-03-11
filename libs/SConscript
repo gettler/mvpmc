@@ -8,6 +8,8 @@ dir = env['BUILD_DIR']
 
 SConscript('libosd/SConscript', build_dir='libosd/'+dir, duplicate=0)
 SConscript('libinput/SConscript', build_dir='libinput/'+dir, duplicate=0)
+SConscript('libgw/SConscript', build_dir='libgw/'+dir, duplicate=0)
+SConscript('librefmem/SConscript', build_dir='librefmem/'+dir, duplicate=0)
 
 if target != 'mg35':
 	SConscript('libav/SConscript', build_dir='libav/'+dir, duplicate=0)
@@ -17,7 +19,6 @@ if target != 'mg35':
 	SConscript('libts_demux/SConscript', build_dir='libts_demux/'+dir, duplicate=0)
 	SConscript('libvnc/SConscript', build_dir='libvnc/'+dir, duplicate=0)
 	SConscript('libwidget/SConscript', build_dir='libwidget/'+dir, duplicate=0)
-	SConscript('librefmem/SConscript', build_dir='librefmem/'+dir, duplicate=0)
 
 if target == 'mvp':
 	SConscript('libtiwlan/SConscript', build_dir='libtiwlan/'+dir, duplicate=0)

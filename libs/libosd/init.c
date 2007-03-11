@@ -180,6 +180,8 @@ yuv2rgb(unsigned char y, unsigned char u, unsigned char v,
 int
 osd_open(void)
 {
+	gfx_init();
+
 #if defined(MVPMC_MG35)
 	if (overlay_init() < 0)
 		return -1;

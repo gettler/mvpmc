@@ -127,6 +127,7 @@ if target == 'kernel':
 elif target == 'mg35':
 	env.SConscript('dongle/libs/SConscript')
 	env.SConscript('libs/SConscript')
+	plugins = env.SConscript('plugins/SConscript')
 else:
 	#
 	# do the application build
@@ -142,6 +143,7 @@ else:
 		env.Depends(apps, inc)
 
 	libs = env.SConscript('dongle/libs/SConscript')
+	plugins = env.SConscript('plugins/SConscript')
 	mvplibs = env.SConscript('libs/SConscript')
 	mvpmc = env.SConscript('src/SConscript',
 			       build_dir='src/'+dir, duplicate=0)
@@ -195,5 +197,7 @@ else:
 	#
 	env.Depends(libs, inc)
 	env.Depends(mvplibs, libs)
+	env.Depends(plugins, mvplibs)
 	env.Depends(mvpmc, libs)
 	env.Depends(mvpmc, mvplibs)
+	env.Depends(mvpmc, plugins)

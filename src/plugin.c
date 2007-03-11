@@ -59,6 +59,8 @@ typedef struct {
 
 static builtin_t builtins[] = {
 #if !defined(PLUGIN_SUPPORT)
+	{ "html", plugin_init_html, plugin_release_html },
+	{ "osd", plugin_init_osd, plugin_release_osd },
 #endif /* !PLUGIN_SUPPORT */
 	{ NULL, NULL, NULL }
 };

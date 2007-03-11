@@ -28,6 +28,9 @@
 
 #define PLUGIN_VERSION(x,y)	((x << 16) | y);
 
+#define CURRENT_PLUGIN_VERSION	PLUGIN_VERSION(PLUGIN_MAJOR_VER, \
+					       PLUGIN_MINOR_VER)
+
 #define PLUGIN_PATH		"/usr/share/mvpmc/plugins"
 
 #define PLUGIN_NAME_MAX		32
@@ -45,5 +48,13 @@ extern unsigned long plugin_version;
 
 extern int plugin_init(void);
 extern int plugin_release(void);
+
+#if defined(PLUGIN_SUPPORT)
+#define PLUGIN_INIT(x)		int plugin_init(void) { return x(); }
+#define PLUGIN_RELEASE(x)	int plugin_release(void) { return x(); }
+#else
+#define PLUGIN_INIT(x)		int plugin_##x(void) { return x(); }
+#define PLUGIN_RELEASE(x)	int plugin_##x(void) { return x(); }
+#endif /* !PLUGIN_SUPPORT */
 
 #endif /* MVPMC_PLUGIN_H */

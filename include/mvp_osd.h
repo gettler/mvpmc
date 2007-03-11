@@ -65,6 +65,9 @@ typedef struct {
 	int n;
 } osd_clip_t;
 
+extern int osd_open(void);
+extern int osd_close(void);
+
 extern osd_surface_t *osd_clip_set(osd_surface_t *surface, osd_clip_t *clip);
 
 extern int osd_clip(osd_surface_t *surface,

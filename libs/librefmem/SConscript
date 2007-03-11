@@ -9,12 +9,21 @@ dir = env['BUILD_DIR']
 target = env['TARG']
 libdir = env['INSTLIBDIR']
 toplevel = env['TOPLEVEL']
+ldflags = env['LDFLAGS']
+linkmode = env['LINKMODE']
+bindir = env['INSTBINDIR']
 
 src = [ 'alloc.c', 'debug.c' ]
 
-static = env.StaticLibrary('refmem', src, CPPPATH = [ env['INCDIR'], '.', toplevel + '/dongle/install/' + target + '/include' ])
-shared = env.SharedLibrary('refmem', src, CPPPATH = [ env['INCDIR'],  '.', toplevel + '/dongle/install/' + target + '/include' ])
+static = env.StaticLibrary('refmem', src,
+                           CPPPATH = [ env['INCDIR'], '.',
+                                       toplevel + '/dongle/install/' + target + '/include' ])
 
-inst = env.Install(libdir, [ static, shared ])
+if linkmode == 'dynamic':
+    shared = env.SharedLibrary('refmem', src,
+                               CPPPATH = [ env['INCDIR'],  '.', toplevel + '/dongle/install/' + target + '/include' ])
+    inst = env.Install(libdir, [ static, shared ])
+else:
+    inst = env.Install(libdir, [ static ])
 
 Return('inst')

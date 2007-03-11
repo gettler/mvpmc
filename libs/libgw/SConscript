@@ -1,0 +1,36 @@
+#!/usr/bin/python
+#
+# libgw
+#
+
+Import ('env')
+
+dir = env['BUILD_DIR']
+target = env['TARG']
+libdir = env['INSTLIBDIR']
+ldflags = env['LDFLAGS']
+linkmode = env['LINKMODE']
+bindir = env['INSTBINDIR']
+
+common = [ 'init.c', 'gw.c', 'menu.c' ]
+
+if target == 'mvp':
+    src = [ common ]
+elif target == 'mg35':
+    src = [ common ]
+else:
+    src = [ common ]
+
+static = env.StaticLibrary('gw', src,
+                           CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                           LINKFLAGS = ldflags)
+
+if linkmode == 'dynamic':
+    shared = env.SharedLibrary('gw', src,
+                               CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                               LINKFLAGS = ldflags)
+    inst = env.Install(libdir, [ static, shared ])
+else:
+    inst = env.Install(libdir, [ static ])
+
+Return('inst')
