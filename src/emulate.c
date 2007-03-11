@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004, 2005, 2006, Jon Gettler
+ *  Copyright (C) 2004, 2005, 2006, 2007 Jon Gettler
  *  http://www.mvpmc.org/
  *
  *   Based on MediaMVP VNC Viewer
@@ -69,13 +69,22 @@
 #include <vncviewer.h>
 #include <nano-X.h>
 
+void log_emulation(void);
+
+#define SLENGTH 80
+static char logstr[SLENGTH];
 
 #if 0
 	#define PRINTF(x...) printf(x)
+	#define LPRINTF(x...) log_emulation();printf(x)	
 	#define TRC(fmt, args...) printf(fmt, ## args)
 	#define VERBOSE_DEBUG 1
+
+
+	
 #else
 	#define PRINTF(x...)
+	#define LPRINTF(x...)	
 	#define TRC(fmt, args...)
 #endif
 
@@ -92,18 +101,18 @@ extern video_callback_t mvp_functions;
 void UpdateFinished(void);
 void SetDisplayState(int state);
 void SetSurface(void);
-void RestoreSurface(void);
+void RestoreSurface(int locked);
 
 Bool media_init(stream_t *stream, char *hostname, int port);
 Bool media_send_request(stream_t *stream, char *uri);
 Bool media_send_read(stream_t *stream);
 Bool media_send_step(stream_t *stream, Bool forward);
-Bool media_send_seek(stream_t *stream, int32_t offset);
+Bool media_send_seek(stream_t *stream, int64_t offset);
 Bool media_send_stop(stream_t *stream);
 Bool media_send_eight(stream_t *stream);
 void media_queue_data(stream_t *stream);
 
-int media_seek(int value);
+int64_t media_seek(int64_t value);
 int needPing = 0;
 
 void pauseFileAck(int);
@@ -116,6 +125,7 @@ void mvp_server_cleanup(void);
 void mvp_key_callback(mvp_widget_t *widget, char key);
 int udp_listen(const char *iface, int port);
 int udp_broadcast(char *data, int len, int port);
+int64_t  media_offset_64(char *ptr);
 
 void ClearSurface(osd_surface_t *sfc);
 Bool direct_init(stream_t *stream, char *hostname, int port);
@@ -134,6 +144,7 @@ int wol_getmac(char *ip);
 int wol_wake(void);
 
 int is_live = 0;
+int server_osd_visible = 0;
 extern demux_handle_t *handle;
 void demux_set_iframe(demux_handle_t *handle,int type);
 
@@ -201,6 +212,7 @@ typedef enum {
 	EMU_PERCENT_PENDING,
 	EMU_PERCENT_RUNNING,
 	EMU_PERCENT,
+	EMU_LIVE,
 } emu_state_t;
 
 
@@ -362,7 +374,7 @@ void query_host_parameters(void)
 	char   buf[52];
 	char   buffer[20];
 	char  *ptr;
-	u_int32_t  ipaddr;
+	uint32_t  ipaddr;
 	int        s;
 	int        listen;
 	struct     timeval tv;
@@ -487,6 +499,8 @@ void query_host_parameters(void)
 pthread_t mvp_server_thread;
 
 pthread_mutex_t mymut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gbmut = PTHREAD_MUTEX_INITIALIZER;
+
 
 void *mvp_server_start(void *arg);
 
@@ -524,6 +538,7 @@ void *mvp_server_start(void *arg)
 	mystream.mediatype= 0;
 	mystream.volume = volume;
 	paused = 0;
+	server_osd_visible = 0;
 	gb_scale.x = gb_scale.y = gb_scale.mode = 0;
 	mvpw_set_timer(vnc_widget, mvp_timer_callback, 5000);
 	mvpw_set_fdinput(vnc_widget, mvp_fdinput_callback);
@@ -595,6 +610,10 @@ void *mvp_server_start(void *arg)
 		mvp_media = 2;
 		mvp_key_callback(vnc_widget,MVPW_KEY_POWER);
 	}
+	av_reset();
+	audio_clear();
+	video_clear();
+	av_video_blank();
 	return NULL;
 }
 
@@ -625,6 +644,7 @@ void mvp_server_cleanup(void)
 }
 #define HAUP_KEY_FORWARD 0x0f
 #define HAUP_KEY_PLAY    0x19
+#define HAUP_KEY_GUIDE   0x1f
 #define HAUP_KEY_STOP    0x1b
 #define HAUP_KEY_PAUSE   0x1c
 #define HAUP_KEY_REPLAY  0x2a
@@ -638,7 +658,7 @@ void mvp_server_remote_key(char key)
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 		0x09, 0x0a, 0x36, 0x24, 0x28, 0x1e, 0x37, 0x15,
 		0x11, 0x10, 0x35, 0x00, 0x33, 0x34, 0x32, 0x31,
-		0x2d, 0x2e, 0x2f, 0x00, 0x2c, 0x30, HAUP_KEY_SKIP, 0x20,
+		0x2d, 0x2e, 0x2f, HAUP_KEY_GUIDE, 0x2c, 0x30, HAUP_KEY_SKIP, 0x20,
 		0x12, 0x13, 0x00, 0x00, HAUP_KEY_REPLAY, 0x0d, 0x00, 0x00,
 		0x00, 0x27, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00,
 		HAUP_KEY_PAUSE, 0x00, 0x0e, 0x00, HAUP_KEY_FORWARD, HAUP_KEY_PLAY, HAUP_KEY_STOP, 0x1a,
@@ -648,19 +668,27 @@ void mvp_server_remote_key(char key)
 	int key1;
 	mystream.last_key = key;
 	if ( mystream.mediatype==TYPE_AUDIO || mystream.mediatype==TYPE_VIDEO ) {
-
-		if (is_stopping != EMU_RUNNING  && key!=MVPW_KEY_STOP   &&  key != MVPW_KEY_MENU) {
-			// not all keys valid when media stream is finished
-			return;
-		}
-
 		key1 = hauppageKey[(int)key];
 		PRINTF("av keymap %i = %x\n", key, key1);
+		if (is_stopping != EMU_RUNNING) {
+			// not all keys valid when media stream is finished
+			switch (key) {
+			case MVPW_KEY_FFWD:
+			case MVPW_KEY_REWIND:
+			case MVPW_KEY_REPLAY:
+			case MVPW_KEY_SKIP:
+				return;
+			default:
+				break;
+			}
+		}
 		switch (key) {
 		case MVPW_KEY_STOP:
 			if (mvp_state==EMU_RUNNING || mvp_state==EMU_STEP) {
-				is_stopping = EMU_STOP_PENDING;
-				osd_visible = -1;
+				if (gb_scale.mode == 0 ){
+					is_stopping = EMU_STOP_PENDING;
+					osd_visible = -1;
+				}
 				SendKeyEvent(key1, 0);
 			} else {
 				is_stopping = EMU_EMPTY_BUFFER;
@@ -668,17 +696,16 @@ void mvp_server_remote_key(char key)
 			}
 			break;
 		case MVPW_KEY_PLAY:
-			if (mvp_state==EMU_STEP || mvp_state==EMU_STEP_SEEK) {
+			if (mvp_state==EMU_STEP || mvp_state==EMU_STEP_SEEK ) { 
 				mvp_state=EMU_STEP_TO_PLAY;
 				SendKeyEvent(key1, 0);
 			} else {
 				SendKeyEvent(key1, 0);
-//                    SendIncrementalFramebufferUpdateRequest();
 			}
 			SendIncrementalFramebufferUpdateRequest();
 			break;
 		case MVPW_KEY_PAUSE:
-			if (mystream.length > 0 ) {
+			if (mystream.length > 0ll ) {
 				SendKeyEvent(key1, 0);
 				SendIncrementalFramebufferUpdateRequest();
 			}
@@ -692,8 +719,8 @@ void mvp_server_remote_key(char key)
 			SendKeyEvent(key1, 0);
 			break;
 		case MVPW_KEY_FFWD:
-			if (mvp_state==EMU_RUNNING) {
-				if (mystream.length > 0 ) {
+			if (mvp_state==EMU_RUNNING && gb_scale.mode == 0) {
+				if (mystream.length > 0ll ) {
 					mvp_state = EMU_STEP_PENDING;
 					mystream.direction = 1;                        
 					PRINTF("FFWD Key\n");
@@ -709,8 +736,8 @@ void mvp_server_remote_key(char key)
 			}
 			break;
 		case MVPW_KEY_REWIND:
-			if (mvp_state==EMU_RUNNING) {
-				if (mystream.length > 0 ) {
+			if (mvp_state==EMU_RUNNING && gb_scale.mode == 0) {
+				if (mystream.length > 0ll ) {
 					mvp_state = EMU_STEP_PENDING;
 					mystream.direction = 0;
 					PRINTF("REWIND Key\n");
@@ -724,14 +751,14 @@ void mvp_server_remote_key(char key)
 			}
 			break;
 		case MVPW_KEY_REPLAY:
-			if (mystream.length > 0 && mvp_state==EMU_RUNNING ) {
+			if (mystream.length > 0ll && mvp_state==EMU_RUNNING && gb_scale.mode == 0 ) { 
 				mvp_state = EMU_REPLAY_PENDING;
 				SendKeyEvent(key1, 0);
 				SendIncrementalFramebufferUpdateRequest();
 			}
 			break;
 		case MVPW_KEY_SKIP:
-			if (mystream.length > 0 && mvp_state==EMU_RUNNING) {
+			if (mystream.length > 0ll && mvp_state==EMU_RUNNING && gb_scale.mode == 0) { 
 				mvp_state = EMU_SKIP_PENDING;
 				SendKeyEvent(key1, 0);
 				SendIncrementalFramebufferUpdateRequest();
@@ -740,7 +767,7 @@ void mvp_server_remote_key(char key)
 		default:
 			break;
 		case MVPW_KEY_ZERO ... MVPW_KEY_NINE:
-			if ( mystream.length > 0 && mvp_state==EMU_RUNNING) {
+			if ( mystream.length > 0ll && mvp_state==EMU_RUNNING) {
 				// only Hauppauge protocol supported
 				if (useHauppageExtentions == 2 ) {
 					mvp_state = EMU_PERCENT_PENDING;
@@ -748,8 +775,6 @@ void mvp_server_remote_key(char key)
 				mystream.direction = key1;
 				SendKeyEvent(key1, 0);
 				SendIncrementalFramebufferUpdateRequest();
-//                    }
-
 			}
 			break;
 		case MVPW_KEY_CHAN_UP:
@@ -817,6 +842,15 @@ void mvp_server_remote_key(char key)
 	return;
 }
 
+void mvp_server_reset_state(void)
+{
+	printf("Go OK Reset\n");
+	mvp_state=EMU_RUNNING;
+	if (paused) {
+		av_pause();
+		paused = 0;
+	}
+}
 
 int udp_listen(const char *iface, int port)
 {
@@ -922,7 +956,7 @@ static void HandleEvents(GR_EVENT *ev);
 /** \brief Initialise a connection to the vnc server
  *
  *  \param hostname Hostname
- *  \param port Pot
+ *  \param port Port
  *
  *  \retval -1 - Connection failed
  *  \retval other - socket
@@ -1013,16 +1047,16 @@ Bool RDCSendRequestAck(int type, int responding)
 
 Bool RDCSendProgress(stream_t *stream)
 {
-	char    buf[10];
+	char    buf[12];
 	char *ptr;
 
 	memset(buf,0,sizeof(buf));
 
 	buf[0] = rfbRdcProgress;
 	ptr = buf + 4;
-	INT32_TO_BUF(stream->current_position,ptr);
-
-	if (!WriteExact(rfbsock,buf,sizeof(buf)) ) {
+	INT64_TO_PROGBUF(stream->current_position,ptr);
+	if (!WriteExact(rfbsock,buf,10) ) {
+		pthread_mutex_unlock(&gbmut);
 		return False;
 	}
 	return True;
@@ -1034,10 +1068,12 @@ Bool RDCSendPing(void)
 
 	buf[0] = 0x08;
 	buf[1] = 0;
-
+	pthread_mutex_lock(&gbmut);
 	if (!WriteExact(rfbsock,buf,sizeof(buf)) ) {
+		pthread_mutex_unlock(&gbmut);
 		return False;
 	}
+	pthread_mutex_unlock(&gbmut);	
 	return True;
 }
 
@@ -1046,7 +1082,8 @@ Bool HandleRDCMessage(int sock)
 {
 	char   buf[64];
 	char *ptr;
-	unsigned int value;
+//	int64_t value;
+	uint uvalue=0;
 
 	PRINTF("Received RDC command ");
 	if ( !ReadExact(sock,buf + 1,33) ) {
@@ -1093,13 +1130,17 @@ Bool HandleRDCMessage(int sock)
 						mvp_state=EMU_SEEK_TO_PLAY;
 						SetSurface();
 						media_send_step(&mystream,mystream.direction);
+						break;
 					} else {
-						if (mystream.mediatype == TYPE_VIDEO) {
-							if (length==0 && mvp_state == EMU_RUNNING ) {
-								// just a play during a play
+						if ( mystream.mediatype == 0 ) {
+							PRINTF("Open Request\n");
+						} else if ( mvp_state != EMU_STOP_PENDING ) { 
+							if (length==0 && mvp_state == EMU_RUNNING ) { // just a play during a play
 								break;
 							}
 							PRINTF("FAKE STOP\n");
+							mvp_state=EMU_LIVE;
+							/*
 							jumping = 1;
 							jump_target = -1;
 							mystream.request_read = mystream.queued - mystream.out_position;
@@ -1108,14 +1149,17 @@ Bool HandleRDCMessage(int sock)
 							output_pipe = open(MVP_NAMED_PIPE, O_WRONLY);
 							jump_target = 0;
 							is_stopping = mvp_state = EMU_RUNNING;
+							*/
 							if (mystream.last_key!=MVPW_KEY_CHAN_UP ||mystream.last_key!=MVPW_KEY_CHAN_DOWN ) {
 							}
+						} else {
+							PRINTF("Stop Pending\n");
 						}
-						while ( is_stopping==EMU_RUNNING && av_empty() == 0 ) {
-							usleep(100000);
-						}
-						client_play(filename);
 					}
+					while (mvp_state!=EMU_LIVE && is_stopping==EMU_RUNNING && av_empty() == 0 ) {
+						usleep(100000);
+					}
+					client_play(filename);
 				}
 				break;
 			case 1:
@@ -1123,19 +1167,23 @@ Bool HandleRDCMessage(int sock)
 				break;
 			case 2:
 				ptr = buf + 18;
-				BUF_TO_INT16(value,ptr);
+				BUF_TO_INT16(uvalue,ptr);
 				mvp_state=EMU_SKIP_REPLAY_OK;
-				media_send_seek(&mystream,media_seek(value));
+				media_send_seek(&mystream,media_seek(uvalue));
 				break;
 			case 3:
 				ptr = buf + 18;
-				BUF_TO_INT16(value,ptr);
+				BUF_TO_INT16(uvalue,ptr);
 				mvp_state=EMU_SKIP_REPLAY_OK;
-				media_send_seek(&mystream,media_seek(-1*value));
+				media_send_seek(&mystream,media_seek(-1ll*uvalue));
 				break;
 			case 4:
+				if ( mystream.mediatype == 0 ) {
+					PRINTF("Bogus Request\n");
+					break;
+				}
 				mvp_state=EMU_PERCENT_RUNNING;
-				media_send_seek(&mystream,(mystream.length*buf[19])/100);
+				media_send_seek(&mystream,(mystream.length*buf[19])/100ll);
 				break;
 			default:
 				if (mvp_state==EMU_STEP_TO_PLAY) {
@@ -1171,7 +1219,7 @@ Bool HandleRDCMessage(int sock)
 				break;
 			} else if (is_stopping == EMU_STOPPED ) {
 				PRINTF("Ignore this because STOP PENDING \n");
-				is_stopping = EMU_STOPPED_AGAIN;            
+				is_stopping = EMU_STOPPED_AGAIN;
 			} else if (is_stopping != EMU_RUNNING || mystream.mediatype == TYPE_AUDIO ) {
 				usleep(200000);
 				client_stop();
@@ -1183,8 +1231,16 @@ Bool HandleRDCMessage(int sock)
 				if (mvp_state == EMU_RUNNING ) {
 					client_stop();
 					is_stopping = EMU_STOPPED;
+				} else {
+					while (mvp_state == EMU_STOP_PENDING && is_stopping != EMU_STOP_PENDING) {
+						usleep(200000);
+					}
+					RDCSendPing();
 				}
 //            osd_visible=-1;
+			} else if (mvp_state == EMU_LIVE) {
+				PRINTF("Ignore this LIVE RDC_STOP\n");
+				break;
 			} else {
 				PRINTF("EMU_RDC_STOP\n");
 				if ( media_init(&mystream,c_server_host,c_stream_port) == False ) {
@@ -1256,14 +1312,35 @@ Bool HandleRDCMessage(int sock)
 		}
 	case RDC_MENU:
 		{
+
+			/* Returns two additional bytes
+			First Byte :
+			 0 : hide screen
+			 1 : show screen
+			 2 : BUSY ICON control ( depends on 2nd byte )
+			
+			Second Byte :
+			  0 : hide BUSY ICON
+			  1 : show BUSY ICON
+			*/
+
 			PRINTF("RDC_MENU\n");
 			buf[7] = 0;
 			char display[2];
 			if ( !ReadExact(sock,display,2) ) {
 				return False;
+			}  
+	      		if (display[0]==2) {
+				if (display[1]==0) {
+					printf("Hide Busy icon\n");
+					mvpw_set_timer(vnc_widget, mvp_timer_callback, 5000);
+				} else {
+					printf("Show Busy icon\n");
+				}
+			} else {
+				PRINTF("Display is state %d %x\n",display[0],buf[7]);
+				SetDisplayState(display[0]);
 			}
-			PRINTF("Display is state %d %x\n",display[0],buf[7]);
-			SetDisplayState(display[0]);
 			break;
 		}
 	case RDC_MUTE:
@@ -1304,7 +1381,7 @@ Bool HandleRDCMessage(int sock)
 				break;
 			default:
 				settings[2] = 3;
-				break;                    
+				break;
 			}
 
 			settings[3] = 0 ;  // no flicker
@@ -1316,8 +1393,8 @@ Bool HandleRDCMessage(int sock)
 			}
 			/* gbpvr setting 14 - ea-60-01-00  20-0a  24-01 */
 			ptr = settings + 12;
-			BUF_TO_INT32(value,ptr);
-			printf("%x ss timeout %u mode %x un1 %x un2 %x\n",buf[7],value,settings[16],settings[20],settings[24]);
+			BUF_TO_INT32(uvalue,ptr);
+			printf("%x ss timeout %u mode %x un1 %x un2 %x\n",buf[7],uvalue,settings[16],settings[20],settings[24]);
 
 			if ( !WriteExact(sock,settings,buf[7]) ) {
 				free(settings);
@@ -1389,9 +1466,6 @@ client.c
 void client_play(char *filename)
 {
 	media_send_eight(&mystream);
-	if (mystream.last_key==MVPW_KEY_CHAN_UP || mystream.last_key==MVPW_KEY_CHAN_DOWN ) {
-		PRINTF("CHANNEL\n");
-	}
 }
 
 void client_stop(void)
@@ -1424,12 +1498,12 @@ void pauseFileAck(int type)
 
 void client_rewind(void)
 {
-	media_send_seek(&mystream,media_seek(0));
+	media_send_seek(&mystream,media_seek(0ll));
 }
 
 void client_forward(void)
 {
-	media_send_seek(&mystream,media_seek(0));
+	media_send_seek(&mystream,media_seek(0ll));
 }
 
 
@@ -1455,8 +1529,16 @@ Bool media_init(stream_t *stream, char *hostname, int port)
 	}
 
 	stream->sock = ConnectToTcpAddr(host, port);
-
-
+	/*
+	const int keepalive_value = 0;
+	if (setsockopt(stream->sock, SOL_SOCKET,SO_KEEPALIVE,
+		(char *)&keepalive_value,sizeof(keepalive_value)) < 0){
+		fprintf(stderr,programName);
+		perror(": mvpmc : setsockopt keepalive");
+		close(stream->sock);
+		return -1;
+	}
+	*/
 	return stream->sock != -1 ? True : False;
 }
 
@@ -1464,18 +1546,18 @@ Bool media_init(stream_t *stream, char *hostname, int port)
 Bool media_send_request(stream_t *stream, char *uri)
 {
 	char *buf;
-	u_int16_t len = strlen(uri);
+	u_int16_t len = strlen(uri)+1;
 	char *ptr;
 
 
 	PRINTF("Requesting");
 	PRINTF(" %s\n",uri);
-	buf = CALLOC(40 + len + 1, sizeof(char));
+	buf = CALLOC(40 + len, sizeof(char));
 
 	buf[0] = MEDIA_REQUEST;
 
 	ptr = buf + 36;
-	INT16_TO_BUF(len + 1,ptr);
+	INT16_TO_BUF(len,ptr);
 	strcpy(buf+40,uri);
 
 	if (!WriteExact(stream->sock,buf,40) ) {
@@ -1483,7 +1565,7 @@ Bool media_send_request(stream_t *stream, char *uri)
 		printf("8 error 1\n");
 		return False;
 	}
-	if (!WriteExact(stream->sock,uri,len + 1) ) {
+	if (!WriteExact(stream->sock,uri,len) ) {
 		FREE(buf);
 		printf("8 error 2\n");
 		return False;
@@ -1511,10 +1593,11 @@ Bool media_send_read(stream_t *stream)
 
 	ptr = buf + 8;
 	INT32_TO_BUF(stream->blocklen,ptr);
-
+	pthread_mutex_lock(&gbmut);
 	if (!WriteExact(stream->sock,buf,40) ) {
 		return False;
 	}
+	pthread_mutex_unlock(&gbmut);
 
 	stream->last_command = MEDIA_BLOCK;
 
@@ -1543,7 +1626,7 @@ Bool media_send_step(stream_t *stream, Bool forward)
 }
 
 
-Bool media_send_seek(stream_t *stream, int32_t offset)
+Bool media_send_seek(stream_t *stream, int64_t offset)
 {
 	char   buf[40];
 	char  *ptr;
@@ -1551,11 +1634,9 @@ Bool media_send_seek(stream_t *stream, int32_t offset)
 	memset(buf,0,sizeof(buf));
 	buf[0] = MEDIA_SEEK;
 	memcpy(buf+6,stream->fileid,2);
-
-
+//	stream->current_position = offset;
 	ptr = buf + 8;
-	INT32_TO_BUF(offset,ptr);
-
+	INT64_TO_BUF(offset,ptr);
 	if (!WriteExact(stream->sock,buf,40) ) {
 		return False;
 	}
@@ -1604,6 +1685,9 @@ Bool media_read_message(stream_t *stream)
 {
 	char   buf[40];
 	char  *ptr;
+	uint32_t ucount;
+//	int32_t count;
+		
 	if (!ReadExact(stream->sock,buf,40) ) {
 		return False;
 	}
@@ -1611,7 +1695,7 @@ Bool media_read_message(stream_t *stream)
 	switch ( buf[0] ) {
 	case MEDIA_REQUEST:
 		{
-			PRINTF("Media Request ");
+			PRINTF("Media msgopen\n");
 			if ( buf[4] == 0 ) {
 				PRINTF("Aborted reading\n");
 			} else {
@@ -1619,74 +1703,77 @@ Bool media_read_message(stream_t *stream)
 				paused=0;
 				stream->mediatype = buf[4];
 				if ( buf[4] == TYPE_VIDEO ) {
-					PRINTF("Video\n");
+					PRINTF("Video vfmt %d mpeg-%d\n",buf[5],buf[6]+1);
 					stream->blocklen = 200000;
 				} else {
 					PRINTF("Audio\n");
 					stream->blocklen = 20000;
 				}
-				// 8 w 
+				// 8 w
 				// 10 h
 				is_stopping=EMU_RUNNING;
 				ptr = buf + 14;
 				BUF_TO_INT16(stream->bps,ptr);
 				ptr = buf + 16;
-				BUF_TO_INT32(stream->length,ptr);
-				printf("bps %d length %lld\n",stream->bps,stream->length);
+				stream->length = media_offset_64(ptr);
+				ptr = buf + 24;
+				uint64_t dropoff = media_offset_64(ptr);
+				printf("bps %d length %lld dropoff %lld\n",stream->bps,stream->length,dropoff);
 				memcpy(stream->fileid,buf+34,2);
 				if (av_mute()==1) {
 					av_mute();
 				}
 				switch ( buf[4] ) {
-				case 0x01:	     /* MPEG */   
-					close(output_pipe);
-
-					mystream.queued = 0;
-					video_functions = &mvp_functions;
-					if (gb_scale.mode==0 ) {
-						osd_fill_rect(surface,0,0,720,surface_y,MVPW_TRANSPARENT);
+				case 0x01:	     /* MPEG */
+					if (mvp_state==EMU_RUNNING) {
+						mystream.queued = 0;
+						video_functions = &mvp_functions;
+						if (gb_scale.mode==0 ) {
+							osd_fill_rect(surface,0,0,720,surface_y,MVPW_TRANSPARENT);
+						}
+						audio_clear();
+						video_clear();
+						mvpw_set_bg(root, MVPW_TRANSPARENT);
+						video_play(NULL);
+						av_move(gb_scale.x, gb_scale.y, gb_scale.mode);
+						mvpw_set_bg(root, MVPW_TRANSPARENT);
+						output_pipe = open(MVP_NAMED_PIPE, O_WRONLY);
+						demux_set_iframe(handle,1);
+					} else {
+						mvp_state=EMU_RUNNING;
 					}
-					audio_clear();            
-					video_clear();
-					mvpw_set_bg(root, MVPW_TRANSPARENT);
-//                av_move(0, 0, 0);
-					video_play(NULL);
-					av_move(gb_scale.x, gb_scale.y, gb_scale.mode);
-					mvpw_set_bg(root, MVPW_TRANSPARENT);
-					output_pipe = open(MVP_NAMED_PIPE, O_WRONLY);
-//                output_file = open("/music/mympeg.mpg", O_CREAT|O_TRUNC|O_WRONLY);
-					demux_set_iframe(handle,1);
-					break;                                        
+					break;
 				case 0x02: /* MP3 */
-					av_reset();
-					audio_play(NULL);
-					output_pipe = open(MVP_NAMED_PIPE, O_WRONLY);
+					if (mvp_state==EMU_RUNNING) {
+						av_reset();
+						audio_play(NULL);
+						output_pipe = open(MVP_NAMED_PIPE, O_WRONLY);
+					} else {
+						av_reset();
+						sleep(1);
+						mvp_state=EMU_RUNNING;
+					} 
 					break;
 				}
+//				media_send_seek(stream,dropoff);
 				media_send_seek(stream,0);
 				if ( mystream.mediatype == TYPE_VIDEO ) {
 					RDCSendRequestAck(RDC_MENU,1);
 				}
-//            media_send_read(stream);
-
+//				media_send_read(stream);
 			}
 			break;
 		}
 	case MEDIA_STEP:
 		{
-//        PRINTF("Media Step\n");
+			ptr = buf + 12;
+			BUF_TO_INT32(ucount,ptr);
+//			PRINTF("Media msgfast redo %d ffwd %d count %u\n",buf[8],buf[9],ucount);
 			ptr = buf + 16;
-			BUF_TO_INT32(stream->current_position,ptr);
+			stream->current_position = media_offset_64(ptr);;
 			if (mvp_state== EMU_STEP_SEEK) {
 				PRINTF("Step received1\n");
 				mvp_state=EMU_STEP;
-//			pthread_kill(video_write_thread, SIGURG);
-//			pthread_kill(audio_write_thread, SIGURG);
-				/*
-				av_stop();
-				av_reset();
-				av_play();
-				*/
 				if (stream->direction) {
 					osd_draw_text(surface, 100, 100, "Fast Forward",osd_rgba(255,255, 0, 255),MVPW_TRANSPARENT, 1, NULL);
 					pauseFileAck(0x02);
@@ -1696,7 +1783,7 @@ Bool media_read_message(stream_t *stream)
 					pauseFileAck(0x03);
 					RDCSendRequestAck(RDC_REWIND,1);
 				}
-//			pthread_cond_broadcast(&video_cond);  
+//			pthread_cond_broadcast(&video_cond);
 			} else if (mvp_state==EMU_SEEK_TO_PLAY) {
 				mvp_state=EMU_RUNNING;
 				numRead=0;
@@ -1706,7 +1793,7 @@ Bool media_read_message(stream_t *stream)
 		}
 	case MEDIA_BLOCK:
 		{
-			int32_t    blocklen;
+			uint32_t    blocklen;
 			if (mvp_state==EMU_SKIP_REPLAY_OK || mvp_state==EMU_PERCENT) {
 				mvp_state=EMU_RUNNING;
 				numRead=5;
@@ -1723,20 +1810,16 @@ Bool media_read_message(stream_t *stream)
 			}
 			BUF_TO_INT32(blocklen,ptr);
 			is_live = 0;
-//        PRINTF("Media Block %d",blocklen);
-
-			if ( blocklen != 0 ) {
-
+//			PRINTF("Media Block %u ",blocklen);
+			if ( blocklen != 0 ) {				
 				if (buf[0]==MEDIA_BLOCK) {
 					ptr = buf + 12;
-					BUF_TO_INT32(stream->current_position,ptr);
+					stream->current_position = media_offset_64(ptr);;
 					if ( stream->current_position > stream->length && is_live==0) {
 						is_live = 1;
 					}
 				};
-
-//            PRINTF(" Current %lld\n",stream->current_position);
-
+//				PRINTF("Current %lld\n",stream->current_position);
 				stream->inbuf = MALLOC(blocklen);
 				if (!ReadExact(stream->sock,stream->inbuf,blocklen) ) {
 					return False;
@@ -1749,7 +1832,7 @@ Bool media_read_message(stream_t *stream)
 				}
 				media_queue_data(&mystream);
 			} else {
-				PRINTF(" %lld %lld\n",stream->current_position,stream->length);
+				PRINTF("EOF %lld %lld\n",stream->current_position,stream->length);
 				if ( stream->current_position < stream->length ) {
 					if (buf[0]==MEDIA_BLOCK) {
 						ptr = buf + 12;
@@ -1783,21 +1866,22 @@ Bool media_read_message(stream_t *stream)
 			}
 			break;
 		}
-
 	case MEDIA_SEEK:
 		{
-			PRINTF("Media Seek\n");
-
+			int32_t whence=0;
+			ptr = buf + 12;
+			INT32_TO_BUF(whence,ptr);
+			PRINTF("Media msgseek %d\n",whence);
 //        media_send_read(stream);                  
 			if (mvp_state== EMU_STEP_PENDING||mvp_state==EMU_STEP_SEEK ||mvp_state==EMU_STEP) {
 				ptr = buf + 8;
-				INT32_TO_BUF(stream->current_position,ptr);
-				PRINTF("First Step\n");
+				INT64_TO_BUF(stream->current_position,ptr);
+				PRINTF("Steppingk\n");
 				media_send_step(stream,stream->direction);
 				mvp_state=EMU_STEP_SEEK;
 			} else if (mvp_state==EMU_SEEK_TO_PLAY) {
 				ptr = buf + 8;
-				INT32_TO_BUF(stream->current_position,ptr);
+				INT64_TO_BUF(stream->current_position,ptr);
 				mvp_state = EMU_RUNNING;
 				numRead = 0;
 				media_send_read(stream);
@@ -1820,13 +1904,12 @@ Bool media_read_message(stream_t *stream)
 		}
 	case MEDIA_STOP:
 		{
+			if (mystream.last_key==MVPW_KEY_CHAN_UP || mystream.last_key==MVPW_KEY_CHAN_DOWN ) {
+				PRINTF("CHANNEL\n");
+			}
 			mvpw_set_timer(vnc_widget, NULL, 0);
 			usleep(10000);
 			osd_visible = -1;
-			if (mystream.last_key==MVPW_KEY_CHAN_UP || mystream.last_key==MVPW_KEY_CHAN_DOWN ) {
-				PRINTF("CHANNEL\n");
-//            break;
-			}
 			close(output_pipe);
 //        close(output_file);
 			stream->inbuflen = 0;
@@ -1835,16 +1918,17 @@ Bool media_read_message(stream_t *stream)
 				usleep(100000);
 			}
 			PRINTF("Media Stopped %d %d\n",mvp_state,is_stopping);
-			if (is_stopping != EMU_STOPPED ) {
+			if (is_stopping != EMU_STOP_PENDING ) {
 				RDCSendRequestAck(RDC_STOP,1);
 			} else {
-				RDCSendRequestAck(RDC_STOP,1);
+				RDCSendRequestAck(RDC_STOP,0);
 			}
 			osd_visible = -2;
 //        RDCSendStop();
-			if (mystream.mediatype==TYPE_VIDEO /*&& surface==NULL*/) {
+			if (mystream.mediatype==TYPE_VIDEO ) {
 				mvpw_set_timer(vnc_widget, NULL, 0);
 				video_clear();
+				av_video_blank();
 				demux_set_iframe(handle,0);
 //            av_move(0, 0, 0);
 				mvpw_set_bg(root, MVPW_TRANSPARENT);
@@ -1853,13 +1937,16 @@ Bool media_read_message(stream_t *stream)
 				audio_clear();
 				av_stop();
 			}
-
+			if (server_osd_visible!=0 && mystream.last_key!=MVPW_KEY_STOP) {
+				PRINTF( "Is this play all\n");
+				mystream.mediatype= 0;
+			}
 			mvp_state = EMU_RUNNING;
 			osd_visible = 0;
-			if (mystream.mediatype == TYPE_VIDEO) {
+			if (mystream.mediatype == TYPE_VIDEO ) {
 //            RDCSendRequestAck(RDC_MENU,1);
 				usleep(100000);
-				RestoreSurface();
+				RestoreSurface(1);
 			}
 			mvpw_set_timer(vnc_widget, mvp_timer_callback, 5000);
 			mystream.mediatype= 0;
@@ -1874,7 +1961,7 @@ Bool media_read_message(stream_t *stream)
 		{
 			PRINTF("Media 8\n");
 			media_send_request(&mystream,current);
-			RDCSendRequestAck(MEDIA_8,1);
+//			RDCSendRequestAck(MEDIA_8,1);
 			break;
 		}
 	default:
@@ -1973,7 +2060,7 @@ void RectangleUpdateYUV2(int x0, int y0, int w, int h,  unsigned char *buf1, uns
 
 	if ( mystream.mediatype==TYPE_VIDEO  ) {
 		printf("YUV2 update %d %d %d %d\n",x0,y0,w,h);
-		return;
+//		return;
 	}
 	PRINTF("YUV2 update %d %d %d %d\n",x0,y0,w,h);
 
@@ -2075,12 +2162,14 @@ void SetDisplayState(int state)
 		} else if (osd_visible==-1) {
 			osd_fill_rect(surface,0,0,720,surface_y,MVPW_TRANSPARENT);
 		}
+		server_osd_visible = state;
 		break;
 	case 1:
 		// clear screen
-		mvpw_set_timer(vnc_widget, mvp_timer_callback, 1000);
+		mvpw_set_timer(vnc_widget, mvp_timer_callback, 5000);
 		osd_fill_rect(surface,0,0,720,surface_y,MVPW_TRANSPARENT);
 		osd_fill_rect(surface2,0,0,720,surface_y,MVPW_TRANSPARENT);
+		server_osd_visible = state;
 		break;
 	case 2:
 		mvpw_set_timer(vnc_widget, mvp_timer_callback, 5000);
@@ -2091,6 +2180,7 @@ void SetDisplayState(int state)
 		osd_fill_rect(surface,0,0,720,surface_y,root_color);
 		osd_fill_rect(surface2,0,0,720,surface_y,root_color);
 		mvpw_set_timer(vnc_widget, mvp_timer_callback, 1000);
+		server_osd_visible = 1;
 		break;
 
 	}
@@ -2104,17 +2194,21 @@ void SetSurface(void)
 {
 	pthread_mutex_lock(&mymut);
 	osd_blit(surface2,0,0,surface,0,0,720,surface_y);
-	osd_blit(surface,0,0,surface_blank,0,0,720,surface_y);      
+	osd_blit(surface,0,0,surface_blank,0,0,720,surface_y);
 	pthread_mutex_unlock(&mymut);
 }
 
 
-void RestoreSurface(void)
+void RestoreSurface(int locked)
 {
-	pthread_mutex_lock(&mymut);
+	if (locked) {
+		pthread_mutex_lock(&mymut);
+	}
 	osd_blit(surface,0,0,surface3,0,0,720,surface_y);
 	osd_blit(surface2,0,0,surface3,0,0,720,surface_y);
-	pthread_mutex_unlock(&mymut);
+	if (locked) {
+		pthread_mutex_unlock(&mymut);
+	}
 }
 
 
@@ -2195,6 +2289,10 @@ int mvp_file_read(char *buf, int len)
 				}
 
 			}
+			if (mvp_state==EMU_LIVE) {
+				tslen = 0;
+			}
+
 		}
 	} while (tslen < len && jumping==0 );
 	if (tslen>0) {
@@ -2204,11 +2302,13 @@ int mvp_file_read(char *buf, int len)
 	return tslen;
 }
 
+
 void mvp_timer_callback(mvp_widget_t *widget)
 {
 	static int i=0;
+	LPRINTF("%s Timer Callback %d ping - %d\n",logstr,mvp_state,i);
 	if ( mystream.mediatype==TYPE_VIDEO  ) {
-		if (is_stopping==EMU_RUNNING || osd_visible == 0) {
+		if (is_stopping==EMU_RUNNING || osd_visible == 0 || mvp_state == EMU_STOP_PENDING) {
 			RDCSendPing();
 		} else {
 			SendIncrementalFramebufferUpdateRequest();
@@ -2239,8 +2339,8 @@ long long mvp_seek(long long how_much, int whence)
 	printf("how much %lld\n",how_much);
 	int data;
 	int len;
-	char tsbuf_static[100000]; 
-	long long rc;    
+	char tsbuf_static[100000];
+	long long rc;
 	av_mute();
 	do {
 	    if (how_much > 100000) {
@@ -2254,7 +2354,7 @@ long long mvp_seek(long long how_much, int whence)
 		if (data == -1 && (errno==EAGAIN ) ) {
 		    continue;
 		}
-		if (data==0) {                
+		if (data==0) {
 		    //mystream.out_position = ;
 		}
 		break;
@@ -2312,37 +2412,38 @@ void mvp_fdinput_callback(mvp_widget_t *widget, int fd)
 {
 	if (!HandleRFBServerMessage()) {
 		printf("Error updating screen\n");
-		mvp_key_callback(widget, MVPW_KEY_POWER);       
+		mvp_key_callback(widget, MVPW_KEY_POWER);
 	}
 }
 
-int media_seek(int value)
+int64_t media_seek(int64_t value)
 {
-	int rc;
-	long offset=0,offset1;
+	int64_t rc;
+	int64_t offset=0ll,offset1;
 
+	PRINTF("media_seek_64\n");
 	if (mystream.queued) {
 		offset = mystream.queued-mystream.out_position;
 	}
 
-	if ( offset < 0 ) {
+	if ( offset < 0ll ) {
 		offset = mystream.blocklen;
 	} else if (offset > mystream.length) {
-		offset = 0;
+		offset = 0ll;
 	}
 	offset1 = (value * mystream.bps * 100);
-	if ( offset1 < 0 && value > 0 ) {
-		offset1 = 0;
+	if ( offset1 < 0ll && value > 0ll ) {
+		offset1 = 0ll;
 	} else if (offset1 > mystream.length) {
 		offset1 = mystream.current_position;
 	}
 
-	PRINTF("%lld %ld ",mystream.current_position,offset);
+	PRINTF("%lld %lld ",mystream.current_position,offset);
 	rc = mystream.current_position - offset + offset1;
-	if (rc < 0) {
-		rc = 0;
+	if (rc < 0ll) {
+		rc = 0ll;
 	}
-	PRINTF("%d\n",rc);
+	PRINTF("%lld\n",rc);
 	/*
 	    demux_attr_t *attr;
 	    av_stc_t stc;
@@ -2414,10 +2515,35 @@ Bool HandlePing(void)
 	} else {
 		if ( mystream.mediatype!=TYPE_VIDEO  && needPing == 0 ) {
 			printf("Received Ping\n");
-			RDCSendPing();
+			RestoreSurface(0);
+//			RDCSendPing();
 		}
 		needPing = 0;
 	}
 	pthread_mutex_unlock(&mymut);
 	return True;
+}
+
+
+
+void log_emulation(void)
+{
+	struct tm *ptr;
+	time_t tm;
+	tm = time(NULL);
+	ptr = localtime(&tm);
+	strftime(logstr, SLENGTH, "%T", ptr);
+	return;
+}
+
+int64_t  media_offset_64(char *ptr)
+{
+	ulong offlow;
+	long offhigh;	
+	int64_t offset;
+	BUF_TO_INT32(offlow,ptr);
+	BUF_TO_INT32(offhigh,ptr);
+	offset = offhigh * 0x100000000ll + offlow;
+//	printf("%lld %lu %ld\n",offset,offhigh,offlow);
+	return offset;
 }
