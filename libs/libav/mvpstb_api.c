@@ -280,7 +280,7 @@ int mvpstb_set_audio_sync(int on)
 
 int mvpstb_audio_end(void)
 {
-	int wlr;
+	unsigned int wlr;
 
 	if (dcr_read(AUDIO_DSP_STATUS, &wlr) < 0)
 		return -1;
@@ -293,7 +293,7 @@ int mvpstb_audio_end(void)
 
 int mvpstb_video_end(void)
 {
-	int wlr;
+	unsigned int wlr;
 
 	if (dcr_read(VIDEO_CLIP_WLR, &wlr) < 0)
 		return -1;

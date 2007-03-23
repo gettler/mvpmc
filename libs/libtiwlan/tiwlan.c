@@ -146,7 +146,7 @@ read_vpd(void)
 	if (cfg->key[0] != '\0') {
 		if (verbose)
 			printf("WEP key found!\n");
-		strcpy(default_wep, cfg->key);
+		strcpy(default_wep, (char*)cfg->key);
 	} else {
 		if (verbose)
 			printf("WEP key not found!\n");
@@ -178,7 +178,7 @@ init_device(int fd, char *name)
 	memset(&dev, 0, sizeof(dev));
 	memset(&ssid, 0, sizeof(ssid));
 
-	strcpy(dev.device, name);
+	strcpy((char*)dev.device, name);
 	dev.arg2 = 0x00223834;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0xd;
@@ -202,7 +202,7 @@ start_config_manager(int fd, char *name)
 	unsigned long buf[256];
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, name);
+	strcpy((char*)dev.device, name);
 	dev.arg2 = 0x0022381c;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x4;
@@ -224,7 +224,7 @@ start_config_manager(int fd, char *name)
 	config_started = 1;
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00223818;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x4;
@@ -236,7 +236,7 @@ start_config_manager(int fd, char *name)
 	}
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00222018;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x24;
@@ -269,7 +269,7 @@ up_device(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00224420;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x75;
@@ -282,7 +282,7 @@ up_device(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00222018;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x24;
@@ -301,7 +301,7 @@ up_device(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00224420;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x75;
@@ -313,7 +313,7 @@ up_device(int fd, char *name)
 	}
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00223028;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x4;
@@ -377,7 +377,7 @@ up_device_wep(int fd, char *name)
 		return -1;
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00223410;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x4;
@@ -388,7 +388,7 @@ up_device_wep(int fd, char *name)
 	}
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00223488;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x4;
@@ -405,7 +405,7 @@ up_device_wep(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00223404;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x2c;
@@ -423,7 +423,7 @@ up_device_wep(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00222018;
 	dev.arg3 = 0x2;
 	dev.arg4 = 0x24;
@@ -442,7 +442,7 @@ up_device_wep(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00224420;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x75;
@@ -456,7 +456,7 @@ up_device_wep(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&buf, 0, sizeof(buf));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00224420;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x75;
@@ -477,7 +477,7 @@ get_ssid_list(int fd, char *name)
 	int n;
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, name);
+	strcpy((char*)dev.device, name);
 	dev.arg2 = 0x00222c20;
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &dev) != 0) {
@@ -486,7 +486,7 @@ get_ssid_list(int fd, char *name)
 	}
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, name);
+	strcpy((char*)dev.device, name);
 	dev.arg2 = 0x00222c1c;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x4;
@@ -498,7 +498,7 @@ get_ssid_list(int fd, char *name)
 
 	memset(&dev, 0, sizeof(dev));
 	memset(&slist, 0, sizeof(slist));
-	strcpy(dev.device, name);
+	strcpy((char*)dev.device, name);
 	dev.arg2 = 0x0022200c;
 	dev.arg3 = 0x1;
 	dev.arg4 = 0x2710;
@@ -555,7 +555,7 @@ init(void)
 		return -1;
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00222020;
 
 	if (ioctl(sockfd, SIOCDEVPRIVATE, &dev) != 0) {
@@ -564,7 +564,7 @@ init(void)
 	}
 
 	memset(&dev, 0, sizeof(dev));
-	strcpy(dev.device, DEVNAME);
+	strcpy((char*)dev.device, DEVNAME);
 	dev.arg2 = 0x00222c20;
 
 	if (ioctl(sockfd, SIOCDEVPRIVATE, &dev) != 0) {
