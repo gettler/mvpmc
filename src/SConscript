@@ -16,9 +16,14 @@ bindir = mvp['INSTBINDIR']
 linkmode = mvp['LINKMODE']
 gtkcflags = env['GTKCFLAGS']
 gtkldflags = env['GTKLDFLAGS']
+ldflags = env['LDFLAGS']
 
-mvp.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
-env.Append(CCFLAGS = ' ' + gtkcflags)
+#
+# XXX: dslinux uclibc build does not include large file support...
+#
+if target != 'mg35':
+	mvp.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
+	env.Append(CCFLAGS = ' ' + gtkcflags)
 
 #
 # Dynamically loadable plug-ins are not available on all platforms
@@ -53,25 +58,30 @@ if target == 'mvp':
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 
-mvpmc = mvp.Program('mvpmc',
-                    ['audio.c', 'colorlist.c', 'config.c', 'display.c',
-		     'emulate.c', 'fb.c', 'gui.c', 'http_stream.c', 'main.c',
-		     'mclient.c', 'mclient_mvpmc.c', 'mclient_cli.c',
-		     'mythtv.c', 'mythtv_livetv.c', 'tvguide.c',
-		     'playlist.c', 'plugin.c', 'replaytv.c', 'theme.c', 'video.c',
-		     'version.c', 'vlc_control.c', 'web_config.c', 'wss.c' ] +
-		    mvpapps,
+common = [ 'mvpmc.c', 'plugin.c', 'version.c' ]
+
+if target == 'mvp':
+	src = [ common ]
+elif target == 'mg35':
+	src = [ common ]
+else:
+	src = [ common ]
+
+if linkmode == 'static':
+	plugins = [ 'mvpmc_html.plugin', 'mvpmc_osd.plugin' ]
+	libs = [ 'gw', 'refmem' ]
+	linkflags = '-static'
+else:
+	plugins = [ ]
+	libs = [ 'dl', 'gw', 'refmem' ]
+	linkflags = ''
+
+mvpmc = mvp.Program('mvpmc', src,
                     CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                 '.', '../include' ],
-                    LIBS = ['widget', 'nano-X', 'mwengine', 'mwdrivers',
-                            'mwfonts', 'replaytv', 'expat',
-                            'osd', 'av', 'demux', 'cmyth', 'refmem', 'vnc',
-                            'mysqlclient', 'png12', 'z', 'jpeg', 'm',
-                            'gcc', 'pthread', 'a52', 'm', 'vorbisidec',
-                            'id3', 'ts_demux', 'dvbpsi', 'dl'
-                           ] + libFLAC + libx11 + libs,
-                    LIBPATH = [ libdir, mysql_libdir ] + libx11dir,
-                    LINKFLAGS = linkflags + ' ' + gtkldflags)
+                    LIBS = plugins + libs ,
+                    LIBPATH = [ libdir ],
+                    LINKFLAGS = ldflags + ' ' + linkflags + ' ' + gtkldflags)
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])
@@ -79,5 +89,8 @@ else:
 	inst = env.Install(bindir, mvpmc)
 
 env.Depends(mvpmc, version)
+env.Depends(inst, mvpmc)
 
-Return('inst')
+ret = [ mvpmc, inst ]
+
+Return('ret')

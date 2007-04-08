@@ -24,8 +24,11 @@
 #include <errno.h>
 
 #include "plugin_gw.h"
+#include "plugin_html.h"
 
+#if defined(PLUGIN_SUPPORT)
 unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
+#endif
 
 #define HTML_HEADER \
 	"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " \
@@ -59,6 +62,7 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 
 static int html_generate_container(int fd, gw_t *widget, int level);
 static int html_generate_menu(int fd, gw_t *widget, int level);
+static int html_generate_text(int fd, gw_t *widget, int level);
 
 static struct html_output_s {
 	gw_type_t type;
@@ -66,6 +70,7 @@ static struct html_output_s {
 } output[] = {
 	{ GW_TYPE_CONTAINER, html_generate_container },
 	{ GW_TYPE_MENU, html_generate_menu },
+	{ GW_TYPE_TEXT, html_generate_text },
 	{ 0, NULL },
 };
 
@@ -255,6 +260,39 @@ html_generate_menu(int fd, gw_t *widget, int level)
 	return -1;
 }
 
+static int
+html_generate_text(int fd, gw_t *widget, int level)
+{
+	char *head1 = "<div id=\"";
+	char *head2 = "\"><p>\n";
+	char *foot = "</p></div>\n";
+	char *text = NULL;
+
+	LEVEL();
+	WRITE(fd, head1, strlen(head1));
+	if (widget->name) {
+		WRITE(fd, widget->name, strlen(widget->name));
+	} else {
+		char *def = "text";
+		WRITE(fd, def, strlen(def));
+	}
+	
+	if (widget->data.text)
+		text = widget->data.text->text;
+
+	WRITE(fd, head2, strlen(head2));
+	if (text)
+		WRITE(fd, text, strlen(text));
+	
+	LEVEL();
+	WRITE(fd, foot, strlen(foot));
+
+	return 0;
+
+ err:
+	return -1;
+}
+
 int
 html_generate(int fd)
 {
@@ -279,10 +317,16 @@ html_generate(int fd)
 	return 0;
 }
 
-static int
+static plugin_html_t html = {
+	.generate = html_generate,
+};
+
+static void*
 init_html(void)
 {
-	return 0;
+	printf("HTML plug-in registered!\n");
+
+	return (void*)&html;
 }
 
 static int

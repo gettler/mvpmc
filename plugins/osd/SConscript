@@ -3,6 +3,8 @@
 # osd plugin
 #
 
+import os
+
 Import ('env')
 
 dir = env['BUILD_DIR']
@@ -11,8 +13,15 @@ libdir = env['INSTLIBDIR']
 ldflags = env['LDFLAGS']
 linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
+pwd = os.getcwd()
 
-common = [ 'osd.c' ]
+if linkmode == 'dynamic':
+	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+	
+env.CFile('css_lexer.c', 'css_lexer.l')
+env.CFile('css_parser.c', 'css_parser.y')
+
+common = [ 'css.c', 'osd.c', 'css_parser.c', 'list.c', 'draw.c' ]
 
 if target == 'mvp':
     src = [ common ]
@@ -21,16 +30,31 @@ elif target == 'mg35':
 else:
     src = [ common ]
 
-static = env.StaticLibrary('mvpmc_osd.plugin', src,
+osdlib = libdir + '/libosd.a'
+osdlibso = libdir + '/libosd.so'
+inputlib = libdir + '/libinput.a'
+inputlibso = libdir + '/libinput.so'
+ftlib = libdir + '/libfreetype.a'
+libs = '-a ' + osdlib + ' -a ' + inputlib + ' -a ' + ftlib
+
+plugin = pwd + '/libmvpmc_osd.plugin.a'
+
+foo = env.Command('dummy.a', 0,
+	    'scons/build_plugin.sh -t ' + plugin + ' ' + libs)
+
+static = env.StaticLibrary('mvpmc_osd.plugin.a', [ src, osdlib ],
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                           LINKFLAGS = ldflags)
+                           LINKFLAGS = ldflags + ' ' + osdlib)
 
 if linkmode == 'dynamic':
-    shared = env.SharedLibrary('mvpmc_osd.plugin.a', src,
+    shared = env.SharedLibrary('mvpmc_osd.plugin', [ src ],
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                               LINKFLAGS = ldflags)
+                               LINKFLAGS = ldflags + ' ' + osdlibso + ' ' + inputlibso)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])
+
+env.Depends(foo, static)
+env.Depends(inst, foo)
 
 Return('inst')

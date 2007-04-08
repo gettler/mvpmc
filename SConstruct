@@ -16,6 +16,17 @@ env.Replace(CCFLAGS = '-O3 -g -Wall -Werror')
 
 home = os.environ['HOME']
 
+#
+# Allow the user to supply their own cross-compiler
+#
+if os.environ.has_key('CROSS'):
+	cross = os.environ['CROSS']
+	if os.path.exists(cross + 'gcc') == 0:
+		print "cross-compiler '%s-gcc' not found"%cross
+		sys.exit(1)
+else:
+	cross = ''
+
 crosstool = '/opt/crosstool'
 toolchains =  '/opt/toolchains/'
 
@@ -30,14 +41,13 @@ if os.path.exists(toolchains) == 0:
 #    kernel
 #
 if target == 'mvp':
-	powerpc = 'powerpc-405-linux-uclibc'
-	gcc = 'gcc-3.4.5-uClibc-0.9.28'
-	prefix = powerpc + '-'
-	crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
-	cross = crossroot + '/bin/' + prefix
-	env.Replace(CROSS = cross)
-	env.Replace(CC = cross + 'gcc')
-	env.Replace(CROSSPATH = crossroot + '/' + powerpc + '/bin')
+	prefix = 'powerpc-linux-uclibc-'
+	if cross == '':
+		powerpc = 'powerpc-405-linux-uclibc'
+		gcc = 'gcc-3.4.5-uClibc-0.9.28'
+		prefix = powerpc + '-'
+		crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
+		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_MEDIAMVP'
 	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
@@ -45,13 +55,12 @@ if target == 'mvp':
 	env.Replace(GTKLDFLAGS = '')
 elif target == 'mg35':
 	# DSLinux toolchain is at http://dslinux.org/wiki/Compiling_DSLinux
+	if cross == '':
+		crossroot = '/usr/local/dslinux-toolchain-2006-11-04-i686'
+		cross = crossroot + '/bin/' + 'arm-linux-elf-'
+		cc = cross + 'gcc'
 	cppflags = '-DMVPMC_MG35'
 	ldflags = '-Wl,-elf2flt'
-	crossroot = '/usr/local/dslinux-toolchain-2006-11-04-i686'
-	cross = crossroot + '/bin/' + 'arm-linux-elf-'
-	cc = cross + 'gcc'
-	env.Replace(CROSS = cross)
-	env.Replace(CC = cc)
 	env.Replace(LINKMODE = 'static')
 	env.Replace(GTKCFLAGS = '')
 	env.Replace(GTKLDFLAGS = '')
@@ -104,6 +113,11 @@ env.Replace(TOPLEVEL = pwd)
 env.Replace(CPPFLAGS = cppflags)
 env.Replace(LDFLAGS = ldflags)
 
+env.Replace(CROSS = cross)
+env.Replace(CC = cross + 'gcc')
+
+crossroot = os.path.dirname(cross)
+env.Replace(CROSSPATH = crossroot)
 Export('env','crossroot')
 
 #
@@ -125,9 +139,19 @@ if target == 'kernel':
 		gcc = env.SConscript(gccbuild)
 		env.Depends(kern, gcc)
 elif target == 'mg35':
-	env.SConscript('dongle/libs/SConscript')
-	env.SConscript('libs/SConscript')
+	dir = env['BUILD_DIR']
+	libs = env.SConscript('dongle/libs/SConscript')
+	mvplibs = env.SConscript('libs/SConscript')
 	plugins = env.SConscript('plugins/SConscript')
+	mvpmc = env.SConscript('src/SConscript',
+			       build_dir='src/'+dir, duplicate=0)
+	inc = env.SConscript('include/SConscript')
+	env.Depends(mvplibs, inc)
+	env.Depends(mvplibs, libs)
+	env.Depends(plugins, mvplibs)
+	env.Depends(mvpmc, plugins)
+	env.Depends(mvpmc, mvplibs)
+	env.Depends(mvpmc, libs)
 else:
 	#
 	# do the application build

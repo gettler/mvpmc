@@ -146,9 +146,10 @@ input_open_kbd(int flags)
 }
 
 int
-input_read_kbd(input_t *handle)
+input_read_kbd(input_t *handle, int raw)
 {
 	unsigned int key;
+	int cmd;
 	fd_set fds;
 
 	if (handle->flags & INPUT_BLOCKING) {
@@ -162,7 +163,33 @@ input_read_kbd(input_t *handle)
 		return -1;
 	}
 
-	return key;
+	if (raw) {
+		return key;
+	}
+
+	switch (key & 0xffff0000) {
+	case KEY_IR_OLD_POWER:
+	case KEY_IR_NEW_POWER:
+		cmd = INPUT_CMD_POWER;
+		break;
+	case KEY_IR_OLD_UP:
+	case KEY_IR_NEW_UP:
+		cmd = INPUT_CMD_UP;
+		break;
+	case KEY_IR_OLD_DOWN:
+	case KEY_IR_NEW_DOWN:
+		cmd = INPUT_CMD_DOWN;
+		break;
+	case KEY_IR_OLD_OK:
+	case KEY_IR_NEW_OK:
+		cmd = INPUT_CMD_SELECT;
+		break;
+	default:
+		cmd = INPUT_CMD_ERROR;
+		break;
+	}
+
+	return cmd;
 }
 
 const char*

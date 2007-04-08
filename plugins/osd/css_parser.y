@@ -1,3 +1,4 @@
+%{
 /*
  *  Copyright (C) 2007, Jon Gettler
  *  http://www.mvpmc.org/
@@ -20,79 +21,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <string.h>
 
-#include "input.h"
-#include "input_local.h"
+extern int yyerror(char*);
+extern int yylex(void);
+%}
 
-int
-input_init(void)
-{
-	return input_init_local();
-}
+%token STR
+%token HASH DOT COMMA
+%token LBRAK RBRAK SEMI
 
-int
-input_release(void)
-{
-	return 0;
-}
+%%
 
-input_t*
-input_open(input_type_t type, int flags)
-{
-	switch (type) {
-	case INPUT_KEYBOARD:
-		return input_open_kbd(flags);
-		break;
-	case INPUT_MOUSE:
-		break;
-	}
+start:	STR	{ return $1; }
 
-	return NULL;
-}
+%%
 
-int
-input_read(input_t *handle)
-{
-	switch (handle->type) {
-	case INPUT_KEYBOARD:
-		return input_read_kbd(handle, 0);
-		break;
-	case INPUT_MOUSE:
-		break;
-	}
-
-	return -1;
-}
-
-int
-input_read_raw(input_t *handle)
-{
-	switch (handle->type) {
-	case INPUT_KEYBOARD:
-		return input_read_kbd(handle, 1);
-		break;
-	case INPUT_MOUSE:
-		break;
-	}
-
-	return -1;
-}
-
-int
-input_test(input_t *handle)
-{
-	return 0;
-}
-
-int
-input_fd(input_t *handle)
-{
-	if (handle == NULL)
-		return -1;
-
-	return handle->fd;
-}
+#include "css_lexer.c"

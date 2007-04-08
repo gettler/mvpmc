@@ -43,9 +43,10 @@ typedef struct {
 	char *name;
 	void *handle;
 	unsigned long *version;
-	int (*init)(void);
+	void *(*init)(void);
 	int (*release)(void);
 	mvp_atomic_t refcnt;
+	void *reloc;
 } plugin_data_t;
 
 static plugin_data_t loaded[MAX_LOAD];
@@ -53,9 +54,16 @@ static int nload = 0;
 
 typedef struct {
 	char *name;
-	int (*init)(void);
+	void *(*init)(void);
 	int (*release)(void);
 } builtin_t;
+
+#if !defined(PLUGIN_SUPPORT)
+extern void *plugin_init_html(void);
+extern int plugin_release_html(void);
+extern void *plugin_init_osd(void);
+extern int plugin_release_osd(void);
+#endif /* !PLUGIN_SUPPORT */
 
 static builtin_t builtins[] = {
 #if !defined(PLUGIN_SUPPORT)
@@ -66,26 +74,28 @@ static builtin_t builtins[] = {
 };
 
 #if defined(PLUGIN_SUPPORT)
-static int
+static void*
 plugin_start(int n)
 {
+	void *reloc;
+
 	if ((loaded[n].init == NULL) || (loaded[n].release == NULL)) {
-		return -1;
+		return NULL;
 	}
 
 	if ((loaded[n].version == NULL) || (*(loaded[n].version) != version)) {
-		return -1;
+		return NULL;
 	}
 
-	if (loaded[n].init() < 0) {
+	if ((reloc=loaded[n].init()) == NULL) {
 		dlclose(loaded[n].handle);
 		free(loaded[n].name);
 		memset(loaded+n, 0, sizeof(loaded[0]));
 		nload--;
-		return -1;
+		return NULL;
 	}
 
-	return 0;
+	return reloc;
 }
 
 static int
@@ -127,9 +137,10 @@ plugin_find(char *name)
 		if ((colon=strchr(search, ';')) != NULL) {
 			*(colon++) = '\0';
 		}
-		sprintf(path, "%s/%s", search, path);
+		sprintf(path, "%s/%s", search, name);
 		if (access(path, R_OK|X_OK) == 0) {
-			break;
+			printf("PLUGIN: found %s\n", path);
+			goto found;
 		}
 		search = colon;
 	}
@@ -137,6 +148,7 @@ plugin_find(char *name)
 	free(path);
 	path = NULL;
 
+ found:
  err:
 	if (search)
 		free(search);
@@ -144,15 +156,16 @@ plugin_find(char *name)
 	return path;
 }
 
-static int
+static void*
 plugin_load_file(char *name)
 {
 	char filename[PLUGIN_NAME_MAX+128];
 	char *path;
-	int i, rc = -1;
+	int i;
+	void *reloc = NULL;
 
 	if ((name == NULL) || (strlen(name) >= PLUGIN_NAME_MAX)) {
-		return -1;
+		return NULL;
 	}
 
 	snprintf(filename, sizeof(filename), "mvpmc_%s.plugin.%lu.%lu",
@@ -172,13 +185,18 @@ plugin_load_file(char *name)
 		goto found;
 	}
 
-	return -1;
+	snprintf(filename, sizeof(filename), "libmvpmc_%s.plugin", name);
+	if ((path=plugin_find(filename)) != NULL) {
+		goto found;
+	}
+
+	return NULL;
 
  found:
 	for (i=0; i<MAX_LOAD; i++) {
 		if (loaded[i].name == NULL) {
 			void *handle;
-			int (*dl_init)(void);
+			void *(*dl_init)(void);
 			int (*dl_release)(void);
 			unsigned long *dl_ver;
 
@@ -202,7 +220,9 @@ plugin_load_file(char *name)
 
 				nload++;
 
-				rc = plugin_start(i);
+				reloc = plugin_start(i);
+
+				loaded[i].reloc = reloc;
 			}
 			break;
 		}
@@ -210,14 +230,26 @@ plugin_load_file(char *name)
 
 	free(path);
 
-	return rc;
+	return reloc;
+}
+#else
+static void*
+plugin_start(int n)
+{
+	void *reloc;
+
+	if ((reloc=loaded[n].init()) == NULL) {
+		return NULL;
+	}
+
+	return reloc;
 }
 #endif /* PLUGIN_SUPPORT */
 
-static int
+static void*
 plugin_load_builtin(int n)
 {
-	int rc = -1;
+	void *rc = NULL;
 	int i;
 
 	for (i=0; i<MAX_LOAD; i++) {
@@ -232,35 +264,36 @@ plugin_load_builtin(int n)
 			nload++;
 
 			rc = plugin_start(i);
+			break;
 		}
 	}
 
 	return rc;
 }
 
-int
+void*
 plugin_load(char *name)
 {
-	int rc = -1;
+	void *reloc = NULL;
 	int i;
 
 	if (name == NULL) {
-		return -1;
+		return NULL;
 	}
 
 	for (i=0; i<MAX_LOAD; i++) {
 		if (loaded[i].name && (strcmp(loaded[i].name, name) == 0)) {
-			rc = 0;
+			reloc = loaded[i].reloc;
 			mvp_atomic_inc(&(loaded[i].refcnt));
 			break;
 		}
 	}
 
-	if (rc < 0) {
+	if (reloc == NULL) {
 		i = 0;
 		while (builtins[i].name) {
 			if (strcmp(builtins[i].name, name) == 0) {
-				rc = plugin_load_builtin(i);
+				reloc = plugin_load_builtin(i);
 				break;
 			}
 			i++;
@@ -268,12 +301,12 @@ plugin_load(char *name)
 	}
 
 #if defined(PLUGIN_SUPPORT)
-	if ((rc < 0) && (nload < MAX_LOAD)) {
-		rc = plugin_load_file(name);
+	if ((reloc == NULL) && (nload < MAX_LOAD)) {
+		reloc = plugin_load_file(name);
 	}
 #endif /* PLUGIN_SUPPORT */
 
-	return rc;
+	return reloc;
 }
 
 int
@@ -310,7 +343,7 @@ plugin_setup(void)
 {
 	printf("Plug-in setup: version %lu.%lu, %d builtins\n",
 	       PLUGIN_MAJOR(version), PLUGIN_MINOR(version),
-	       (sizeof(builtins)/sizeof(builtins[0]))-1);
+	       (int)(sizeof(builtins)/sizeof(builtins[0]))-1);
 
 	if (!enabled) {
 		printf("Loadable plug-in support disabled\n");

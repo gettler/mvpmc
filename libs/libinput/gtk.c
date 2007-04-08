@@ -42,7 +42,7 @@ input_open_kbd(int flags)
 }
 
 int
-input_read_kbd(input_t *handle)
+input_read_kbd(input_t *handle, int raw)
 {
 	return -1;
 }

@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "gw_local.h"
+#include "input.h"
 
 int
 gw_menu_title_set(gw_t *widget, char *title)
@@ -50,7 +51,8 @@ gw_menu_title_set(gw_t *widget, char *title)
 }
 
 int
-gw_menu_item_add(gw_t *widget, char *text)
+gw_menu_item_add(gw_t *widget, char *text,
+		 gw_select_t select, gw_hilite_t hilite)
 {
 	gw_menu_t *data;
 	gw_menu_item_t **items = NULL, *item = NULL;
@@ -63,20 +65,25 @@ gw_menu_item_add(gw_t *widget, char *text)
 
 	item = (gw_menu_item_t*)ref_alloc(sizeof(*item));
 
-	item->text = ref_strdup(text);
-	item->selectable = true;
-	item->checked = false;
-	item->hilite = false;
-
 	if (item == NULL) {
 		return -1;
 	}
+
+	item->text = ref_strdup(text);
+	item->selectable = true;
+	item->checked = false;
+	item->hilited = false;
+	item->select = select;
+	item->hilite = hilite;
+
+	printf("Menu has %d items\n", data->n);
 
 	if (data->n == 0) {
 		items = (gw_menu_item_t**)ref_alloc(sizeof(*items));
 		if (items == NULL) {
 			goto err;
 		}
+		item->hilited = true;
 		items[0] = item;
 		data->n = 1;
 		data->items = items;
@@ -99,4 +106,73 @@ gw_menu_item_add(gw_t *widget, char *text)
 	}
 
 	return -1;
+}
+
+static int
+menu_select(gw_t *widget)
+{
+	gw_menu_t *data;
+	int i = 0;
+
+	data = widget->data.menu;
+
+	while (i < data->n) {
+		if (data->items[i]->hilited) {
+			printf("Select '%s'\n", data->items[i]->text);
+			if (data->items[i]->select) {
+				data->items[i]->select(widget);
+				return 0;
+			}
+			return -1;
+		}
+		i++;
+	}
+
+	return -1;
+}
+
+int
+gw_menu_input(gw_t *widget, int c)
+{
+	gw_menu_t *data;
+	int i = 0, cur = -1;
+	int delta;
+
+	data = widget->data.menu;
+
+	if (data->n <= 1) {
+		return -1;
+	}
+
+	printf("Input command: %d\n", c);
+
+	switch (c) {
+	case INPUT_CMD_UP:
+		delta = -1;
+		break;
+	case INPUT_CMD_DOWN:
+		delta = 1;
+		break;
+	case INPUT_CMD_SELECT:
+		return menu_select(widget);
+	default:
+		return -1;
+	}
+
+	while (i < data->n) {
+		if (data->items[i]->hilited) {
+			cur = i;
+			break;
+		}
+		i++;
+	}
+
+	if (cur >= 0) {
+		data->items[cur]->hilited = false;
+		i = (cur+data->n+delta) % data->n;
+		data->items[i]->hilited = true;
+		printf("Change hilite: %d --> %d\n", cur, i);
+	}
+
+	return 0;
 }

@@ -173,4 +173,9 @@ static inline void mvp_atomic_set(mvp_atomic_t *a, unsigned val) {
 	*a = val;
 };
 
+#define mvp_atomic_val __mvp_atomic_val
+static inline int mvp_atomic_val(mvp_atomic_t *a) {
+	return *a;
+};
+
 #endif  /* __MVP_ATOMIC_H */

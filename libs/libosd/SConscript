@@ -13,6 +13,7 @@ bindir = env['INSTBINDIR']
 ldflags = env['LDFLAGS']
 gtkcflags = env['GTKCFLAGS']
 gtkldflags = env['GTKLDFLAGS']
+linkmode = env['LINKMODE']
 
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
@@ -39,7 +40,7 @@ osdtest = env.Program('osdtest',
 		      LIBPATH = [ libdir ],
 		      LINKFLAGS = ldflags + ' ' + gtkldflags )
 
-if target == 'mvp':
+if linkmode == 'dynamic':
 	shared = env.SharedLibrary('osd', src,
 				   CPPPATH = [ env['INCDIR'],
 					       env['INSTINCDIR'],

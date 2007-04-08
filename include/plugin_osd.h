@@ -17,35 +17,18 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef INPUT_H
-#define INPUT_H
+#ifndef PLUGIN_OSD_H
+#define PLUGIN_OSD_H
 
-typedef struct input_s input_t;
+#include "plugin.h"
+#include "plugin_gw.h"
 
-typedef enum {
-	INPUT_KEYBOARD=1,
-	INPUT_MOUSE,
-} input_type_t;
+typedef struct {
+	int (*input_fd)(void);
+	int (*input_read)(void);
+	int (*css_load)(char*);
+	int (*generate)(gw_t*);
+	int (*update_widget)(gw_t*);
+} plugin_osd_t;
 
-typedef enum {
-	INPUT_CMD_ERROR=0,
-	INPUT_CMD_POWER,
-	INPUT_CMD_UP,
-	INPUT_CMD_DOWN,
-	INPUT_CMD_LEFT,
-	INPUT_CMD_RIGHT,
-	INPUT_CMD_SELECT,
-} input_cmd_t;
-
-#define INPUT_BLOCKING	0x1
-
-extern int input_init(void);
-extern int input_release(void);
-extern input_t* input_open(input_type_t type, int flags);
-extern int input_read(input_t *handle);
-extern int input_read_raw(input_t *handle);
-extern int input_test(input_t *handle);
-extern const char *input_key_name(int key);
-extern int input_fd(input_t*);
-
-#endif /* INPUT_H */
+#endif /* PLUGIN_OSD_H */

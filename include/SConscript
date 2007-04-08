@@ -19,7 +19,7 @@ headers = [ 'cmyth.h', 'input.h', 'gw.h',
             'plugin.h', 'rfbproto.h',
             'vncviewer.h', 'tiwlan.h' ]
 
-plugin_headers = [ 'plugin_gw.h' ]
+plugin_headers = [ 'plugin_gw.h', 'plugin_html.h', 'plugin_osd.h' ]
 
 inst = env.Install(incdir, [ headers, plugin_headers ])
 

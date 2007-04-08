@@ -21,11 +21,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/select.h>
 
+#include "plugin.h"
 #include "gw_local.h"
+
+#include "plugin_html.h"
+#include "plugin_osd.h"
 
 gw_t *root = NULL;
 gw_t *commands = NULL;
+
+plugin_osd_t *osd = NULL;
+plugin_html_t *html = NULL;
 
 gw_t*
 gw_root(void)
@@ -33,10 +41,61 @@ gw_root(void)
 	return root;
 }
 
+static int
+gw_load_plugins(unsigned int dev)
+{
+	unsigned int loaded = 0;
+
+	if ((dev & GW_DEV_HTML) && ((html=plugin_load("html")) == NULL)) {
+		goto err;
+	}
+	loaded |= GW_DEV_HTML;
+
+	if ((dev & GW_DEV_OSD) && ((osd=plugin_load("osd")) == NULL)) {
+		goto err;
+	}
+	loaded |= GW_DEV_OSD;
+
+	return 0;
+
+ err:
+	if (loaded & GW_DEV_OSD) {
+		plugin_unload("osd");
+		osd = NULL;
+	}
+
+	if (loaded & GW_DEV_HTML) {
+		plugin_unload("html");
+		html = NULL;
+	}
+
+	return -1;
+}
+
 int
-gw_init(void)
+gw_device_add(unsigned int dev)
+{
+	return -1;
+}
+
+int
+gw_device_remove(unsigned int dev)
+{
+	return -1;
+}
+
+int
+gw_init(unsigned int dev)
 {
 	if (root != NULL) {
+		return -1;
+	}
+
+	if (dev == 0) {
+		return -1;
+	}
+
+	if (gw_load_plugins(dev) < 0) {
 		return -1;
 	}
 
@@ -72,5 +131,19 @@ gw_init(void)
 int
 gw_shutdown(void)
 {
+	return 0;
+}
+
+int
+gw_output(void)
+{
+#if 0
+	plugin_html_t *h = (plugin_html_t*)html;
+
+	h->generate(fileno(stdout));
+#endif
+
+	osd->generate(root);
+
 	return 0;
 }

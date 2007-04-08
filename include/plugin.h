@@ -21,7 +21,7 @@
  */
 
 #define PLUGIN_MAJOR_VER	0
-#define PLUGIN_MINOR_VER	1
+#define PLUGIN_MINOR_VER	2
 
 #define PLUGIN_MAJOR(x)		((x >> 16) & 0xffff)
 #define PLUGIN_MINOR(x)		(x & 0xffff)
@@ -38,7 +38,7 @@
 /*
  * Symbols from the mvpmc application
  */
-extern int plugin_load(char *name);
+extern void *plugin_load(char *name);
 extern int plugin_unload(char *name);
 
 /*
@@ -46,14 +46,14 @@ extern int plugin_unload(char *name);
  */
 extern unsigned long plugin_version;
 
-extern int plugin_init(void);
+extern void *plugin_init(void);
 extern int plugin_release(void);
 
 #if defined(PLUGIN_SUPPORT)
-#define PLUGIN_INIT(x)		int plugin_init(void) { return x(); }
+#define PLUGIN_INIT(x)		void *plugin_init(void) { return x(); }
 #define PLUGIN_RELEASE(x)	int plugin_release(void) { return x(); }
 #else
-#define PLUGIN_INIT(x)		int plugin_##x(void) { return x(); }
+#define PLUGIN_INIT(x)		void *plugin_##x(void) { return x(); }
 #define PLUGIN_RELEASE(x)	int plugin_##x(void) { return x(); }
 #endif /* !PLUGIN_SUPPORT */
 

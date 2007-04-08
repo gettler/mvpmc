@@ -40,7 +40,9 @@ typedef struct {
 	char *text;
 	bool selectable;
 	bool checked;
-	bool hilite;
+	bool hilited;
+	gw_select_t select;
+	gw_hilite_t hilite;
 } gw_menu_item_t;
 
 typedef struct {
@@ -101,10 +103,13 @@ struct gw_s {
 	gw_type_t type;
 	char *name;
 	bool realized;
+	struct gw_s *next;
+	struct gw_s *prev;
 	struct gw_s *parent;
 	struct gw_s *above;
 	struct gw_s *below;
 	gw_event_t event_mask;
+	mvp_atomic_t generation;
 	union {
 		gw_container_t *container;
 		gw_menu_t *menu;

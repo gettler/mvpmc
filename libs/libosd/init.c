@@ -183,9 +183,10 @@ osd_open(void)
 	gfx_init();
 
 #if defined(MVPMC_MG35)
-	if (overlay_init() < 0)
+	if (overlay_init() < 0) {
 		return -1;
-#endif
+	}
+#endif /* MVPMC_MG35 */
 
 	return 0;
 }

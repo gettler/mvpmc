@@ -28,6 +28,6 @@ struct input_s {
 
 extern int input_init_local(void);
 extern input_t* input_open_kbd(int flags);
-extern int input_read_kbd(input_t *handle);
+extern int input_read_kbd(input_t *handle, int raw);
 
 #endif /* INPUT_LOCAL_H */

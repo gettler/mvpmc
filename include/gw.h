@@ -33,6 +33,10 @@ typedef enum {
 
 typedef struct gw_s gw_t;
 
+#define GW_DEV_OSD	0x0001
+#define GW_DEV_HTML	0x0002
+#define GW_DEV_VFD	0x0004
+
 typedef enum {
 	/* GUI types */
 	GW_TYPE_CONTAINER = 1,
@@ -50,18 +54,32 @@ typedef enum {
 	GW_TYPE_BUSY,
 } gw_type_t;
 
-extern int gw_init(void);
+typedef int (*gw_select_t)(gw_t*);
+typedef int (*gw_hilite_t)(gw_t*, bool);
+
+extern int gw_init(unsigned int dev);
 extern int gw_shutdown(void);
 extern gw_t *gw_root(void);
 
 extern gw_t* gw_create(gw_type_t type, gw_t *parent);
 
-extern int gw_realize(gw_t* widget);
+extern int gw_map(gw_t* widget);
+extern int gw_unmap(gw_t* widget);
 extern int gw_name_set(gw_t *widget, char *name);
 
+extern int gw_focus_set(gw_t *widget);
+extern int gw_focus_cb_set(gw_select_t input);
+
 extern int gw_menu_title_set(gw_t *widget, char *title);
-extern int gw_menu_item_add(gw_t *widget, char *text);
+extern int gw_menu_item_add(gw_t *widget, char *text,
+			    gw_select_t select, gw_hilite_t hilite);
+extern int gw_menu_input(gw_t *widget, int c);
+
+extern int gw_text_set(gw_t *widget, char *text);
 
 extern int gw_html_generate(int fd);
+
+extern int gw_loop(struct timeval *to);
+extern int gw_output(void);
 
 #endif /* GW_H */

@@ -6,5 +6,9 @@ Import('env')
 target = env['TARG']
 dir = env['BUILD_DIR']
 
-SConscript('osd/SConscript', build_dir='osd/'+dir, duplicate=0)
-SConscript('html/SConscript', build_dir='html/'+dir, duplicate=0)
+osd = env.SConscript('osd/SConscript', build_dir='osd/'+dir, duplicate=0)
+html = env.SConscript('html/SConscript', build_dir='html/'+dir, duplicate=0)
+
+ret = [ osd, html ]
+
+Return('ret')

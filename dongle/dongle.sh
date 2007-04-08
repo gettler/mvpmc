@@ -10,7 +10,7 @@ TOOLLIB=`dirname ${CROSS}`/../lib
 
 echo STRIP $STRIP
 
-DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot"
+DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot usr/share/mvpmc/plugins"
 WRAPPER_DIRS="bin sbin etc usr/bin usr/sbin dev tmp lib proc mnt"
 
 BIN="busybox flashcp mvpmc ntpclient osdtest scp djmount nbtscan"
@@ -23,12 +23,14 @@ USRBIN=""
 
 USRSBIN=""
 
-LIB="libav.so libcmyth.so libdemux.so librefmem.so libosd.so libts_demux.so libvnc.so libwidget.so libvorbisidec.so.1.0.2 libvorbisidec.so.1 libfreetype.so.6.3.10 libfreetype.so.6 libfreetype.so libpng12.so.0.0.0 libpng12.so.0 libpng12.so libid3.so.0.0.0 libid3.so libid3.so.0 libexpat.so.0.5.0 libexpat.so.0 libexpat.so libdvbpsi.so.4.0.0 libdvbpsi.so.4 libdvbpsi.so liba52.so.0.0.0 liba52.so.0 liba52.so libjpeg.so.62.0 libjpeg.so libtiwlan.so"
-TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libgcc_s_nof.so.1 libpthread.so.0 libutil.so.0 libdl.so.0 libresolv.so.0"
+LIB="libinput.so libgw.so libav.so libcmyth.so libdemux.so librefmem.so libosd.so libts_demux.so libvnc.so libwidget.so libvorbisidec.so.1.0.2 libvorbisidec.so.1 libfreetype.so.6.3.10 libfreetype.so.6 libfreetype.so libpng12.so.0.0.0 libpng12.so.0 libpng12.so libid3.so.0.0.0 libid3.so libid3.so.0 libexpat.so.0.5.0 libexpat.so.0 libexpat.so libdvbpsi.so.4.0.0 libdvbpsi.so.4 libdvbpsi.so liba52.so.0.0.0 liba52.so.0 liba52.so libjpeg.so.62.0 libjpeg.so libtiwlan.so"
+PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin"
+GCCLIB="libgcc_s_nof.so.1 libgcc_s.so.1"
+TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libpthread.so.0 libutil.so.0 libdl.so.0 libresolv.so.0"
 LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 
 WRAPPERLIB="libav.so libosd.so"
-TWRAPPERLIB="libc.so.0 libcrypt.so.0 libgcc_s_nof.so.1 libdl-0.9.28.so libdl.so.0"
+TWRAPPERLIB="libc.so.0 libcrypt.so.0 libdl-0.9.28.so libdl.so.0"
 
 rm -rf filesystem/install
 rm -rf filesystem/install_wrapper
@@ -51,9 +53,27 @@ for i in $LIB ; do
     cp -d install/mvp/lib/$i filesystem/install/lib
     $STRIP filesystem/install/lib/$i
 done
+for i in $PLUGINS ; do
+    cp -d install/mvp/lib/$i filesystem/install/usr/share/mvpmc/plugins
+    $STRIP filesystem/install/usr/share/mvpmc/plugins/$i
+done
 for i in $TLIB ; do
     cp $TOOLLIB/$i filesystem/install/lib
     $STRIP filesystem/install/lib/$i
+done
+for i in $GCCLIB ; do
+    if [ -a $TOOLLIB/nof/$i ] ; then
+	TARGET=$TOOLLIB/nof/$i
+    fi
+    if [ -a $TOOLLIB/$i ] ; then
+	TARGET=$TOOLLIB/$i
+    fi
+    if [ "$TARGET" != "" ] ; then
+	cp $TARGET filesystem/install/lib
+	cp $TARGET filesystem/install_wrapper/lib
+	$STRIP filesystem/install/lib/$i
+	$STRIP filesystem/install_wrapper/lib/$i
+    fi
 done
 for i in $LDLIB ; do
     cp -d $TOOLLIB/$i filesystem/install/lib
@@ -95,7 +115,11 @@ for i in $USRSBIN ; do
     $STRIP filesystem/install/usr/sbin/$i
 done
 
-cp $TOOLLIB/../powerpc-405-linux-uclibc/target_utils/ldd filesystem/install/usr/bin
+if [ -a "$TOOLLIB/../powerpc-405-linux-uclibc" ] ; then
+    cp $TOOLLIB/../powerpc-405-linux-uclibc/target_utils/ldd filesystem/install/usr/bin
+else
+    cp $TOOLLIB/../powerpc-linux-uclibc/target_utils/ldd filesystem/install/usr/bin
+fi
 
 awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox filesystem/install" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox filesystem/install" $0) }}' apps/busybox/mvp/busybox-*/busybox.links
 awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox filesystem/install_wrapper" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox filesystem/install_wrapper" $0) }}' apps/busybox/mvp/busybox-*/busybox.links

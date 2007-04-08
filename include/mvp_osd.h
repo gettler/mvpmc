@@ -329,6 +329,19 @@ yuva2rgba(unsigned int c)
 	return (a<<24) | (r<<16) | (g<<8) | b;
 }
 
+#define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
+
+#define OSD_COLOR_WHITE		OSD_COLOR(255,255,255,255)
+#define OSD_COLOR_RED		OSD_COLOR(255,0,0,255)
+#define OSD_COLOR_BLUE		OSD_COLOR(0,0,255,255)
+#define OSD_COLOR_GREEN		OSD_COLOR(0,255,0,255)
+#define OSD_COLOR_BLACK		OSD_COLOR(0,0,0,255)
+#define OSD_COLOR_YELLOW	OSD_COLOR(255,255,0,255)
+#define OSD_COLOR_ORANGE	OSD_COLOR(255,180,0,255)
+#define OSD_COLOR_PURPLE	OSD_COLOR(255,0,234,255)
+#define OSD_COLOR_BROWN		OSD_COLOR(118,92,0,255)
+#define OSD_COLOR_CYAN		OSD_COLOR(0,255,234,255)
+
 #endif /* MVP_OSD_H */
 
 #if 0

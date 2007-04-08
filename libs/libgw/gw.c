@@ -24,11 +24,17 @@
 
 #include "gw_local.h"
 
+static mvp_atomic_t events;
+
+static gw_t *focus;
+
+static gw_select_t focus_input;
+
 static int
 gw_create_container(gw_t *widget)
 {
 	widget->data.container =
-		(gw_container_t*)ref_alloc(sizeof(gw_container_t*));
+		(gw_container_t*)ref_alloc(sizeof(gw_container_t));
 
 	if (widget->data.container == NULL) {
 		return -1;
@@ -36,19 +42,39 @@ gw_create_container(gw_t *widget)
 
 	widget->data.container->child = NULL;
 
+	gw_name_set(widget, "container");
+
 	return 0;
 }
 
 static int
 gw_create_menu(gw_t *widget)
 {
-	widget->data.menu = (gw_menu_t*)ref_alloc(sizeof(gw_menu_t*));
+	widget->data.menu = (gw_menu_t*)ref_alloc(sizeof(gw_menu_t));
 
 	if (widget->data.menu == NULL) {
 		return -1;
 	}
 
 	memset(widget->data.menu, 0, sizeof(gw_menu_t));
+
+	gw_name_set(widget, "menu");
+
+	return 0;
+}
+
+static int
+gw_create_text(gw_t *widget)
+{
+	widget->data.text = (gw_text_t*)ref_alloc(sizeof(gw_text_t));
+
+	if (widget->data.text == NULL) {
+		return -1;
+	}
+
+	memset(widget->data.text, 0, sizeof(gw_text_t));
+
+	gw_name_set(widget, "text");
 
 	return 0;
 }
@@ -103,6 +129,9 @@ gw_create(gw_type_t type, gw_t *parent)
 	case GW_TYPE_MENU:
 		gw_create_menu(gw);
 		break;
+	case GW_TYPE_TEXT:
+		gw_create_text(gw);
+		break;
 	default:
 		break;
 	}
@@ -117,6 +146,9 @@ gw_create(gw_type_t type, gw_t *parent)
 			ref_release(gw);
 			gw = NULL;
 		}
+
+		update(parent);
+		update(gw);
 	}
 
 	return gw;
@@ -139,13 +171,181 @@ gw_name_set(gw_t *widget, char *name)
 }
 
 int
-gw_realize(gw_t *widget)
+gw_map(gw_t *widget)
 {
 	if (widget == NULL) {
 		return -1;
 	}
 
-	widget->realized = 1;
+	if (widget->realized) {
+		return -1;
+	}
+
+	widget->realized = true;
+
+	update(widget);
+
+	return 0;
+}
+
+int
+gw_unmap(gw_t *widget)
+{
+	if (widget == NULL) {
+		return -1;
+	}
+
+	if (!widget->realized) {
+		return -1;
+	}
+
+	widget->realized = false;
+
+	update(widget);
+
+	return 0;
+}
+
+static void
+handle_events(void)
+{
+	/*
+	 * Inform each plug-in that they should update their state
+	 */
+
+	gw_output();
+}
+
+static void
+input(int c)
+{
+	int ret = -1;
+
+	if (focus == NULL)
+		return;
+
+	switch (focus->type) {
+	case GW_TYPE_MENU:
+		printf("Add input to menu...\n");
+		ret = gw_menu_input(focus, c);
+		break;
+	case GW_TYPE_TEXT:
+		if (focus_input) {
+			ret = focus_input(focus);
+		}
+		break;
+	default:
+		return;
+	}
+
+	if (ret == 0) {
+		mvp_atomic_inc(&events);
+	}
+}
+
+int
+gw_loop(struct timeval *to)
+{
+	int c;
+	int fd;
+	fd_set fds;
+
+	fd = osd->input_fd();
+
+	printf("input fd %d\n", fd);
+
+	while (1) {
+		/*
+		 * Handle outstanding events.
+		 */
+		if (mvp_atomic_val(&events) > 0) {
+			mvp_atomic_set(&events, 0);
+			handle_events();
+			continue;
+		}
+
+		/*
+		 * Block on all file descriptors for new events.
+		 */
+		FD_ZERO(&fds);
+		FD_SET(fd, &fds);
+		if (select(fd+1, &fds, NULL, NULL, NULL) > 0) {
+			if (FD_ISSET(fd, &fds)) {
+				c = osd->input_read();
+				printf("key pressed: 0x%x!\n", c);
+				input(c);
+			}
+		}
+	}
+
+	return 0;
+}
+
+int
+gw_text_set(gw_t *widget, char *text)
+{
+	char *next;
+
+	if (widget->type != GW_TYPE_TEXT) {
+		return -1;
+	}
+
+	if (widget->data.text == NULL) {
+		widget->data.text = (gw_text_t*)ref_alloc(sizeof(gw_text_t));
+		if (widget->data.text == NULL) {
+			return -1;
+		}
+		memset(widget->data.text, 0, sizeof(gw_text_t));
+	}
+
+	if ((next=ref_strdup(text)) == NULL) {
+		return -1;
+	}
+
+	if (widget->data.text->text != NULL) {
+		ref_release(widget->data.text->text);
+	}
+
+	widget->data.text->text = next;
+
+	return 0;
+}
+
+int
+update(gw_t *widget)
+{
+	mvp_atomic_inc(&events);
+
+	/*
+	 * Inform each plug-in that cares of a change in this widget
+	 */
+
+	if (osd && osd->update_widget) {
+		osd->update_widget(widget);
+	}
+	if (html && html->update_widget) {
+		html->update_widget(widget);
+	}
+
+	return 0;
+}
+
+int
+gw_focus_set(gw_t *widget)
+{
+	if ((widget != NULL) && (!widget->realized)) {
+		return -1;
+	}
+
+	focus = widget;
+
+	return 0;
+}
+
+int
+gw_focus_cb_set(gw_select_t input)
+{
+	focus_input = input;
 
 	return 0;
 }

@@ -44,7 +44,7 @@ main(int argc, char **argv)
 
 	while (1) {
 		const char *name;
-		key = input_read(handle);
+		key = input_read_raw(handle);
 		name = input_key_name(key);
 		if (name == NULL) {
 			fprintf(stderr, "Unknown key 0x%.8x!\n", key);

@@ -12,6 +12,9 @@ ldflags = env['LDFLAGS']
 linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
 
+if linkmode == 'dynamic':
+	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+	
 common = [ 'html.c' ]
 
 if target == 'mvp':
@@ -21,17 +24,16 @@ elif target == 'mg35':
 else:
     src = [ common ]
 
-static = env.StaticLibrary('mvpmc_html.plugin', src,
+static = env.StaticLibrary('mvpmc_html.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                            LINKFLAGS = ldflags)
 
 if linkmode == 'dynamic':
-    shared = env.SharedLibrary('mvpmc_html.plugin.a', src,
+    shared = env.SharedLibrary('mvpmc_html.plugin', src,
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                                LINKFLAGS = ldflags)
     inst = env.Install(libdir, [ static, shared ])
 else:
-    inst = env.InstallAs(target = libdir + '/mvpmc_html.plugin.a',
-                         source = static )
+    inst = env.Install(libdir, [ static ])
 
 Return('inst')
