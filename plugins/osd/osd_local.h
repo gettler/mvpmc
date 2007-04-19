@@ -36,6 +36,7 @@
 #define screen_width	__osd_screen_width
 #define screen_height	__osd_screen_height
 #define lookup		__osd_lookup
+#define css_init	__osd_css_init
 
 typedef struct osd_widget_s {
 	struct osd_widget_s *next;
@@ -55,6 +56,8 @@ typedef struct osd_widget_s {
 
 extern osd_widget_t *wlist;
 extern osd_widget_t *hlist;
+
+extern int css_init(void);
 
 extern int osd_css_load(char *path);
 extern int osd_css_arrange(gw_t *gw);

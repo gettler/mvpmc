@@ -15,11 +15,14 @@ linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
 pwd = os.getcwd()
 
+env.Append(CCFLAGS = ' -Iplugins/osd')
+
 if linkmode == 'dynamic':
 	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
 	
 env.CFile('css_lexer.c', 'css_lexer.l')
 env.CFile('css_parser.c', 'css_parser.y')
+env.CFile('css_parser_test.c', 'css_parser.y')
 
 common = [ 'css.c', 'osd.c', 'css_parser.c', 'list.c', 'draw.c' ]
 
@@ -56,5 +59,12 @@ else:
 
 env.Depends(foo, static)
 env.Depends(inst, foo)
+
+csstest = env.Program('csstest',
+                        [ 'csstest.c', 'css_parser_test.c' ],
+                        CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
+                        LIBS = [ 'refmem' ],
+                        LIBPATH = [ libdir ],
+                        LINKFLAGS = ldflags + ' -static' )
 
 Return('inst')

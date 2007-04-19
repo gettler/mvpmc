@@ -1,4 +1,3 @@
-%{
 /*
  *  Copyright (C) 2007, Jon Gettler
  *  http://www.mvpmc.org/
@@ -18,47 +17,31 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-static int linenum = 1;
-%}
-
-%%
-
-\n		{ linenum++; }
-\#		{ return HASH; }
-\.		{ return DOT; }
-\,		{ return COMMA; }
-\{		{ return LBRAK; }
-\}		{ return RBRAK; }
-\;		{ return SEMI; }
-\:		{ return COLON; }
-\*		{ return ASTERISK; }
-\>		{ return GT; }
-\/\*		{ return COMMENT_START; }
-\*\/		{ return COMMENT_END; }
-
-[^ \t\n\#\,\.\{\}\;\:\*]+	{ return STR; }
-
-[^ \t\#\.\,\:\;\n\*]+	{ return ANY; }
-
-%%
-
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+extern FILE *yyin;
+extern int yyparse(void);
 
 int
-yywrap(void)
+main(int argc, char **argv)
 {
-	return 1;
-}
+	int ret;
+	char *path = argv[1];
 
-int
-yyerror(char *str)
-{
-	fprintf(stderr, "parse error in line %d, '%s', '%s'\n",
-		linenum, yytext, str);
+	printf("CSS: parse file '%s'\n", path);
 
-	if (str == NULL) {
-		yyunput(0,0);
+	if ((yyin=fopen(path, "r")) == NULL) {
+		perror(path);
+		return -1;
 	}
 
-	return -1;
+	ret = yyparse();
+
+	fclose(yyin);
+
+	printf("CSS: parser returned %d\n", ret);
+
+	return 0;
 }

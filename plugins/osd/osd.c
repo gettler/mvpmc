@@ -256,6 +256,10 @@ init_osd(void)
 		return NULL;
 	}
 
+	if (css_init() < 0) {
+		return NULL;
+	}
+
 	printf("OSD plug-in registered!\n");
 
 	return &reloc;

@@ -102,3 +102,9 @@ osd_css_arrange(gw_t *gw)
 
 	return count;
 }
+
+int
+css_init(void)
+{
+	return 0;
+}
