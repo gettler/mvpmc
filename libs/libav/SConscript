@@ -8,16 +8,24 @@ Import ('env')
 dir = env['BUILD_DIR']
 target = env['TARG']
 libdir = env['INSTLIBDIR']
+linkmode = env['LINKMODE']
 
 if target == 'mvp':
     src = [ 'av.c', 'init.c', 'io.c', 'mtd.c', 'mvpstb_api.c',
     	    'videvents.c']
+elif target == 'mg35':
+    src = [ 'mg35.c' ]
 else:
     src = [ 'sim.c', 'videvents.c']
 
-static = env.StaticLibrary('av', src, CPPPATH = [env['INCDIR'], env['INSTINCDIR']])
-shared = env.SharedLibrary('av', src, CPPPATH = [env['INCDIR'], env['INSTINCDIR']])
+static = env.StaticLibrary('av', src,
+                           CPPPATH = [env['INCDIR'], env['INSTINCDIR']])
 
-inst = env.Install(libdir, [ static, shared ])
+if linkmode == 'dynamic':
+    shared = env.SharedLibrary('av', src,
+                               CPPPATH = [env['INCDIR'], env['INSTINCDIR']])
+    inst = env.Install(libdir, [ static, shared ])
+else:
+    inst = env.Install(libdir, [ static ])
 
 Return('inst')

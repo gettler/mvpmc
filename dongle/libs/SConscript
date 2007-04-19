@@ -11,30 +11,6 @@ target = env['TARG']
 
 freetype = env.SConscript('freetype/SConscript')
 
-if target != 'mg35':
-	zlib = env.SConscript('zlib/SConscript')
-	png = env.SConscript('libpng/SConscript')
-	jpg = env.SConscript('jpeg/SConscript')
-	mw = env.SConscript('microwindows/SConscript')
-	a52 = env.SConscript('a52dec/SConscript')
-	expat = env.SConscript('expat/SConscript')
-	dvb = env.SConscript('libdvbpsi/SConscript')
-	id3 = env.SConscript('libid3/SConscript')
-	tremor = env.SConscript('Tremor/SConscript')
-	ncurses = env.SConscript('ncurses/SConscript')
-	mysql = env.SConscript('mysql/SConscript')
-	freetype = env.SConscript('freetype/SConscript')
-	env.Depends(png, zlib)
-	env.Depends(mw, png)
-	env.Depends(mw, jpg)
-	env.Depends(mw, freetype)
-	env.Depends(mysql, ncurses)
-	lib = mw
-
-if target == 'mg35':
-	lib = freetype
-
-if target == 'mvp':
-	flac = env.SConscript('flac/SConscript')
+lib = [ freetype ]
 
 Return('lib')

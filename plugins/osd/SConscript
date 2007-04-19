@@ -53,6 +53,7 @@ if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_osd.plugin', [ src ],
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                                LINKFLAGS = ldflags + ' ' + osdlibso + ' ' + inputlibso)
+    env.Depends(shared, osdlibso)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])

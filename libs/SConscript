@@ -6,29 +6,17 @@ Import('env')
 target = env['TARG']
 dir = env['BUILD_DIR']
 
-osd = env.SConscript('libosd/SConscript', build_dir='libosd/'+dir, duplicate=0)
-inp = env.SConscript('libinput/SConscript', build_dir='libinput/'+dir, duplicate=0)
-gw = env.SConscript('libgw/SConscript', build_dir='libgw/'+dir, duplicate=0)
-refmem = env.SConscript('librefmem/SConscript', build_dir='librefmem/'+dir, duplicate=0)
+osd = env.SConscript('libosd/SConscript',
+		     build_dir='libosd/'+dir, duplicate=0)
+input = env.SConscript('libinput/SConscript',
+		       build_dir='libinput/'+dir, duplicate=0)
+gw = env.SConscript('libgw/SConscript',
+		    build_dir='libgw/'+dir, duplicate=0)
+refmem = env.SConscript('librefmem/SConscript',
+			build_dir='librefmem/'+dir, duplicate=0)
+av = env.SConscript('libav/SConscript',
+		    build_dir='libav/'+dir, duplicate=0)
 
-common = [ osd, inp, gw, refmem ]
-other = [ ]
-mvp = [ ]
+libs = [ osd, input, gw, refmem, av ]
 
-if target != 'mg35':
-	av = env.SConscript('libav/SConscript', build_dir='libav/'+dir, duplicate=0)
-	cmyth = env.SConscript('libcmyth/SConscript', build_dir='libcmyth/'+dir, duplicate=0)
-	demux = env.SConscript('libdemux/SConscript', build_dir='libdemux/'+dir, duplicate=0)
-	rtv = env.SConscript('libreplaytv/SConscript', build_dir='libreplaytv/'+dir, duplicate=0)
-	ts = env.SConscript('libts_demux/SConscript', build_dir='libts_demux/'+dir, duplicate=0)
-	vnc = env.SConscript('libvnc/SConscript', build_dir='libvnc/'+dir, duplicate=0)
-	widget = env.SConscript('libwidget/SConscript', build_dir='libwidget/'+dir, duplicate=0)
-	other = [ av, cmyth, demux, rtv, ts, vnc, widget ]
-
-if target == 'mvp':
-	tiwlan = env.SConscript('libtiwlan/SConscript', build_dir='libtiwlan/'+dir, duplicate=0)
-	mvp = [ tiwlan ]
-
-ret = [ common, other, mvp ]
-
-Return('ret')
+Return('libs')

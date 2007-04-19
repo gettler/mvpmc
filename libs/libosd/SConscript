@@ -50,6 +50,7 @@ else:
 	inst = env.Install(libdir, [ static ])
 
 inst2 = env.Install(bindir, osdtest)
-env.Depends(osdtest, inst)
 
-Return('inst2')
+ret = [ inst, inst2 ]
+
+Return('ret')
