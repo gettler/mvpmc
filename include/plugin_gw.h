@@ -43,6 +43,7 @@ typedef struct {
 	bool hilited;
 	gw_select_t select;
 	gw_hilite_t hilite;
+	void *key;
 } gw_menu_item_t;
 
 typedef struct {

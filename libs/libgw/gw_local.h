@@ -29,10 +29,12 @@
 #define osd		__gw_osd
 #define html		__gw_html
 #define update		__gw_update
+#define focus_input	__gw_focus_input
 
 extern gw_t *root;
 extern plugin_osd_t *osd;
 extern plugin_html_t *html;
+extern gw_cmd_t focus_input;
 
 extern int update(gw_t *widget);
 

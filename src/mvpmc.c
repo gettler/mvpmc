@@ -64,8 +64,8 @@
 #include <netinet/in.h>
 #include <libgen.h>
 
-#include "plugin.h"
-#include "gw.h"
+#include <plugin.h>
+#include <gw.h>
 
 char *version = NULL;
 char build_info[256];
@@ -108,7 +108,7 @@ static gw_t *about;
 static gw_t *menu;
 
 static int
-do_exit(gw_t *widget)
+do_exit(gw_t *widget, char *text, void *key)
 {
 	printf("Bye!\n");
 	exit(0);
@@ -117,7 +117,7 @@ do_exit(gw_t *widget)
 }
 
 static int
-do_about(gw_t *widget)
+do_about(gw_t *widget, char *text, void *key)
 {
 	gw_map(about);
 	gw_unmap(menu);
@@ -127,7 +127,19 @@ do_about(gw_t *widget)
 }
 
 static int
-do_key(gw_t *widget)
+do_fb(gw_t *widget, char *text, void *key)
+{
+	extern void fb_display(void);
+
+	gw_unmap(menu);
+
+	fb_display();
+
+	return 0;
+}
+
+static int
+do_key(gw_t *widget, int key)
 {
 	if (widget == about) {
 		gw_unmap(about);
@@ -141,6 +153,7 @@ do_key(gw_t *widget)
 static void*
 gui_start(void *arg)
 {
+	extern int fb_init(gw_t *root);
 	gw_t *splash;
 	gw_t *text;
 	gw_t *root;
@@ -170,10 +183,12 @@ gui_start(void *arg)
 
 	gw_output();
 
+	fb_init(root);
+
 	gw_menu_title_set(menu, "mvpmc");
-	gw_menu_item_add(menu, "File Browser", NULL, NULL);
-	gw_menu_item_add(menu, "About", do_about, NULL);
-	gw_menu_item_add(menu, "Exit", do_exit, NULL);
+	gw_menu_item_add(menu, "File Browser", (void*)0, do_fb, NULL);
+	gw_menu_item_add(menu, "About", (void*)1, do_about, NULL);
+	gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
 
 	gw_unmap(splash);
 	gw_map(menu);
@@ -186,6 +201,17 @@ gui_start(void *arg)
 
  err:
 	return NULL;
+}
+
+void
+main_display(void)
+{
+	gw_map(menu);
+
+	gw_focus_set(menu);
+	gw_focus_cb_set(do_key);
+
+	gw_output();
 }
 
 /*
@@ -274,10 +300,36 @@ vpdread_main(int argc, char **argv)
 }
 #endif /* MVPMC_MEDIAMVP */
 
+#if 0
+static void*
+thread_test(void *arg)
+{
+	printf("test thread pid %d\n", getpid());
+	return NULL;
+}
+#endif
+
 int
 main(int argc, char **argv)
 {
 	char *prog;
+#if 0
+	pthread_t t;
+#endif
+
+#ifdef MVPMC_MG35
+	extern int pthread_init(char*);
+	printf("%s(): start pid %d...\n", __FUNCTION__, getpid());
+	pthread_init(argv[0]);
+#endif
+
+#if 0
+	printf("creating thread...\n");
+	pthread_create(&t, NULL, thread_test, NULL);
+	sleep(5);
+	printf("main thread exiting...\n");
+	exit(1);
+#endif
 
 	prog = basename(argv[0]);
 

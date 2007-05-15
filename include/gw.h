@@ -54,8 +54,9 @@ typedef enum {
 	GW_TYPE_BUSY,
 } gw_type_t;
 
-typedef int (*gw_select_t)(gw_t*);
-typedef int (*gw_hilite_t)(gw_t*, bool);
+typedef int (*gw_cmd_t)(gw_t*, int);
+typedef int (*gw_select_t)(gw_t*, char*, void*);
+typedef int (*gw_hilite_t)(gw_t*, char*, void*, bool);
 
 extern int gw_init(unsigned int dev);
 extern int gw_shutdown(void);
@@ -68,12 +69,14 @@ extern int gw_unmap(gw_t* widget);
 extern int gw_name_set(gw_t *widget, char *name);
 
 extern int gw_focus_set(gw_t *widget);
-extern int gw_focus_cb_set(gw_select_t input);
+extern int gw_focus_cb_set(gw_cmd_t input);
 
 extern int gw_menu_title_set(gw_t *widget, char *title);
-extern int gw_menu_item_add(gw_t *widget, char *text,
+extern char* gw_menu_title_get(gw_t *widget);
+extern int gw_menu_item_add(gw_t *widget, char *text, void *key,
 			    gw_select_t select, gw_hilite_t hilite);
 extern int gw_menu_input(gw_t *widget, int c);
+extern int gw_menu_clear(gw_t *widget);
 
 extern int gw_text_set(gw_t *widget, char *text);
 

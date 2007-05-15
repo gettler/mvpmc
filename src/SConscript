@@ -58,22 +58,25 @@ if target == 'mvp':
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 
-common = [ 'mvpmc.c', 'plugin.c', 'version.c' ]
+common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version.c' ]
 
 if target == 'mvp':
 	src = [ common ]
+	pt = 'pthread'
 elif target == 'mg35':
 	src = [ common ]
+	pt = 'pthread_nommu'
 else:
 	src = [ common ]
+	pt = 'pthread'
 
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_osd.plugin' ]
-	libs = [ 'gw', 'refmem' ]
+	libs = [ 'gw', 'refmem', pt ]
 	linkflags = '-static'
 else:
 	plugins = [ ]
-	libs = [ 'dl', 'gw', 'refmem' ]
+	libs = [ 'dl', 'gw', 'refmem', pt ]
 	linkflags = ''
 
 mvpmc = mvp.Program('mvpmc', src,

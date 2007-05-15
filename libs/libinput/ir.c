@@ -184,6 +184,10 @@ input_read_kbd(input_t *handle, int raw)
 	case KEY_IR_NEW_OK:
 		cmd = INPUT_CMD_SELECT;
 		break;
+	case KEY_IR_OLD_LEFT:
+	case KEY_IR_NEW_LEFT:
+		cmd = INPUT_CMD_LEFT;
+		break;
 	default:
 		cmd = INPUT_CMD_ERROR;
 		break;

@@ -17,6 +17,11 @@ refmem = env.SConscript('librefmem/SConscript',
 av = env.SConscript('libav/SConscript',
 		    build_dir='libav/'+dir, duplicate=0)
 
-libs = [ osd, input, gw, refmem, av ]
+if target == 'mg35':
+    pt = env.SConscript('libpthread_nommu/SConscript',
+                        build_dir='libpthread_nommu/'+dir, duplicate=0)
+    libs = [ osd, input, gw, refmem, av, pt ]
+else:
+    libs = [ osd, input, gw, refmem, av ]
 
 Return('libs')

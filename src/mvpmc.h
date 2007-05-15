@@ -547,4 +547,6 @@ extern int wireless;
 
 extern int plugin_setup(void);
 
+extern int fb_init(gw_t *root);
+
 #endif /* MVPMC_H */

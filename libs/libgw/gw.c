@@ -28,7 +28,7 @@ static mvp_atomic_t events;
 
 static gw_t *focus;
 
-static gw_select_t focus_input;
+gw_cmd_t focus_input;
 
 static int
 gw_create_container(gw_t *widget)
@@ -231,7 +231,7 @@ input(int c)
 		break;
 	case GW_TYPE_TEXT:
 		if (focus_input) {
-			ret = focus_input(focus);
+			ret = focus_input(focus, c);
 		}
 		break;
 	default:
@@ -343,7 +343,7 @@ gw_focus_set(gw_t *widget)
 }
 
 int
-gw_focus_cb_set(gw_select_t input)
+gw_focus_cb_set(gw_cmd_t input)
 {
 	focus_input = input;
 

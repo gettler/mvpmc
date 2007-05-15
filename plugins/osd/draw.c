@@ -65,10 +65,14 @@ draw(osd_widget_t *widget)
 	int i;
 	char *str;
 	unsigned long c;
+	int w = 0, h = 0;
+	int cur = 0, vis = 0;
 
 	if (!widget->visible) {
 		return 0;
 	}
+
+	osd_get_surface_size(drawable, &w, &h);
 
 	switch (widget->gw->type) {
 	case GW_TYPE_TEXT:
@@ -90,6 +94,20 @@ draw(osd_widget_t *widget)
 			      OSD_COLOR_BLACK, NULL);
 		i = 0;
 		while (i < widget->gw->data.menu->n) {
+			if (widget->gw->data.menu->items[i]->hilited) {
+				cur = i;
+			}
+			i++;
+		}
+		vis = h / osd_font_height(NULL);
+		printf("Menu items: %d total %d visible [cur %d]\n",
+		       i, vis, cur);
+		if (vis < widget->gw->data.menu->n) {
+			i = cur;
+		} else {
+			i = 0;
+		}
+		while ((i < widget->gw->data.menu->n) && (y < h)) {
 			y += osd_font_height(NULL);
 			str = widget->gw->data.menu->items[i]->text;
 			printf("Draw menu item '%s'!\n", str);

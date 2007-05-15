@@ -50,8 +50,22 @@ gw_menu_title_set(gw_t *widget, char *title)
 	return 0;
 }
 
+char*
+gw_menu_title_get(gw_t *widget)
+{
+	gw_menu_t *data;
+
+	if (widget->type != GW_TYPE_MENU) {
+		return NULL;
+	}
+
+	data = widget->data.menu;
+
+	return data->title;
+}
+
 int
-gw_menu_item_add(gw_t *widget, char *text,
+gw_menu_item_add(gw_t *widget, char *text, void *key,
 		 gw_select_t select, gw_hilite_t hilite)
 {
 	gw_menu_t *data;
@@ -75,8 +89,7 @@ gw_menu_item_add(gw_t *widget, char *text,
 	item->hilited = false;
 	item->select = select;
 	item->hilite = hilite;
-
-	printf("Menu has %d items\n", data->n);
+	item->key = key;
 
 	if (data->n == 0) {
 		items = (gw_menu_item_t**)ref_alloc(sizeof(*items));
@@ -112,6 +125,8 @@ static int
 menu_select(gw_t *widget)
 {
 	gw_menu_t *data;
+	void *key;
+	char *text;
 	int i = 0;
 
 	data = widget->data.menu;
@@ -119,8 +134,10 @@ menu_select(gw_t *widget)
 	while (i < data->n) {
 		if (data->items[i]->hilited) {
 			printf("Select '%s'\n", data->items[i]->text);
+			key = data->items[i]->key;
+			text = data->items[i]->text;
 			if (data->items[i]->select) {
-				data->items[i]->select(widget);
+				data->items[i]->select(widget, text, key);
 				return 0;
 			}
 			return -1;
@@ -156,6 +173,9 @@ gw_menu_input(gw_t *widget, int c)
 	case INPUT_CMD_SELECT:
 		return menu_select(widget);
 	default:
+		if (focus_input) {
+			focus_input(widget, c);
+		}
 		return -1;
 	}
 
@@ -173,6 +193,27 @@ gw_menu_input(gw_t *widget, int c)
 		data->items[i]->hilited = true;
 		printf("Change hilite: %d --> %d\n", cur, i);
 	}
+
+	return 0;
+}
+
+int
+gw_menu_clear(gw_t *widget)
+{
+	gw_menu_t *data;
+	int i = 0;
+
+	data = widget->data.menu;
+
+	while (i < data->n) {
+		gw_menu_item_t *item = data->items[i];
+		ref_release(item->text);
+		i++;
+	}
+
+	ref_release(data->items);
+	data->items = NULL;
+	data->n = 0;
 
 	return 0;
 }
