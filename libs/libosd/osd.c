@@ -788,3 +788,14 @@ osd_clip_set(osd_surface_t *surface, osd_clip_t *clip)
 
 	return NULL;
 }
+
+int
+osd_memcpy(osd_surface_t *surface,int base, int destOffset, unsigned char *Data,
+		int sourceOffset, int frameWidth)
+{
+	if (surface->fp->memcpy)
+		return surface->fp->memcpy(surface,base,destOffset, Data, sourceOffset,frameWidth);
+	else
+		return -1;
+}
+

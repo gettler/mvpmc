@@ -15,4 +15,3 @@ nbtscan = env.SConscript('nbtscan/SConscript')
 apps = [ busybox, ntp, dropbear, mtd, fuse, djmount, nbtscan ]
 
 Return('apps')
-

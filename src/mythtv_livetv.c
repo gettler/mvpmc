@@ -272,6 +272,7 @@ mythtv_new_livetv_start(cmyth_recorder_t rec)
 	CHANGE_GLOBAL_REF(current_prog, loc_prog);
 	ref_release(loc_prog);
 
+	CHANGE_GLOBAL_REF(mythtv_recorder, rec);
 	/*
 	mvpw_show(mythtv_browser);
 	mvpw_focus(mythtv_browser);
@@ -297,7 +298,6 @@ mythtv_new_livetv_start(cmyth_recorder_t rec)
 	mvpw_hide(mythtv_browser);
 	*/
 
-	CHANGE_GLOBAL_REF(mythtv_recorder, rec);
 #if 0
 	ref_release(ctrl);
 	ref_release(rec);
@@ -486,6 +486,7 @@ mythtv_livetv_start(int *tuner)
 	CHANGE_GLOBAL_REF(current_prog, loc_prog);
 	ref_release(loc_prog);
 
+	CHANGE_GLOBAL_REF(mythtv_recorder, rec);
 	// This appears to be redundant and takes a bunch of time slowing down
 	// the launch of live TV.
 	get_livetv_programs();
@@ -505,7 +506,6 @@ mythtv_livetv_start(int *tuner)
 		       osd_settings.program, NULL);
 	mvpw_hide(mythtv_description);
 
-	CHANGE_GLOBAL_REF(mythtv_recorder, rec);
 #if 0
 	ref_release(ctrl);
 	ref_release(rec);
@@ -1319,7 +1319,7 @@ mythtv_new_livetv(void)
 	return mythtv_new_livetv_start(rec);
 }
 
-int
+static int
 mythtv_livetv_menu(void)
 {
 	int failed = 0;
@@ -1456,3 +1456,27 @@ mythtv_livetv_select(int which)
 	ref_release(channame);
 }
 
+int
+mythtv_livetv_menu_start(void)
+{
+	int ver, rc;
+	cmyth_conn_t ctrl;
+
+	if (mythtv_verify() < 0) {
+		cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) -1}\n",
+			    __FUNCTION__, __FILE__, __LINE__);
+		return -1;
+	}
+
+	ctrl = ref_hold(control);
+	ver = cmyth_conn_get_protocol_version(ctrl);
+	ref_release(ctrl);
+
+	if (ver >= 26) {
+		rc = mythtv_new_livetv();
+	} else {
+		rc = mythtv_livetv_menu();
+	}
+
+	return rc;
+}
