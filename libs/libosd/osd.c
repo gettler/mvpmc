@@ -446,7 +446,7 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 #if defined(MVPMC_MG35)
 	case OSD_GFX:
 #endif
-#if !defined(MVPMC_HOST)
+#if defined(MVPMC_MG35) || defined(MVPMC_MEDIAMVP)
 	case OSD_FB:
 		return fb_create(w, h, color);
 		break;

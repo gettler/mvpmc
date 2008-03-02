@@ -44,6 +44,7 @@ if os.path.exists(toolchains) == 0:
 # parse the TARGET= option
 #    mvp
 #    mg35
+#    nmt
 #    host
 #    kernel
 #
@@ -76,6 +77,20 @@ elif target == 'mg35':
 		print "ARM cross-compiler '%s' not found"%cc
 		print "Please see http://dslinux.org/wiki/Compiling_DSLinux"
 		sys.exit(1)
+elif target == 'nmt':
+	print "Doing NMT build..."
+	if cross == '':
+		powerpc = 'mipsel-linux-uclibc'
+		gcc = ''
+		prefix = powerpc + '-'
+		crossroot = toolchains + '/mips/' + gcc + '/'
+		cross = crossroot + '/bin/' + prefix
+	cppflags = '-DMVPMC_NMT'
+	cc = cross + 'gcc'
+	ldflags = '-Wl,--dynamic-linker,/lib/ld-uClibc.so.0'
+	env.Replace(LINKMODE = 'dynamic')
+	env.Replace(GTKCFLAGS = '')
+	env.Replace(GTKLDFLAGS = '')
 elif target == 'host':
 	cppflags = '-DMVPMC_HOST'
 	crossroot = ''
@@ -155,6 +170,24 @@ if target == 'kernel':
 		env.Depends(kern, gcc)
 elif target == 'mg35':
 	dir = env['BUILD_DIR']
+	libs = env.SConscript('dongle/libs/SConscript')
+	mvplibs = env.SConscript('libs/SConscript')
+	plugins = env.SConscript('plugins/SConscript')
+	mvpmc = env.SConscript('src/SConscript',
+			       build_dir='src/'+dir, duplicate=0)
+	inc = env.SConscript('include/SConscript')
+	env.Depends(mvplibs, inc)
+	env.Depends(mvplibs, libs)
+	env.Depends(plugins, mvplibs)
+	env.Depends(mvpmc, plugins)
+	env.Depends(mvpmc, mvplibs)
+	env.Depends(mvpmc, libs)
+elif target == 'nmt':
+	dir = env['BUILD_DIR']
+	cc = env['CC']
+	if os.path.exists(cc) == 0:
+		print "build application cross-compiler"
+		gcc = env.SConscript('tools/toolchains/uclibc/SConscript')
 	libs = env.SConscript('dongle/libs/SConscript')
 	mvplibs = env.SConscript('libs/SConscript')
 	plugins = env.SConscript('plugins/SConscript')

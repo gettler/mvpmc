@@ -14,6 +14,9 @@ host:
 mg35:
 	scons -Q -j 2 TARGET=mg35
 
+nmt:
+	scons -Q -j 2 TARGET=nmt
+
 kernel:
 	scons -Q TARGET=kernel
 
@@ -26,13 +29,22 @@ cscope:
 	find src libs include -name \*.c -or -name \*.h > cscope.files
 	cscope -b -q -k
 
-clean:
+mvp_clean:
 	scons -c TARGET=mvp
+	rm -f dongle.bin.mvpmc.ver
+
+host_clean:
 	scons -c TARGET=host
+
+mg35_clean:
 	scons -c TARGET=mg35
+
+nmt_clean:
+	scons -c TARGET=nmt
+
+clean: mvp_clean host_clean mg35_clean nmt_clean
 	rm -rf `find libs -name obj -type d`
 	rm -rf `find src -name obj -type d`
-	rm -f dongle.bin.mvpmc.ver
 
 distclean: clean
 	rm -rf dongle/install

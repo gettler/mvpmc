@@ -11,12 +11,14 @@ dongle/install
 dongle/libs/*/host
 dongle/libs/*/mvp
 dongle/libs/*/mg35
+dongle/libs/*/nmt
 dongle/kernel/linux-2.4.31/linux-2.4.31
 dongle/kernel/linux-2.4.31/mvpstb
 dongle/kernel/linux-2.4.31/unionfs-1.0.14
 dongle/kernel/linux-2.4.31/ac3
 dongle/kernel/filesystem
 libs/*/obj
+plugins/*/obj
 src/obj
 src/version.c
 tools/*/*.o
@@ -25,3 +27,5 @@ tools/misc/mvpdbg
 tools/mktree/mktree
 tools/mvprelay/mvprelay
 tools/squashfs/squashfs2.2-r2
+*~
+*.a

@@ -4,57 +4,41 @@
 #
 
 import os
+import mvpmc
 
 Import('env')
 
-home = os.environ['HOME']
-cc = env['CC']
-downloads = env['DOWNLOADS']
-target = env['TARG']
+build_target = env['TARG']
+topdir = env['TOPDIR']
+libdir = '%s/dongle/install/%s/lib/' % (topdir,build_target)
+incdir = '%s/dongle/install/%s/include/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
 
-if target == 'mvp':
-  cross = '-c ' + env['CROSS']
-  host = '-C --host=powerpc-linux'
-elif target == 'mg35':
-  cross = '-c ' + env['CROSS']
-  host = '-C --host=arm-linux'
+if build_target == 'mvp':
+  cross = env['CROSS']
+  config = '--host=powerpc-linux'
+elif build_target == 'mg35':
+  cross = env['CROSS']
+  config = '--host=arm-linux --disable-shared'
+elif build_target == 'nmt':
+  cross = env['CROSS']
+  config = '--host=mips-linux --disable-shared'
 else:
   cross = ''
-  host = ''
+  config = ''
 
-file = downloads + '/freetype-2.2.1.tar.gz'
+url = [ 'http://www.mvpmc.org/dl/freetype-2.2.1.tar.gz' ]
 
 e = Environment()
-e.Tool('WGet', toolpath=['../../../scons'])
 
-def GetSourceFile(url, output_dir, env):
-  '''
-  Create a node for a file retrieved via wget.
-  This node can be used as a dependency in other rules.
-  '''
-  # Nab everything after the last slash as the filename
-  basefilename = str(url)[str( url).rfind(os.sep) + 1:]
-  munged = output_dir + os.sep + basefilename + os.sep + url
-  node = env.SourceCode( munged, env.WGet() )
-  return node
+target = [ libdir + 'libfreetype.a',
+           incdir + 'ft2build.h' ]
+cmd = [ './configure --prefix=%s %s' % (prefix,config),
+	'cp ../../modules.cfg .',
+        'make -i',
+        'make -i install',
+        'cp include/ft2build.h %s' % prefix ]
 
-url = 'http://www.mvpmc.org/dl/freetype-2.2.1.tar.gz'
-pwd = os.getcwd()
-
-build = env.Command('../../install/' + target + '/lib/libfreetype.a', 0,
-                    'scons/build_lib.sh -d ' + pwd + '/' + target +
-                    '/freetype-2.2.1 -i ' + file + ' ' +
-                    cross + ' ' +
-                    '-I ' + pwd + '/../../install/' + target + ' ' +
-                    host)
-
-if not os.path.exists(file):
-	dl = GetSourceFile(url, '#' + downloads, e)
-	env.Depends(build, dl)
-
-env.SideEffect(['../../install/' + target + '/include/freetype2/freetype/freetype.h'],
-                build)
-env.SideEffect(['../../install/' + target + '/include/ft2build.h'],
-                build)
+build = mvpmc.OSSBuild(target, url, env, e, cmd)
 
 Return('build')

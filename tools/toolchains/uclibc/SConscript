@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# $Id: SConscript 20 2006-03-14 05:26:56Z gettler $
+# Build a cross-compiler for the current target
 #
 
 import os
@@ -12,11 +12,11 @@ downloads = env['DOWNLOADS']
 target = env['TARG']
 pwd = os.getcwd()
 
-file = downloads + '/buildroot-20060710.tar.bz2'
-
-#url = 'http://buildroot.uclibc.org/downloads/snapshots/buildroot-20060710.tar.bz2'
-url = 'http://www.mvpmc.org/dl/buildroot-20060710.tar.bz2'
-uclibc = os.system(pwd +'/mvpmc-uclibc.sh '+file + ' ' + url)
-uclibc = ''
+if target == 'mvp':
+    file = downloads + '/buildroot-20060710.tar.bz2'
+    url = 'http://www.mvpmc.org/dl/buildroot-20060710.tar.bz2'
+    uclibc = os.system(pwd +'/mvpmc-uclibc.sh '+file + ' ' + url)
+elif target == 'nmt':
+    uclibc = os.system(pwd +'/mvpmc-nmt.sh')
 
 Return('uclibc')

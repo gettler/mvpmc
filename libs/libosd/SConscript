@@ -23,6 +23,9 @@ if target == 'mg35':
 elif target == 'mvp':
 	src = [ common, 'cursor.c', 'gfx.c', 'fb.c' ]
 	dl = 'dl'
+elif target == 'nmt':
+	src = [ common ]
+	dl = 'dl'
 else:
 	src = [ common, 'gtk.c' ]
 	dl = ''
