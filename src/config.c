@@ -242,7 +242,6 @@ add_item(config_list_t *list, int type)
 		len = strlen(config->y);\
 		ptr = (void*)&config->y;\
 		break;
-
 	switch (type) {
 		ITEM_FIXED(SCREENSAVER, screensaver_timeout);
 		ITEM_FIXED(MODE, av_mode);
@@ -274,6 +273,10 @@ add_item(config_list_t *list, int type)
 		ITEM_STRING(VLC_AOPTS, vlc_aopts);
 		ITEM_FIXED(VLC_VB, vlc_vb);
 		ITEM_FIXED(VLC_AB, vlc_ab);
+		ITEM_STRING(WEATHER_LOCATION, weather_location);
+		//ITEM_FIXED(MYTHTV_COMMSKIP,mythtv_commskip);
+		ITEM_FIXED(FRIENDLY_DATE, mythtv_use_friendly_date);
+		ITEM_FIXED(DURATION_MINUTES, mythtv_use_duration_minutes);
 	case CONFIG_ITEM_MYTHTV_RG_HIDE:
 		if ((config->bitmask & CONFIG_MYTHTV_RECGROUP) == 0)
 			return 0;
@@ -404,6 +407,10 @@ get_item(config_item_t *item, int override)
 		ITEM_STRING(VLC_AOPTS, vlc_aopts);
 		ITEM_FIXED(VLC_VB, vlc_vb);
 		ITEM_FIXED(VLC_AB, vlc_ab);
+		ITEM_STRING(WEATHER_LOCATION, weather_location);
+		//ITEM_FIXED(MYTHTV_COMMSKIP, mythtv_commskip);
+		ITEM_FIXED(FRIENDLY_DATE, mythtv_use_friendly_date);
+		ITEM_FIXED(DURATION_MINUTES, mythtv_use_duration_minutes);
 	case CONFIG_ITEM_MYTHTV_RG_HIDE:
 	case CONFIG_ITEM_MYTHTV_RG_SHOW:
 		config->bitmask |= CONFIG_MYTHTV_RECGROUP;
@@ -518,7 +525,14 @@ save_config_file(char *file)
 		goto err;
 	if (add_item(list, CONFIG_ITEM_VLC_AB) < 0) 
 		goto err;
-
+	if (add_item(list, CONFIG_ITEM_WEATHER_LOCATION) < 0) 
+		goto err;
+//	if (add_item(list, CONFIG_ITEM_MYTHTV_COMMSKIP) < 0) 
+//		goto err;
+	if (add_item(list, CONFIG_ITEM_FRIENDLY_DATE) < 0)
+		goto err;
+	if (add_item(list, CONFIG_ITEM_DURATION_MINUTES) < 0)
+		goto err;
 
 	list->crc = 0;
 	list->version = CONFIG_VERSION;
@@ -529,7 +543,6 @@ save_config_file(char *file)
 	 */
 	if (list->buflen < 1024)
 		compress = 0;
-
 	if ((ret=save_config_to_file(list, file, compress)) < 0) {
 		fprintf(stderr, "config file failed with error %d\n", ret);
 		goto err;
@@ -626,6 +639,14 @@ set_config(void)
 		display_type = config->display_type;
 	if (config->bitmask & CONFIG_MYTHTV_FILTER) 
 		mythtv_filter = config->mythtv_filter;
+	if (config->bitmask & CONFIG_WEATHER_LOCATION)
+		weather_location = strdup(config->weather_location);
+	//if (config->bitmask & CONFIG_MYTHTV_COMMSKIP)
+	//	mythtv_commskip = config->mythtv_commskip;
+	if (config->bitmask & CONFIG_FRIENDLY_DATE)
+		mythtv_use_friendly_date = config->mythtv_use_friendly_date;
+	if (config->bitmask & CONFIG_DURATION_MINUTES)
+		mythtv_use_duration_minutes = config->mythtv_use_duration_minutes;
 }
 
 int
@@ -697,7 +718,6 @@ load_config_file(char *file, int override)
 	}
 
 	set_config();
-
 	close(fd);
 
 	printf("loaded config file\n");

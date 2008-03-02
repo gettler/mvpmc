@@ -169,15 +169,15 @@ av_get_output(void)
 	return output;
 }
 
+
+/*
+ * av_init_letterbox() - Initialise hardware APIs for letterbox mode
+ */
 int
 av_init_letterbox(void)
 {
-    int height,y;
-    if(av_get_mode() == AV_MODE_PAL)
-	height = 576;
-    else
-	height = 480;
-    y = (((height*4)/16))/2;
+    int y;
+    y = (((av_get_height()*4)/16))/2;
     /* STB seems to want offset/field, rather than offset/frame */
     y /=2;
     return mvpstb_set_lbox_offset(y);
@@ -275,8 +275,24 @@ av_set_video_aspect(av_video_aspect_t vid_ar, int afd)
 		    break;
 		case 0x9:
 		    /*4:3 pillarboxed in a 16:9 raster */
-		    zoom_type = 1;
-		    new_wss = WSS_ASPECT_FULL_4x3;
+		    /* According to the spec we should crop this even
+		     * for a 16x9 display, however the only way to do this
+		     * is to switch the display type, which we currently
+		     * can't do without restarting the whole of mvpmc
+		     */
+		    if(IS_4x3(tv_aspect))
+		    {
+			zoom_type = 1;
+			new_wss = WSS_ASPECT_FULL_4x3;
+		    }
+		    else
+		    {
+			/* There isn't actually a way to signal that this is
+			 * 4x3 in a 16:9 raster using WSS, so just lie
+			 * and tell the telly it's 16x9, full
+			 */
+			new_wss = WSS_ASPECT_FULL_16x9;
+		    }
 		    break;
 		case 0xA:
 		    /*16:9 full frame image, in 16:9 frame, no protected area
@@ -313,14 +329,20 @@ av_set_video_aspect(av_video_aspect_t vid_ar, int afd)
 		    break;
 		case 0xD:
 		    /* 4:3 pillarboxed image 14:9 protected in 16:9 raster*/
-		    /*Force CCO mode:*/
-		    zoom_type = 1;
 		    if(IS_16x9(tv_aspect))
 		    {
+			/* If we could do a CCO whilst in 16x9 mode we'd
+			 * go for this one:
 			new_wss = WSS_ASPECT_FULL_4x3_PROTECT_14x9;
+			 * but since we can't, then we'll just have to leave
+			 * as-is:
+			 */
+			new_wss = WSS_ASPECT_FULL_16x9;
 		    }
 		    else
 		    {
+			/*Force CCO mode:*/
+			zoom_type = 1;
 			new_wss = WSS_ASPECT_FULL_4x3;
 		    }
 		    break;
@@ -586,13 +608,23 @@ av_pause(void)
 }
 
 int
-av_delay_video(int usec)
+av_pause_video()
 {
 	if (state.pause)
 		return -1;
 
 	if (ioctl(fd_video, AV_SET_VID_PAUSE, 0) < 0)
 		return -1;
+
+	return 0;
+}
+
+int
+av_delay_video(int usec)
+{
+        if (av_pause_video() < 0)
+		return -1;
+
 	usleep(usec);
 	av_play();
 
@@ -859,7 +891,7 @@ av_current_stc(av_stc_t *stc)
  * Arguments:
  *	x		- location of video on x axis
  *	y		- location of video on y axis
- *	video_mode	- specify a video mode from the following
+ *	thumnbail_mode	- specify a video mode from the following
  *				0 - normal
  *				1 - ??
  *				2 - ??
@@ -869,18 +901,47 @@ av_current_stc(av_stc_t *stc)
  *				6 - ??
  */
 int
-av_move(int x, int y, int video_mode)
+av_move(int x, int y, av_thumbnail_mode_t thumbnail_mode)
 {
 	vid_pos_regs_t pos_d;
 
 	memset(&pos_d, 0, sizeof(pos_d));
 
-	pos_d.dest.y = y;
-	pos_d.dest.x = x;
+	/*Both X and Y offsets in pos_d seem to have a range of 0-255
+	 *and represent (give or take a couple of pixels) half the pixel
+	 *offset of the thumbnail
+	 *
+	 * This does mean X/Y pixels greater than 510 can't be used
+	 */
+	pos_d.dest.y = y/2;
+	pos_d.dest.x = x/2;
+	if(pos_d.dest.y > 1)
+	    pos_d.dest.y--;
+	if(pos_d.dest.y > 255)
+	{
+	    pos_d.dest.y = 255;
+	    fprintf(stderr, "WARNING: Out of range Y value passed to av_move, resetting to max (512 pixels)\n");
+	}
+	if(pos_d.dest.y < 0)
+	{
+	    pos_d.dest.y = 0;
+	    fprintf(stderr, "WARNING: Out of range Y value passed to av_move, resetting to min (0 pixels)\n");
+	}
+
+	if(pos_d.dest.x > 255)
+	{
+	    pos_d.dest.x = 255;
+	    fprintf(stderr, "WARNING: Out of range X value passed to av_move, resetting to max (510 pixels)\n");
+	}
+	if(pos_d.dest.x < 0)
+	{
+	    pos_d.dest.x = 0;
+	    fprintf(stderr, "WARNING: Out of range X value passed to av_move, resetting to min (0 pixels)\n");
+	}
 
 	ioctl(fd_video, AV_SET_VID_POSITION, &pos_d);
 	
-	if (video_mode == 0)
+	if (thumbnail_mode == AV_THUMBNAIL_OFF)
 	{
 	    	in_thumbnail = 0;
 		ioctl(fd_video, AV_SET_VID_OUTPUT_MODE, cur_dispmode);
@@ -888,10 +949,10 @@ av_move(int x, int y, int video_mode)
 	else
 	{
 	        in_thumbnail = 1;
-		ioctl(fd_video, AV_SET_VID_OUTPUT_MODE, video_mode);
+		ioctl(fd_video, AV_SET_VID_OUTPUT_MODE, thumbnail_mode);
 	}
 
-	if (video_mode == 0)
+	if (thumbnail_mode == 0)
 		ioctl(fd_video, AV_SET_VID_SRC, 1);
 
 	return 0;

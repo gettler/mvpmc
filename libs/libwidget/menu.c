@@ -313,6 +313,14 @@ key(mvp_widget_t *widget, char c)
 
 			hilite_item(widget, i, 1);
 		break;
+	case MVPW_KEY_BLUE:
+		if (strcmp(widget->data.menu.items[0].label, "../") == 0)
+		{
+			str = widget->data.menu.items[0].label;
+			k = widget->data.menu.items[0].key;
+			widget->data.menu.items[0].select(widget, str, k);
+		}
+		break;
 	case MVPW_KEY_OK:
 		if (widget->data.menu.current < widget->data.menu.nitems) {
 			i = widget->data.menu.current;
@@ -738,6 +746,20 @@ mvpw_check_menu_item(mvp_widget_t *widget, void *key, bool checked)
 				mvpw_expose(item->checkbox);
 			}
 		}
+	}
+}
+
+void
+mvpw_check_all_items(mvp_widget_t *widget, bool checked)
+{
+	struct menu_item_s *item;
+	void *k;
+	int i;
+
+	for (i=0; i<widget->data.menu.nitems; i++) {
+		item = widget->data.menu.items + i;
+		k = item->key;
+		mvpw_check_menu_item(widget, k, checked);
 	}
 }
 

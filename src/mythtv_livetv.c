@@ -55,6 +55,8 @@ extern int tvguide_cur_chan_index;
 extern int tvguide_scroll_ofs_x;
 extern int tvguide_scroll_ofs_y;
 extern long tvguide_free_cardids;
+extern mvp_atomic_t mythtv_prevent_request_block;
+extern pthread_mutex_t request_block_mutex;
 
 static mvpw_menu_item_attr_t item_attr = {
 	.selectable = 1,
@@ -283,10 +285,10 @@ mythtv_new_livetv_start(cmyth_recorder_t rec)
 	av_play();
 	video_play(root);
 
-	video_thumbnail(1);
+	video_thumbnail(AV_THUMBNAIL_EIGTH,VID_THUMB_BOTTOM_RIGHT);
 
 	mythtv_fullscreen();
-	video_thumbnail(1);
+	video_thumbnail(AV_THUMBNAIL_EIGTH,VID_THUMB_BOTTOM_RIGHT);
 	mythtv_fullscreen();
 
 	// enable program info widget
@@ -496,7 +498,7 @@ mythtv_livetv_start(int *tuner)
 
 	demux_reset(handle);
 	demux_attr_reset(handle);
-	video_thumbnail(1);
+	video_thumbnail(AV_THUMBNAIL_EIGTH,VID_THUMB_BOTTOM_RIGHT);
 	av_play();
 	video_play(root);
 
@@ -546,7 +548,9 @@ mythtv_livetv_stop(void)
 
 	fprintf(stderr, "Stopping Live TV\n");
 
+	mvp_atomic_inc(&mythtv_prevent_request_block);
 	busy_start();
+	pthread_mutex_lock(&request_block_mutex);
 
 	pthread_mutex_lock(&myth_mutex);
 
@@ -586,6 +590,9 @@ mythtv_livetv_stop(void)
 	mythtv_livetv = 0;
 	pthread_mutex_unlock(&myth_mutex);
 
+	mvp_atomic_dec(&mythtv_prevent_request_block);
+	pthread_mutex_unlock(&request_block_mutex);
+
 
 	busy_end();
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) %d}\n",
@@ -604,7 +611,9 @@ int __change_channel(direction)
 		    __FUNCTION__, __FILE__, __LINE__);
 	changing_channel = 1;
 
+	mvp_atomic_inc(&mythtv_prevent_request_block);
 	busy_start();
+	pthread_mutex_lock(&request_block_mutex);
 	video_clear();
 	pthread_mutex_lock(&myth_mutex);
 
@@ -682,6 +691,8 @@ int __change_channel(direction)
 	}
 
  out:
+	mvp_atomic_dec(&mythtv_prevent_request_block);
+	pthread_mutex_unlock(&request_block_mutex);
 	ref_release(ctrl);
 	ref_release(rec);
 	changing_channel = 0;
@@ -720,8 +731,10 @@ mythtv_channel_set(char * channame)
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) {\n",
 		    __FUNCTION__, __FILE__, __LINE__);
 	changing_channel = 1;
-
+        
+	mvp_atomic_inc(&mythtv_prevent_request_block);
 	busy_start();
+	pthread_mutex_lock(&request_block_mutex);
 	video_clear();
 	pthread_mutex_lock(&myth_mutex);
 
@@ -776,6 +789,8 @@ mythtv_channel_set(char * channame)
 	cmyth_livetv_chain_switch_last(rec);
 
  out:
+	mvp_atomic_dec(&mythtv_prevent_request_block);
+	pthread_mutex_unlock(&request_block_mutex);
 	ref_release(ctrl);
 	ref_release(rec);
 	changing_channel = 0;
@@ -994,7 +1009,8 @@ get_livetv_programs_rec(int id, struct livetv_prog **list, int *n, int *p)
 	char *title = NULL, *subtitle = NULL, *channame = NULL;
 	char *start_channame = NULL, *chansign = NULL;
 	char *description = NULL;
-	char start[256], end[256], *ptr;
+	char *start, *end, *ptr;
+	char tsbuf[256];
 	int cur_id, i; 
 	int shows = 0, unique = 0, busy = 0;
 	struct livetv_proginfo *pi;
@@ -1073,19 +1089,25 @@ get_livetv_programs_rec(int id, struct livetv_prog **list, int *n, int *p)
 		channame = (char *) cmyth_proginfo_channame(next_prog);
 		chansign = (char *) cmyth_proginfo_chansign(next_prog);
 						
+		start = end = NULL;
+
 		ts = cmyth_proginfo_start(next_prog);
 		if (ts != NULL ) {
-			cmyth_timestamp_to_string(start, ts);
+			cmyth_timestamp_to_string(tsbuf, ts);
 			ref_release(ts);
-			ts = cmyth_proginfo_end(next_prog);
-			cmyth_timestamp_to_string(end, ts);
+			ptr = strchr(tsbuf, 'T');
+			*ptr = '\0';
+			memmove(tsbuf, ptr+1, strlen(ptr+1)+1);
+			start = ref_strdup(tsbuf);
+		}
+		ts = cmyth_proginfo_end(next_prog);
+		if (ts != NULL ) {
+			cmyth_timestamp_to_string(tsbuf, ts);
 			ref_release(ts);
-			ptr = strchr(start, 'T');
+			ptr = strchr(tsbuf, 'T');
 			*ptr = '\0';
-			memmove(start, ptr+1, strlen(ptr+1)+1);
-			ptr = strchr(end, 'T');
-			*ptr = '\0';
-			memmove(end, ptr+1, strlen(ptr+1)+1);
+			memmove(tsbuf, ptr+1, strlen(ptr+1)+1);
+			end = ref_strdup(tsbuf);
 		}
 
 		ref_release(cur);
@@ -1119,14 +1141,8 @@ get_livetv_programs_rec(int id, struct livetv_prog **list, int *n, int *p)
 		(*list)[*p].title = ref_hold(title);
 		(*list)[*p].subtitle = ref_hold(subtitle);
 		(*list)[*p].description = ref_hold(description);
-		if (start)
-			(*list)[*p].start = ref_strdup(start);
-		else
-			(*list)[*p].start = NULL;
-		if (end)
-			(*list)[*p].end = ref_strdup(end);
-		else
-			(*list)[*p].end = NULL;
+		(*list)[*p].start = start;
+		(*list)[*p].end = end;
 		(*list)[*p].count = 1;
 		(*list)[*p].pi[0].rec_id = id;
 		(*list)[*p].pi[0].busy = busy;
@@ -1472,7 +1488,7 @@ mythtv_livetv_menu_start(void)
 	ver = cmyth_conn_get_protocol_version(ctrl);
 	ref_release(ctrl);
 
-	if (ver >= 26) {
+	if (ver >= 15) {
 		rc = mythtv_new_livetv();
 	} else {
 		rc = mythtv_livetv_menu();

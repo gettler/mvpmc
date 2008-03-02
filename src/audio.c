@@ -1302,6 +1302,7 @@ audio_start(void *arg)
 		if (!audio_stop && playlist) {
 			if (is_streaming(current) != 0 ) {
 				close(fd);
+				fd = -1;
 			}
 			playlist_next();
 			if (playlist) {
@@ -1313,6 +1314,7 @@ audio_start(void *arg)
 		printf("Done with audio file\n");
 
 		close(fd);
+		fd = -1;
 		audio_clear();
 		if (done < 0 ) {
 			mvpw_hide(fb_progress);
@@ -1378,7 +1380,7 @@ static int http_play(int afd)
 					mvpw_hide(playlist_widget);
 				}
 				mvpw_hide(file_browser);
-				video_thumbnail(0);
+				video_thumbnail(AV_THUMBNAIL_OFF,0);
 				video_set_root();
 				mvpw_focus(root);
 				screensaver_disable();

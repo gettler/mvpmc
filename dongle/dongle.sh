@@ -14,7 +14,7 @@ DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/s
 WRAPPER_DIRS="bin sbin etc usr/bin usr/sbin dev tmp lib proc mnt"
 
 BIN="busybox flashcp mvpmc ntpclient osdtest scp djmount nbtscan"
-MVPMC_BIN="ticonfig vpdread"
+MVPMC_BIN="ticonfig vpdread splash"
 WRAPPER_BIN="busybox splash"
 
 SBIN="dropbearmulti dropbear dropbearkey fusermount"
@@ -89,6 +89,11 @@ for i in $WRAPPERLIB ; do
     $STRIP filesystem/install_wrapper/lib/$i
 done
 
+for i in $SBIN ; do
+    cp -d install/mvp/sbin/$i filesystem/install/sbin
+    $STRIP filesystem/install/sbin/$i
+done
+
 for i in $BIN ; do
     cp -d install/mvp/bin/$i filesystem/install/bin
     $STRIP filesystem/install/bin/$i
@@ -99,11 +104,6 @@ for i in $WRAPPER_BIN ; do
 done
 for i in $MVPMC_BIN ; do
     ln -sf mvpmc filesystem/install/bin/$i
-done
-
-for i in $SBIN ; do
-    cp -d install/mvp/sbin/$i filesystem/install/sbin
-    $STRIP filesystem/install/sbin/$i
 done
 
 for i in $USRBIN ; do

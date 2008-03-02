@@ -52,6 +52,7 @@
 #endif
 
 extern int new_live_tv;
+extern int jit_mode;
 
 /* #define STREAM_TEST 1 */
 #ifdef STREAM_TEST 
@@ -159,15 +160,22 @@ sighandler(int sig)
 }
 
 void
-video_thumbnail(int on)
+video_thumbnail(av_thumbnail_mode_t thumb_mode, vid_thumb_location_t loc)
 {
 	static int enable = 1;
 
-	if (on) {
-		if (si.rows == 480)
-			av_move(475, si.rows-60, 4);
+	if (thumb_mode != AV_THUMBNAIL_OFF) {
+		int x,y;
+		if((loc & 1) == 0)
+			x = VIEWPORT_LEFT;
 		else
-			av_move(475, si.rows-113, 4);
+			x = VIEWPORT_RIGHT - av_thumbnail_width(thumb_mode);
+
+		if((loc & 2) == 0)
+			y = VIEWPORT_TOP;
+		else
+			y = VIEWPORT_BOTTOM - av_thumbnail_height(thumb_mode);
+		av_move(x, y, thumb_mode);
 		screensaver_enable();
 		enable = 1;
 	} else {
@@ -248,7 +256,7 @@ video_subtitle_check(mvp_widget_t *widget)
 	       mvpw_visible(ct_text_box) ||
 	       mvpw_visible(mythtv_menu))) {
 		if(showing_guide == 0) {
-			video_thumbnail(0);
+			video_thumbnail(AV_THUMBNAIL_OFF,0);
 		}
 	} 
 }
@@ -591,6 +599,17 @@ seek_by(int seconds)
 	size = video_functions->size();
 
 	seek_seconds = seek_start_seconds + seconds;
+
+	/* The mvpmc hardware can only handle 12Mbps and some off-air DVB/ATSC
+	 * SD broadcasts appear to some way result in huge (200+Mbps) values
+	 * to appear in the seeks and cause 30 seconds seeks to go for a lot
+	 * longer */
+	if ( seek_Bps > (12/8)*1024*1024) {
+		printf("Calculated Seek Bps was %d kbps, which is too high " \
+		       "- set to 4Mbps\n",8*seek_Bps/1024);
+		seek_Bps = (4/8) * 1024 * 1024;
+	}
+
 	delta = seek_Bps * seconds;
 
 	/*
@@ -626,6 +645,21 @@ disable_osd(void)
 	set_osd_callback(OSD_TIMECODE, NULL);
 }
 
+static void
+seek_disable_osd(mvp_widget_t *widget)
+{
+	if (display_on_alt != 1)
+		return;
+
+	display_on_alt = 0;
+
+	if (!display_on) {
+		disable_osd();
+	}
+
+	mvpw_expose(root);
+}
+
 void
 set_bookmark_status(mvp_widget_t *widget)
 {
@@ -647,16 +681,52 @@ goto_bookmark_status(mvp_widget_t *widget)
 }
 
 void
+set_commbreak_status(mvp_widget_t *widget)
+{
+	char buf[55];
+	// current_breaklist not available
+	// snprintf(buf, sizeof(buf),"MythTV Commercial Skip\n%li Commercial Breaks Found",current_breaklist->commbreak_count);
+	snprintf(buf, sizeof(buf),"MythTV Commercial Skip\n");
+	mvpw_set_text_str(mythtv_osd_description, buf);
+	mvpw_expose(mythtv_osd_description);
+}
+
+void
+set_seek_status(mvp_widget_t *widget)
+{
+	char buf[42];
+	if (mythtv_commskip) 
+		snprintf(buf, sizeof(buf),"MythTV Seek\nNot in Commercial Break");
+	else 
+		snprintf(buf, sizeof(buf),"MythTV Seek\nCommercial Skip Disabled");
+	mvpw_set_text_str(mythtv_osd_description, buf);
+	mvpw_expose(mythtv_osd_description);
+}
+
+void
 display_bookmark_status_osd(int function)
 {
+	display_on_alt = 1;
 	set_osd_callback(OSD_PROGRESS, video_progress);
 	set_osd_callback(OSD_TIMECODE, video_timecode);
-	if (function) { // set bookmark
-		set_osd_callback(OSD_PROGRAM, set_bookmark_status);
+	switch (function) {
+		case 0:
+			//seek to bookmark
+			set_osd_callback(OSD_PROGRAM, goto_bookmark_status);
+			break;
+		case 1:
+			// set bookmark
+			set_osd_callback(OSD_PROGRAM, set_bookmark_status);
+			break;
+		case 2:
+			// doing a commskip seek
+			set_osd_callback(OSD_PROGRAM, set_commbreak_status);
+			break;
+		case 3:
+			// doing a normal seek
+			set_osd_callback(OSD_PROGRAM, set_seek_status);
 	}
-	else { //seek to bookmark
-		set_osd_callback(OSD_PROGRAM, goto_bookmark_status);
-	}
+	mvpw_set_timer(root, seek_disable_osd, 5000);
 }
 
 void
@@ -669,13 +739,17 @@ enable_osd(void)
 	set_osd_callback(OSD_DEMUX, video_demux);
 	switch (hw_state) {
 	case MVPMC_STATE_MYTHTV:
+	case MVPMC_STATE_MYTHTV_SHUTDOWN:
 		set_osd_callback(OSD_PROGRAM, mythtv_program);
 		break;
 	case MVPMC_STATE_REPLAYTV:
+	case MVPMC_STATE_REPLAYTV_SHUTDOWN:
 		set_osd_callback(OSD_PROGRAM, replaytv_osd_proginfo_update);
 		break;
 	case MVPMC_STATE_HTTP:
+	case MVPMC_STATE_HTTP_SHUTDOWN:
 	case MVPMC_STATE_FILEBROWSER:
+	case MVPMC_STATE_FILEBROWSER_SHUTDOWN:
 		set_osd_callback(OSD_PROGRAM, fb_program);
 		break;
 	default:
@@ -690,7 +764,7 @@ back_to_guide_menu()
 	
 		disable_osd();
 		if ( !running_replaytv ) {
-			video_thumbnail(1);
+			video_thumbnail(AV_THUMBNAIL_EIGTH,VID_THUMB_BOTTOM_RIGHT);
 		}
 		if (spu_widget) {
 			mvpw_hide(spu_widget);
@@ -707,14 +781,16 @@ back_to_guide_menu()
 		display_on = 0;
 		zoomed = 0;
 		switch (gui_state) {
-        case MVPMC_STATE_NONE:
-        case MVPMC_STATE_EMULATE:
-
+		case MVPMC_STATE_NONE:
+		case MVPMC_STATE_EMULATE:
+		case MVPMC_STATE_EMULATE_SHUTDOWN:
+		case MVPMC_STATE_WEATHER:
 			/*
 			 * XXX: redisplay the main menu?
 			 */
 			break;
 		case MVPMC_STATE_MYTHTV:
+		case MVPMC_STATE_MYTHTV_SHUTDOWN:
 			printf("%s(): %d\n", __FUNCTION__, __LINE__);
 			if (mythtv_livetv == 1) {
 				if (mythtv_state == MYTHTV_STATE_LIVETV) {
@@ -735,7 +811,7 @@ back_to_guide_menu()
 						mvpw_show(mythtv_logo);
 						mvpw_show(mythtv_browser);
 						mvpw_focus(mythtv_browser);
-						video_thumbnail(1);
+						video_thumbnail(AV_THUMBNAIL_EIGTH,VID_THUMB_BOTTOM_RIGHT);
 					}
 				} else if (mythtv_state == MYTHTV_STATE_MAIN) {
 					mvpw_show(mythtv_logo);
@@ -754,11 +830,14 @@ back_to_guide_menu()
 			}
 			break;
 		case MVPMC_STATE_REPLAYTV:
+		case MVPMC_STATE_REPLAYTV_SHUTDOWN:
 			video_playing = 0;
 			replaytv_back_from_video();
 			break;
 		case MVPMC_STATE_FILEBROWSER:
+		case MVPMC_STATE_FILEBROWSER_SHUTDOWN:
 		case MVPMC_STATE_HTTP:
+		case MVPMC_STATE_HTTP_SHUTDOWN:
 			if (playlist) {
 				mvpw_show(fb_progress);
 				mvpw_show(playlist_widget);
@@ -770,6 +849,7 @@ back_to_guide_menu()
 			}
 			break;
 		case MVPMC_STATE_MCLIENT:
+		case MVPMC_STATE_MCLIENT_SHUTDOWN:
 			/*
 			 * No code is necessary here because:
 			 * - The key is already trapped / processed in gui.c/mclient_key_callback.
@@ -816,8 +896,9 @@ video_callback(mvp_widget_t *widget, char key)
 			mvp_tvguide_video_topright(1);
 			mvp_tvguide_show(mythtv_livetv_program_list, mythtv_livetv_description,
 											 mythtv_livetv_clock);
+			break;
 		}
-		break;
+	/* if the guide button is pressed while guide is active fall through to go back to remove guide and return to TV */
 	case MVPW_KEY_TV:
 		if(showing_guide == 1) {
 			printf("In %s hiding guide %d \n", __FUNCTION__, key);
@@ -887,7 +968,15 @@ video_callback(mvp_widget_t *widget, char key)
 		timed_osd(seek_osd_timeout*1000);
 		break;
 	case MVPW_KEY_SKIP:
-		seek_by(30);
+		if (mythtv_seek_amount == 2 ) {
+			seek_by(30);
+		}
+		else if (mythtv_seek_amount == 3 ) {
+			seek_by(60);
+		}
+		else {
+			seek_by(30);
+		}
 		timed_osd(seek_osd_timeout*1000);
 		break;
 	case MVPW_KEY_FFWD:
@@ -1145,7 +1234,7 @@ audio_switch_stream(mvp_widget_t *widget, int stream)
 		if (type == STREAM_MPEG)
 			av_set_audio_output(AV_AUDIO_MPEG);
 		else
-			av_set_audio_output(AV_AUDIO_PCM);
+			av_set_audio_output(AV_AUDIO_AC3);
 
 		fd_audio = av_get_audio_fd();
 
@@ -1338,6 +1427,7 @@ file_open(void)
 			audio_clear();
 		
 		close(fd);
+		fd = -1;
 	}
 
 	pthread_kill(video_write_thread, SIGURG);
@@ -1370,13 +1460,11 @@ file_open(void)
 		ts_demux_reset(tshandle);
 		demux_attr_reset(handle);
 		demux_seek(handle);
+		vid_event_discontinuity_possible();
 		if (gui_state == MVPMC_STATE_EMULATE || http_playing == HTTP_VIDEO_FILE_MPG) {
-			video_thumbnail(0);
+			video_thumbnail(AV_THUMBNAIL_OFF, 0);
 		} else {
-			if (si.rows == 480)
-				av_move(475, si.rows-60, 4);
-			else
-				av_move(475, si.rows-113, 4);
+			video_thumbnail(AV_THUMBNAIL_EIGTH, 0);
 		}
 		av_play();
 	}
@@ -1426,6 +1514,7 @@ video_read_start(void *arg)
 			demux_reset(handle);
 			ts_demux_reset(tshandle);
 			demux_seek(handle);
+			vid_event_discontinuity_possible();
 			if ( !(sent_idle_notify) ) {
 				if ( video_functions->notify != NULL ) {
 					video_functions->notify(MVP_READ_THREAD_IDLE);
@@ -1446,6 +1535,7 @@ video_read_start(void *arg)
 #endif
 
 		if (video_reopen) {
+		        vid_event_clear();
 			if (video_functions->open() == 0) {
 				/* Jump to the start of the new file */
 				jump_target = 0;
@@ -1468,6 +1558,8 @@ video_read_start(void *arg)
 			demux_seek(handle);
 			av_get_state(&state);
 			av_reset();
+			av_reset_stc();
+			vid_event_discontinuity_possible();
 			if (seeking)
 				reset = 0;
 			if (state.mute)
@@ -1480,6 +1572,7 @@ video_read_start(void *arg)
 			}
 			pcm_decoded = 0;
 			ac3len = 0;
+			len = 0;
 			if (jumping) {
 				while (jump_target < 0)
 					usleep(1000);
@@ -1512,7 +1605,7 @@ video_read_start(void *arg)
 					tsmode = ts_demux_is_ts(tshandle, tsbuf, tslen);
 					printf("auto detection transport stream returned %d\n", tsmode);
 					if (tsmode == TS_MODE_NO)
-					len = tslen;
+						len = tslen;
 			    	}
 			} else if (tsmode == TS_MODE_NO) {
 				len = tslen;
@@ -1655,7 +1748,7 @@ video_events_start(void *arg)
 static void video_change_aspect(int new_aspect, int new_afd)
 {
     printf("Changing to aspect %d, afd %d\n", new_aspect, new_afd);
-    if (new_aspect != 0) {
+    if (new_aspect != 0 && new_aspect != -1) {
 	av_wss_aspect_t wss;
 	if (new_aspect == 3) {
 	    printf("Source video aspect ratio: 16:9\n");
@@ -1668,7 +1761,7 @@ static void video_change_aspect(int new_aspect, int new_afd)
 	}
 	av_wss_update_aspect(wss);
     } else {
-	printf("Video aspect reported as ZERO - not changing setting\n");
+	printf("Video aspect reported as 0 or -1 - not changing setting\n");
 	fflush(stdout);
     }
 }
@@ -1721,21 +1814,6 @@ video_write_start(void *arg)
 	return NULL;
 }
 
-static void
-seek_disable_osd(mvp_widget_t *widget)
-{
-	if (display_on_alt != 1)
-		return;
-
-	display_on_alt = 0;
-
-	if (!display_on) {
-		disable_osd();
-	}
-
-	mvpw_expose(root);
-}
-
 void
 timed_osd(int timeout)
 {
@@ -1746,6 +1824,21 @@ timed_osd(int timeout)
 
 	enable_osd();
 	mvpw_set_timer(root, seek_disable_osd, timeout);
+}
+
+static inline unsigned int get_cur_vid_stc()
+{
+    pts_sync_data_t pts_struct;
+    av_get_video_sync(&pts_struct);
+    return pts_struct.stc & 0xFFFFFFFF;
+}
+
+static void
+video_unpause_timer_callback(mvp_widget_t * widget)
+{
+        if(!paused)
+		av_play();
+	mvpw_set_timer(widget,NULL,0);
 }
 
 void*
@@ -1814,10 +1907,44 @@ audio_write_start(void *arg)
 		case AUDIO_MODE_MPEG1_PES:
 		case AUDIO_MODE_MPEG2_PES:
 		case AUDIO_MODE_ES:
-			if ((len=DEMUX_WRITE_AUDIO(handle, fd_audio)) > 0)
-				pthread_cond_broadcast(&video_cond);
-			else
-				pthread_cond_wait(&video_cond, &mutex);
+			if (jit_mode == 0) {
+				if ((len=DEMUX_WRITE_AUDIO(handle, fd_audio)) > 0)
+					pthread_cond_broadcast(&video_cond);
+				else
+					pthread_cond_wait(&video_cond, &mutex);
+			} else {
+			    int flags, duration;
+			    len=DEMUX_JIT_WRITE_AUDIO(handle, fd_audio,
+						get_cur_vid_stc(),jit_mode,
+						&flags,&duration);
+			    if(flags & 4)
+			    {
+				/*4 is the same as 1 followed by 2*/
+				flags = (flags | 1 | 2) & ~4;
+			    }
+			    if(flags & 1)
+			    {
+				av_pause_video();
+			    }
+			    if((flags & 2) && !paused)
+			    {
+				if(duration <= 10)
+				    video_unpause_timer_callback(pause_widget);
+				else
+				    mvpw_set_timer(pause_widget,
+				       video_unpause_timer_callback, duration);
+			    }
+			    if(flags & 8)
+			    {
+				usleep(duration*1000);
+			    }
+
+
+			    if(len > 0)
+				    pthread_cond_broadcast(&video_cond);
+			    else if(!(flags & 8))
+				    pthread_cond_wait(&video_cond, &mutex);
+			}
 			break;
 		case AUDIO_MODE_PCM:
 			/*
@@ -1893,6 +2020,13 @@ demux_write_audio_nop(demux_handle_t *handle, int fd)
 	return len;
 }
 
+static int
+demux_jit_write_audio_nop(demux_handle_t *handle, int fd, unsigned int pts,
+			  int mode, int* flags, int *duration)
+{
+    return demux_write_audio_nop(handle,fd);
+}
+
 void
 start_thruput_test(void)
 {
@@ -1900,6 +2034,7 @@ start_thruput_test(void)
 
 	DEMUX_WRITE_VIDEO = demux_write_video_nop;
 	DEMUX_WRITE_AUDIO = demux_write_audio_nop;
+	DEMUX_JIT_WRITE_AUDIO = demux_jit_write_audio_nop;
 
 	thruput = 1;
 
@@ -1941,6 +2076,7 @@ end_thruput_test(void)
 
 	DEMUX_WRITE_VIDEO = demux_write_video;
 	DEMUX_WRITE_AUDIO = demux_write_audio;
+	DEMUX_JIT_WRITE_AUDIO = demux_jit_write_audio;
 
 	thruput = 0;
 	thruput_count = 0;
@@ -1956,6 +2092,7 @@ end_thruput_test(void)
 
 void sync_ac3_audio(void)
 {
+#ifndef MVPMC_HOST
 	pts_sync_data_t async, vsync;
 	long long syncDiff;
 	int threshold=0;
@@ -1968,22 +2105,26 @@ void sync_ac3_audio(void)
 	av_get_audio_sync(&async);
 	av_get_video_sync(&vsync);
 	syncDiff = async.stc-vsync.stc;
-	/*
+#if 0
+
 	printf("PRE SYNC:  a 0x%llx 0x%llx  v 0x%llx 0x%llx 0x%llx\n",
-		async.stc, async.pts, vsync.stc, vsync.pts, syncDiff)
-	*/
+		async.stc, async.pts, vsync.stc, vsync.pts, syncDiff);
+#endif
+		
+#if 1
 	if ( abs(syncDiff) > AC3OK ) {
 		if ( syncDiff < threshold ) {
 			av_delay_video(threshold-syncDiff);
-		} else if ( syncDiff > threshold + 0x1000 ) {
-			if (ioctl(fd_audio, _IOW('a',3,int), 0) < 0) {
-			} else {
-//				usleep(syncDiff-(threshold+0x1000));
-			}
+		} else if ( syncDiff > threshold  ) {
+                        mvpstb_audio_end();
+			/*
 			if (ioctl(fd_audio, _IOW('a',4,int), 0) < 0) {
 			} else {
 			}
+			*/
 		}
 	}
-	
+
+#endif
+#endif	
 }

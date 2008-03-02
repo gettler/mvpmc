@@ -7,12 +7,19 @@
 import os
 import sys
 
+pwd = os.getcwd()
+os.environ['TOPLEVEL'] = pwd
+sys.path.append('%s/scons' % pwd)
+
+import mvpmc
+
 env = Environment (ENV = os.environ)
 
 target = ARGUMENTS.get('TARGET', Platform())
 kernver = ARGUMENTS.get('KERNVER', Platform())
 
 env.Replace(CCFLAGS = '-O3 -g -Wall -Werror')
+env.Replace(TOPDIR = os.getcwd())
 
 home = os.environ['HOME']
 
@@ -49,6 +56,7 @@ if target == 'mvp':
 		crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_MEDIAMVP'
+	cc = cross + 'gcc'
 	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
 	env.Replace(GTKCFLAGS = '')
@@ -81,27 +89,34 @@ elif target == 'host':
 	fd.close()
 	env.Replace(GTKCFLAGS = gtkcflags)
 	env.Replace(GTKLDFLAGS = gtkldflags)
+	env.Replace(CROSS = '')
 elif target == 'kernel':
 	print "kernel build"
 	powerpc = 'powerpc-405-linux-uclibc'
 	gcc = 'gcc-3.4.5-uClibc-0.9.28'
 	crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
-	env.Replace(CROSSPATH = crossroot + '/' + powerpc + '/bin')
 	prefix = powerpc + '-'
 	cross = crossroot + '/bin/' + prefix
 	cc = cross + 'gcc'
-	env.Replace(CROSS = cross)
-	env.Replace(CC = cross + 'gcc')
 	cppflags = ''
 else:
 	print "Unknown target %s"%target
 	sys.exit(1)
 
 #
+# Rebuilding the cross-compiler should be done in ~/toolchains
+#
+if (target != 'host') and (os.path.exists(cc) == 0):
+	toolchains =  home + '/toolchains/'
+	crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
+	cross = crossroot + '/bin/' + prefix
+	cc = cross + 'gcc'
+
+#
 # build binaries in the obj/TARGET directory
 #
-pwd = os.getcwd()
 env.Replace(INCDIR = pwd + '/include')
+env.Replace(INSTDIR = pwd + '/dongle/install/' + target)
 env.Replace(INSTINCDIR = pwd + '/dongle/install/' + target + '/include')
 env.Replace(INSTLIBDIR = pwd + '/dongle/install/' + target + '/lib')
 env.Replace(INSTBINDIR = pwd + '/dongle/install/' + target + '/bin')
@@ -173,6 +188,9 @@ else:
 	themes = env.SConscript('themes/SConscript')
 	images = env.SConscript('images/SConscript')
 
+	env.Depends(mvpmc, libs)
+	env.Depends(mvplibs, libs)
+
 	#
 	# Install the cross compilation tools, if needed.
 	#
@@ -181,8 +199,8 @@ else:
 		if os.path.exists(cc) == 0:
 			print "build application cross-compiler"
 			gcc = env.SConscript('tools/toolchains/uclibc/SConscript')
-			for a in libs + apps:
-			    env.Depends(a, gcc)
+			env.Depends(libs, gcc)
+			env.Depends(apps, gcc)
 			env.Depends(mvplibs, gcc)
 			env.Depends(mvpmc, gcc)
 
@@ -192,10 +210,11 @@ else:
 	if target == 'mvp':
 		dongle = env.SConscript('dongle/SConscript')
 		env.Depends(dongle, mvpmc)
-		for a in apps + libs:
-		    env.Depends(dongle,a)
-		env.Depends(dongle,themes)
-		env.Depends(dongle,images)
+		env.Depends(dongle, mvplibs)
+		env.Depends(dongle, apps)
+		env.Depends(dongle, libs)
+		env.Depends(dongle, themes)
+		env.Depends(dongle, images)
 
 	#
 	# Build squashfs and mktree and mvprelay

@@ -138,7 +138,7 @@ extern uint32_t mvpw_get_bg(const mvp_widget_t *widget);
  * Set the timer callback and timeout value for a widget.
  * \param widget widget handle
  * \param callback callback function (NULL to disable)
- * \param timeout timeout in microseconds
+ * \param timeout timeout in milliseconds
  */
 extern void mvpw_set_timer(mvp_widget_t *widget,
 			   void (*callback)(mvp_widget_t*), uint32_t timeout);
@@ -618,6 +618,13 @@ extern char* mvpw_get_menu_item(mvp_widget_t *widget, void *key);
  * \param checked 0 to uncheck, 1 to check
  */
 extern void mvpw_check_menu_item(mvp_widget_t *widget, void *key, bool checked);
+
+/**
+ * Check or uncheck all menu items.
+ * \param widget widget handle
+ * \param checked 0 to uncheck, 1 to check
+ */
+extern void mvpw_check_all_items(mvp_widget_t *widget, bool checked);
 
 /**
  * Hilite a specific menu item.
@@ -1109,6 +1116,12 @@ mvpw_get_rgba(unsigned long c, unsigned char *r, unsigned char *g,
 #define	MVPW_KEY_PREV_CHAN	'C'
 #define	MVPW_KEY_GUIDE		'U'
 #define	MVPW_KEY_TV		'T'
+
+/* not mapped to keys yet use low */
+#define	MVPW_KEY_MUSIC		25
+#define	MVPW_KEY_PICTURES	26
+#define	MVPW_KEY_RADIO		29
+
 #else
 #define	MVPW_KEY_ZERO		 0
 #define	MVPW_KEY_ONE		 1
@@ -1131,6 +1144,7 @@ mvpw_get_rgba(unsigned long c, unsigned char *r, unsigned char *g,
 #define	MVPW_KEY_PICTURES	26
 #define	MVPW_KEY_GUIDE		27
 #define	MVPW_KEY_TV		28
+#define	MVPW_KEY_RADIO		29
 #define	MVPW_KEY_SKIP		30
 #define	MVPW_KEY_EXIT		31
 #define	MVPW_KEY_REPLAY		36
@@ -1158,8 +1172,6 @@ mvpw_get_rgba(unsigned long c, unsigned char *r, unsigned char *g,
 #define	MVPW_KEY_ASTERISK	10
 #define	MVPW_KEY_POUND		14
 #define	MVPW_KEY_PREV_CHAN	18
-
-#define	MVPW_KEY_RADIO		29
 
 #endif /* MVPMC_HOST */
 

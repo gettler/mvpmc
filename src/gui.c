@@ -38,6 +38,7 @@
 #include <mvp_av.h>
 #include <mvp_demux.h>
 #include <mvp_osd.h>
+#include <mvp_string.h>
 #include <cmyth.h>
 
 #include "mvpmc.h"
@@ -50,6 +51,7 @@
 #include "http_stream.h"
 #include "display.h"
 #include "bmp.h"
+#include "weather.h"
 
 #include <vncviewer.h>
 #include <nano-X.h>
@@ -147,6 +149,18 @@ mvpw_text_attr_t mclient_sub_image_attr = {
 	.font = FONT_LARGE,
 	.fg = MVPW_LIGHTGREY,
 	.border = MVPW_MIDNIGHTBLUE,
+	.border_size = 4,
+	.utf8 = true,
+};
+
+mvpw_text_attr_t mclient_sub_alt_image_attr = {
+	.wrap = true,
+	.pack = false,
+	.justify = MVPW_TEXT_LEFT,
+	.margin = 4,
+	.font = FONT_LARGE,
+	.fg = MVPW_LIGHTGREY,
+	.border = MVPW_MIDNIGHTBLUE,
 	.border_size = 0,
 	.utf8 = true,
 };
@@ -167,6 +181,28 @@ mvpw_graph_attr_t mclient_sub_volumebar_attr = {
    	.bg = MVPW_LIGHTGREY,
    	.border = MVPW_MIDNIGHTBLUE,
    	.border_size = 0,
+};
+
+mvpw_graph_attr_t mclient_sub_browsebar_attr = {
+	.min = 0,
+	.max = 100,
+	.fg = mvpw_color_alpha(MVPW_GREEN, 0x80),
+   	.bg = MVPW_LIGHTGREY,
+   	.border = MVPW_MIDNIGHTBLUE,
+   	.border_size = 4,
+};
+
+mvpw_menu_attr_t mclient_sub_localmenu_attr = {
+	.font = FONT_LARGE,
+	.fg = MVPW_LIGHTGREY,
+	.bg = MVPW_BLACK,
+	.hilite_fg = MVPW_GREEN,
+	.hilite_bg = MVPW_BLACK,
+	.title_fg = MVPW_WHITE,
+	.title_bg = MVPW_MIDNIGHTBLUE,
+	.border_size = 0,
+	.border = MVPW_DARKGREY2,
+	.margin = 4,
 };
 
 static mvpw_menu_attr_t settings_attr = {
@@ -339,6 +375,13 @@ static mvpw_menu_item_attr_t mclient_fullscreen_menu_item_attr = {
 	.selectable = false,
 	.fg = MVPW_LIGHTGREY, 
 	.bg = MVPW_BLACK,
+	.checkbox_fg = MVPW_GREEN,
+};
+
+static mvpw_menu_item_attr_t mclient_sub_localmenu_item_attr = {
+	.selectable = true,
+	.fg = MVPW_BLACK,
+	.bg = MVPW_LIGHTGREY,
 	.checkbox_fg = MVPW_GREEN,
 };
 
@@ -551,6 +594,19 @@ static mvpw_text_attr_t slow_connect_attr = {
 	.margin = 4,
 };
 
+static mvpw_text_attr_t weather_attr = {
+	.wrap = true,
+	.pack = false,
+	.justify = MVPW_TEXT_LEFT,
+	.margin = 4,
+	.font = FONT_LARGE,
+	.fg = MVPW_WHITE,
+	.bg = MVPW_BLACK,
+	.border = MVPW_BLACK,
+	.border_size = 0,
+	.margin = 0,
+};
+
 static mvpw_dialog_attr_t warn_attr = {
 	.font = FONT_STANDARD,
 	.fg = MVPW_WHITE,
@@ -631,7 +687,7 @@ static mvpw_text_attr_t thruput_text_attr = {
 
 static mvpw_graph_attr_t splash_graph_attr = {
 	.min = 0,
-	.max = 20,
+	.max = 35,
 	.bg = MVPW_BLACK,
 	.gradient = true,
 	.left = MVPW_BLACK,
@@ -650,6 +706,20 @@ static mvpw_graph_attr_t demux_video_graph_attr = {
 	.max = 1024*1024*2,
 	.fg = mvpw_color_alpha(MVPW_BLUE, 0x80),
 	.bg = mvpw_color_alpha(MVPW_BLACK, 0x80),
+};
+
+static mvpw_menu_attr_t weather_menu_attr = {
+	.font = FONT_STANDARD,
+	.fg = MVPW_BLACK,
+	.bg = MVPW_LIGHTGREY,
+	.hilite_fg = MVPW_WHITE,
+	.hilite_bg = MVPW_DARKGREY2,
+	.title_fg = MVPW_WHITE,
+	.title_bg = MVPW_BLUE,
+	.border_size = 2,
+	.border = MVPW_DARKGREY2,
+	.checkbox_fg = MVPW_GREEN,
+	.margin = 4,
 };
 
 /* 
@@ -802,6 +872,9 @@ theme_attr_t theme_attr[] = {
 	{ .name = "mclient_sub_softsqueeze",
 	  .type = WIDGET_TEXT,
 	  .attr.text = &mclient_sub_softsqueeze_attr },
+	{ .name = "mclient_sub_localmenu",
+	  .type = WIDGET_MENU,
+	  .attr.menu = &mclient_sub_localmenu_attr },
 	{ .name = "busy_graph",
 	  .type = WIDGET_GRAPH,
 	  .attr.graph = &busy_graph_attr },
@@ -961,6 +1034,8 @@ static mvp_widget_t *settings_av;
 static mvp_widget_t *settings_osd;
 static mvp_widget_t *settings_mythtv;
 static mvp_widget_t *settings_tvguide;
+static mvp_widget_t *settings_mythtv_options;
+static mvp_widget_t *osd_mythtv_options;
 static mvp_widget_t *settings_mythtv_control;
 static mvp_widget_t *settings_mythtv_program;
 static mvp_widget_t *settings_playback_osd;
@@ -985,20 +1060,46 @@ static mvp_widget_t *settings_help;
 static mvp_widget_t *settings_startup;
 static mvp_widget_t *settings_wireless;
 static mvp_widget_t *settings_wireless_signal;
+static mvp_widget_t *settings_weather;
+static mvp_widget_t *settings_weather_region;
 static mvp_widget_t *screensaver_dialog;
 static mvp_widget_t *about;
 mvp_widget_t *mclient;
 mvp_widget_t *mclient_fullscreen;
 mvp_widget_t *mclient_sub_softsqueeze;
 mvp_widget_t *mclient_sub_image;
+mvp_widget_t *mclient_sub_image_1_1;
+mvp_widget_t *mclient_sub_image_1_2;
+mvp_widget_t *mclient_sub_image_1_3;
+mvp_widget_t *mclient_sub_image_2_1;
+mvp_widget_t *mclient_sub_image_2_2;
+mvp_widget_t *mclient_sub_image_2_3;
+mvp_widget_t *mclient_sub_image_3_1;
+mvp_widget_t *mclient_sub_image_3_2;
+mvp_widget_t *mclient_sub_image_3_3;
+mvp_widget_t *mclient_sub_alt_image;
+mvp_widget_t *mclient_sub_alt_image_1_1;
+mvp_widget_t *mclient_sub_alt_image_1_2;
+mvp_widget_t *mclient_sub_alt_image_1_3;
+mvp_widget_t *mclient_sub_alt_image_2_1;
+mvp_widget_t *mclient_sub_alt_image_2_2;
+mvp_widget_t *mclient_sub_alt_image_2_3;
+mvp_widget_t *mclient_sub_alt_image_3_1;
+mvp_widget_t *mclient_sub_alt_image_3_2;
+mvp_widget_t *mclient_sub_alt_image_3_3;
+mvp_widget_t *mclient_sub_alt_image_info;
 mvp_widget_t *mclient_sub_progressbar;
 mvp_widget_t *mclient_sub_volumebar;
+mvp_widget_t *mclient_sub_browsebar;
+mvp_widget_t *mclient_sub_localmenu;
 static mvp_widget_t *setup_image;
 static mvp_widget_t *fb_image;
 static mvp_widget_t *mythtv_image;
 static mvp_widget_t *replaytv_image;
 static mvp_widget_t *about_image;
 static mvp_widget_t *emulate_image;
+static mvp_widget_t *weather_image;
+static mvp_widget_t *mclient_image;
 static mvp_widget_t *exit_image;
 static mvp_widget_t *warn_widget;
 static mvp_widget_t *busy_widget;
@@ -1016,10 +1117,12 @@ static mvp_widget_t *ct_bg_box;
 mvp_widget_t *file_browser;
 mvp_widget_t *mythtv_browser;
 mvp_widget_t *mythtv_sched_1;
+mvp_widget_t *mythtv_utils;
 mvp_widget_t *mythtv_sched_option_1; //recording options
 mvp_widget_t *mythtv_sched_option_2; //start early
 mvp_widget_t *mythtv_sched_option_3; //end late
 mvp_widget_t *mythtv_sched_option_4; //recording group
+mvp_widget_t *mythtv_options; // used for mythtv dialog questions
 mvp_widget_t *mythtv_prog_finder_1;
 mvp_widget_t *mythtv_prog_finder_2;
 mvp_widget_t *mythtv_prog_finder_3;
@@ -1027,6 +1130,7 @@ mvp_widget_t *mythtv_menu;
 mvp_widget_t *mythtv_logo;
 mvp_widget_t *mythtv_date;
 mvp_widget_t *mythtv_description;
+mvp_widget_t *settings_mythtv_testdb;
 mvp_widget_t *mythtv_channel;
 mvp_widget_t *mythtv_record;
 mvp_widget_t *mythtv_popup;
@@ -1083,6 +1187,10 @@ mvp_widget_t *fb_offset_widget;
 mvp_widget_t *fb_offset_bar;
 
 mvp_widget_t *vnc_widget;
+mvp_widget_t *weather_widget;
+mvp_widget_t *current_conditions_image;
+mvp_widget_t *forecast[5];
+mvp_widget_t *forecast_image[5];
 
 /* Widgets supporting the new livetv program guide */
 mvp_widget_t *mythtv_livetv_clock;
@@ -1094,6 +1202,8 @@ mvp_widget_t *mythtv_tvguide_dialog;
 mvp_widget_t *mythtv_tvguide_tune_warn;
 mvp_widget_t *mythtv_tvguide_tune_conflict;
 
+mvp_widget_t *weather_menu;
+
 static int screensaver_enabled = 0;
 volatile int screensaver_timeout = 60;
 volatile int screensaver_default = -1;
@@ -1103,12 +1213,10 @@ static int colorbars = 0;
 int chan_digit_cnt = 0;
 char chan_num[4] =  "\0\0\0";
 
-enum {
-	EDGE_TOP = 0,
-	EDGE_LEFT = 1,
-	EDGE_BOTTOM = 2,
-	EDGE_RIGHT = 3,
-};
+#define EDGE_TOP VIEWPORT_EDGE_TOP
+#define EDGE_LEFT VIEWPORT_EDGE_LEFT
+#define EDGE_BOTTOM VIEWPORT_EDGE_BOTTOM
+#define EDGE_RIGHT VIEWPORT_EDGE_RIGHT
 
 /*
  * The following will give similar results to the code prior to adding
@@ -1157,6 +1265,7 @@ typedef enum {
 	SETTINGS_MAIN_VIEWPORT,
 	SETTINGS_MAIN_STARTUP,
 	SETTINGS_MAIN_WIRELESS,
+	SETTINGS_MAIN_WEATHER,
 } settings_main_t;
 
 typedef enum {
@@ -1175,7 +1284,15 @@ typedef enum {
 	SETTINGS_MYTHTV_PROGRAMS,
 	SETTINGS_MYTHTV_RECGROUP_FILTER,
 	SETTINGS_MYTHTV_PENDING,
+	SETTINGS_MYTHTV_OPTIONS,
+	SETTINGS_MYTHTV_TESTDB
 } settings_mythtv_t;
+
+typedef enum {
+	COMMSKIP = 1,
+	SEEK30,
+	SEEK60
+} mythtv_options_t;
 
 typedef enum {
 	SETTINGS_VLC_IP = 1,
@@ -1200,6 +1317,8 @@ typedef enum {
 typedef enum {
 	SETTINGS_TVGUIDE_CLOCK_12 = 1,
 	SETTINGS_TVGUIDE_SORT,
+	SETTINGS_TVGUIDE_FRIENDLY_DATE,
+	SETTINGS_TVGUIDE_DURATION_MINUTES,
 } settings_tvguide_t;
 
 typedef enum {
@@ -1220,6 +1339,12 @@ enum {
 };
 
 typedef enum {
+	SETTINGS_WEATHER_EUROPE = 1,
+	SETTINGS_WEATHER_NA = 2,
+	SETTINGS_WEATHER_DEFAULT = 3,
+} settings_weather_t;
+
+typedef enum {
 	SETTINGS_WIRELESS_SIGNAL = 1,
 } settings_wireless_t;
 
@@ -1231,6 +1356,7 @@ enum {
 	MENU_OSD,
 	MENU_BRIGHT,
 	MENU_VOLUME,
+	MYTHTV_SETTINGS,
 };
 
 enum {
@@ -1259,6 +1385,11 @@ enum {
 	MYTHTV_POPUP_TUNER,		/* needs to be last */
 };
 
+enum {
+	MCLIENT_LOCALMENU_BROWSE_BY_COVER_ART = 1,
+	MCLIENT_LOCALMENU_CONTROL_ANOTHER_CLIENT,
+};
+
 mythtv_filter_t mythtv_filter = MYTHTV_FILTER_NONE;
 
 static void settings_display_mode_callback(mvp_widget_t*, char*, void*);
@@ -1277,6 +1408,7 @@ osd_settings_t osd_settings = {
 	.program	= 1,
 	.timecode	= 1,
 };
+
 
 /*
  * Holds startup application selection for OSD menu.
@@ -1332,10 +1464,17 @@ osd_widget_toggle(int type)
 static void
 splash_update(char *str)
 {
+#if 0
+	static int i = 0;
+
+	printf("splash %d\n", ++i);
+#endif
+
 	mvpw_set_text_str(splash, str);
 	mvpw_expose(splash);
 	mvpw_graph_incr(splash_graph, 1);
 	mvpw_event_flush();
+
 }
 
 void
@@ -1382,6 +1521,7 @@ mythtv_menu_callback(mvp_widget_t *widget, char key)
 		mvpw_hide(episodes_widget);
 		mvpw_hide(freespace_widget);
 		mvpw_hide(program_info_widget);
+		mvpw_hide(mythtv_utils);
 
 		switch_gui_state(MVPMC_STATE_NONE);
 		mvpw_show(mythtv_image);
@@ -1811,6 +1951,36 @@ settings_startup_key_callback(mvp_widget_t *widget, char key)
 }
 
 static void
+settings_weather_key_callback(mvp_widget_t *widget, char key)
+{
+	switch (key) {
+	case MVPW_KEY_EXIT:
+		mvpw_hide(widget);
+		mvpw_show(settings);
+		mvpw_focus(settings);
+		break;
+	}
+}
+
+static void
+settings_weather_region_key_callback(mvp_widget_t *widget, char key)
+{
+	switch (key) {
+	case MVPW_KEY_EXIT:
+		mvpw_hide(widget);
+		if (weather_location && weather_cmdline) {
+			if (strcmp(weather_location, weather_cmdline) == 0) {
+				mvpw_check_menu_item(settings_weather,
+						     (void*)SETTINGS_WEATHER_DEFAULT, 1);
+			}
+		}
+		mvpw_show(settings_weather);
+		mvpw_focus(settings_weather);
+		break;
+	}
+}
+
+static void
 settings_wireless_key_callback(mvp_widget_t *widget, char key)
 {
 	switch (key) {
@@ -2104,6 +2274,18 @@ settings_ip_key_callback(mvp_widget_t *widget, char key)
 }
 
 static void
+settings_mythtv_options_key_callback(mvp_widget_t *widget, char key)
+{
+	switch (key) {
+	case MVPW_KEY_EXIT:
+		mvpw_hide(widget);
+		mvpw_show(settings_mythtv);
+		mvpw_focus(settings_mythtv);
+		break;
+	}
+}
+
+static void
 settings_item_key_callback(mvp_widget_t *widget, char key)
 {
 	switch (key) {
@@ -2254,6 +2436,16 @@ pl_menu_select_callback(mvp_widget_t *widget, char *item, void *key)
 	}
 }
 
+
+int quickdir_change(mvp_widget_t *widget,char *path );
+
+#define quickdir_videos    "/mvpmc_media/videos"
+#define quickdir_music     "/mvpmc_media/music"
+#define quickdir_pictures  "/mvpmc_media/pictures"
+#define quickdir_tv        "/mvpmc_media/tv"
+#define quickdir_radio     "/mvpmc_media/radio"
+
+
 void
 fb_key_callback(mvp_widget_t *widget, char key)
 {
@@ -2310,6 +2502,21 @@ fb_key_callback(mvp_widget_t *widget, char key)
 		volume_key_callback(volume_dialog, key);
 		mvpw_show(volume_dialog);
 		mvpw_set_timer(volume_dialog, timer_hide, 3000);
+		break;
+	case MVPW_KEY_VIDEOS:
+		quickdir_change(widget,quickdir_videos);
+		break;
+	case MVPW_KEY_MUSIC:
+		quickdir_change(widget,quickdir_music);
+		break;
+	case MVPW_KEY_PICTURES:
+		quickdir_change(widget,quickdir_pictures);
+		break;
+	case MVPW_KEY_TV:
+		quickdir_change(widget,quickdir_tv);
+		break;
+	case MVPW_KEY_RADIO:
+		quickdir_change(widget,quickdir_radio);
 		break;
 	}
 }
@@ -2649,6 +2856,8 @@ mythtv_set_popup_menu(mythtv_state_t state)
 	char buf[32];
 
 	switch (state) {
+	case MYTHTV_STATE_UTILS:
+		break;
 	case MYTHTV_STATE_SCHEDULE:
 		printf ("Schedule Recordings\n");
 		mvpw_set_menu_title(mythtv_popup_nocheck, "Schedule Recordings Menu");
@@ -2866,7 +3075,7 @@ void
 mythtv_key_callback(mvp_widget_t *widget, char key)
 {
 
-	printf("In mythtv_key_callback and got number key %c \n",key);
+	//printf("In mythtv_key_callback and got number key %c \n",key);
 	// if we are changing channel based number keys then need to backup
 	// one digit if we get exit key
 	if (key == MVPW_KEY_EXIT && chan_digit_cnt > 0)
@@ -2889,7 +3098,18 @@ mythtv_key_callback(mvp_widget_t *widget, char key)
 			mythtv_main_menu = 1;
 			mythtv_state = MYTHTV_STATE_MAIN;
 			mythtv_clear_channel();
-		} else {
+		} 
+		else if (mythtv_state == MYTHTV_STATE_UTILS) {
+			mvpw_hide(mythtv_utils);
+			mvpw_hide(mythtv_browser);
+			mvpw_hide(program_info_widget);
+			mvpw_show(mythtv_logo);
+			mvpw_show(mythtv_menu);
+			mvpw_focus(mythtv_menu);
+			mythtv_main_menu = 1;
+			mythtv_state = MYTHTV_STATE_MAIN;
+		}
+		else {
 			mythtv_popup = NULL;
 			mvpw_hide(mythtv_record);
 			if (mythtv_back(widget) == 0) {
@@ -3051,6 +3271,7 @@ popup_key_callback(mvp_widget_t *widget, char key)
 		mvpw_hide(video_stream_menu);
 		mvpw_hide(subtitle_stream_menu);
 		mvpw_hide(osd_menu);
+		mvpw_hide(osd_mythtv_options);
 		mvpw_hide(bright_menu);
 		mvpw_focus(root);
 	}
@@ -3065,6 +3286,7 @@ popup_key_callback(mvp_widget_t *widget, char key)
 			mvpw_hide(subtitle_stream_menu);
 			mvpw_hide(osd_menu);
 			mvpw_hide(bright_menu);
+			mvpw_hide(osd_mythtv_options);
 			mvpw_show(popup_menu);
 			mvpw_focus(popup_menu);
 		}
@@ -3086,9 +3308,13 @@ mclient_key_callback(mvp_widget_t *widget, char key)
 		mvpw_hide(mclient_fullscreen); 
 		mvpw_hide(mclient_sub_softsqueeze); 
 		mvpw_hide(mclient_sub_image); 
+		mvpw_hide(mclient_sub_alt_image); 
 		mvpw_hide(mclient_sub_progressbar);
 		mvpw_hide(mclient_sub_volumebar);
 	        mvpw_hide(widget);
+
+                mclient_localmenu_hide_all_widgets();
+
 		/*
 		 * Give up the mclient GUI.
                  * We will turn off the audio later when the user
@@ -3104,6 +3330,138 @@ mclient_key_callback(mvp_widget_t *widget, char key)
 	}
 }
 
+void
+mclient_localmenu_callback(mvp_widget_t *widget, char key)
+{
+	if (gui_state != MVPMC_STATE_MCLIENT)
+		return;
+
+        if(
+            (key == MVPW_KEY_EXIT) |
+            (key == MVPW_KEY_MENU)
+	)
+	{
+		/*
+		 * Exit the local menu.
+		 */
+	       // Hide the BROWSE and LOCAL MENU widgets.
+		mclient_localmenu_hide_all_widgets();
+
+	       // Exit out of BROWSE and LOCAL MENU mode.
+		remote_buttons.local_menu = FALSE;
+		remote_buttons.local_menu_browse = FALSE;
+                mvpw_focus(mclient);
+        }
+	else if (key == MVPW_KEY_OK)
+	{
+             if (remote_buttons.local_menu_browse)
+             {
+            /*
+             * If OK key pressed and we are browsing the user is selecting 
+             * one of the albums to play.
+             * Figure out which and act accordingly.
+             */
+             unsigned int album_index;
+	
+             album_index = ((cli_data.row_for_cover_art * 3 ) + cli_data.col_for_cover_art);
+	     if(
+	     ((remote_buttons.local_menu) & (remote_buttons.local_menu_browse)) &
+	     (album_index < 6)
+	     )
+	     {
+	       sprintf (pending_cli_string, "%s playlistcontrol cmd:load album_id:%d\n", 
+		decoded_player_id,
+		cli_data.album_id_for_cover_art[album_index]);
+
+	       // Hide the BROWSE and LOCAL MENU widgets.
+               mclient_localmenu_hide_all_widgets();
+
+	       // Exit out of BROWSE and LOCAL MENU mode.
+               remote_buttons.local_menu = FALSE;
+               remote_buttons.local_menu_browse = FALSE;
+               mvpw_focus(mclient);
+	     }
+             }
+             else
+             {
+            /*
+             * If OK key pressed user is selecting one of the local
+             * menu's items.  Figure out which and act accordingly.
+             */
+	    int which;
+	    which = (int) mvpw_menu_get_hilite(mclient_sub_localmenu);
+	    switch(which)
+	    {
+	        default:
+                    printf(">>>TEST: Let's start the album cover browser.\n");
+	            if (remote_buttons.local_menu_browse == FALSE)
+	            {
+		      // Initialize cover art state machine.
+		      cli_data.state_for_cover_art = GET_1ST_ALBUM_COVERART;
+		      cli_data.pending_proc_for_cover_art = TRUE;
+		      cli_data.state_for_cover_art_widget = IDLE_COVERART_WIDGET;
+		      cli_data.pending_proc_for_cover_art_widget = TRUE;
+
+		      remote_buttons.local_menu_browse = TRUE;
+	            }
+		    break;
+	        case 2:
+                    printf(">>>TEST: Let's control another slimserver client.\n");
+		    break;
+	    }
+	    }
+	}
+	else
+	{
+		// Process this button press normally.
+                curses2ir(key);
+	}
+}
+
+void
+mclient_localmenu_hide_all_widgets(void)
+{
+	mvpw_hide(mclient_sub_localmenu); 
+    	mvpw_hide(mclient_sub_image_1_1);
+    	mvpw_hide(mclient_sub_image_1_2);
+    	mvpw_hide(mclient_sub_image_1_3);
+    	mvpw_hide(mclient_sub_image_2_1);
+    	mvpw_hide(mclient_sub_image_2_2);
+    	mvpw_hide(mclient_sub_image_2_3);
+    	mvpw_hide(mclient_sub_image_3_1);
+    	mvpw_hide(mclient_sub_image_3_2);
+    	mvpw_hide(mclient_sub_image_3_3);
+    	mvpw_hide(mclient_sub_alt_image_1_1);
+    	mvpw_hide(mclient_sub_alt_image_1_2);
+    	mvpw_hide(mclient_sub_alt_image_1_3);
+    	mvpw_hide(mclient_sub_alt_image_2_1);
+    	mvpw_hide(mclient_sub_alt_image_2_2);
+    	mvpw_hide(mclient_sub_alt_image_2_3);
+    	mvpw_hide(mclient_sub_alt_image_3_1);
+    	mvpw_hide(mclient_sub_alt_image_3_2);
+    	mvpw_hide(mclient_sub_alt_image_3_3);
+    	mvpw_hide(mclient_sub_alt_image_info);
+    	mvpw_hide(mclient_sub_browsebar);
+}
+
+static void
+weather_key_callback(mvp_widget_t *widget, char key)
+{
+	switch (key) {
+	case MVPW_KEY_EXIT:
+		switch_gui_state(MVPMC_STATE_NONE);
+		mvpw_hide(widget);
+		mvpw_show(main_menu);
+		mvpw_show(mvpmc_logo);
+		mvpw_show(weather_image);
+		mvpw_focus(main_menu);
+		break;
+	case MVPW_KEY_MENU:
+		printf("Menu key...\n");
+		break;
+	}
+}
+ 
 static void
 vnc_key_callback(mvp_widget_t *widget, char key)
 {
@@ -3149,14 +3507,22 @@ static int
 file_browser_init(void)
 {
 	mvp_widget_t *contain, *widget;
-	int h, h2, w, w2, x, y;
+	int h, h2, w, w2, x, y, h3;
 
 	splash_update("Creating file browser");
 
 	h = FONT_HEIGHT(display_attr);
 
 	w = si.cols - viewport_edges[EDGE_LEFT] - viewport_edges[EDGE_RIGHT];
-	h2 = si.rows - (h*3) -
+
+	/* Calculate the height of the lower section which the file list must
+	 * not stray onto
+	 */
+	h3 = av_thumbnail_height(AV_THUMBNAIL_EIGTH);
+	if(h3 < h*3)
+		h3 = h*3;
+
+	h2 = si.rows - h3 -
 		viewport_edges[EDGE_TOP] - viewport_edges[EDGE_BOTTOM];
 	file_browser = mvpw_create_menu(NULL,
 					viewport_edges[EDGE_LEFT],
@@ -3171,9 +3537,10 @@ file_browser_init(void)
 
 	mvpw_set_key(file_browser, fb_key_callback);
 
-	w = 300;
+	w = VIEWPORT_RIGHT - VIEWPORT_LEFT
+		- av_thumbnail_width(AV_THUMBNAIL_EIGTH);
 
-	contain = mvpw_create_container(NULL, 50, 80,
+	contain = mvpw_create_container(NULL, 0, 0,
 					w, h*3, display_attr.bg,
 					display_attr.border,
 					display_attr.border_size);
@@ -3386,6 +3753,32 @@ osd_select_callback(mvp_widget_t *widget, char *item, void *key)
 }
 
 static void
+settings_mythtv_options_select_callback(mvp_widget_t *widget, char *item, void *key)
+{
+        switch ((mythtv_options_t)key) {
+        case COMMSKIP: //COMMSKIP
+		mythtv_commskip ^= 1;
+                mvpw_check_menu_item(widget, (void*)key, mythtv_commskip);
+		config->mythtv_commskip = mythtv_commskip;
+		//config->bitmask |= CONFIG_MYTHTV_COMMSKIP;
+                break;
+	case SEEK30: // seek amount in seconds
+                mvpw_check_menu_item(widget, (void*)SEEK30, 0);
+                mvpw_check_menu_item(widget, (void*)SEEK60, 0);
+                mvpw_check_menu_item(widget, (void*)key, 1);
+		mythtv_seek_amount = (int)key;
+		break;
+	case SEEK60: // seek amount in seconds
+                mvpw_check_menu_item(widget, (void*)SEEK30, 0);
+                mvpw_check_menu_item(widget, (void*)SEEK60, 0);
+                mvpw_check_menu_item(widget, (void*)key, 1);
+		mythtv_seek_amount = (int)key;
+		break;
+        }
+}
+
+
+static void
 tvguide_select_callback(mvp_widget_t *widget, char *item, void *key)
 {
 
@@ -3397,6 +3790,18 @@ tvguide_select_callback(mvp_widget_t *widget, char *item, void *key)
 	case SETTINGS_TVGUIDE_SORT:
 		mythtv_tvguide_sort_desc ^= 1;
 		mvpw_check_menu_item(widget, (void*)key, mythtv_tvguide_sort_desc);
+		break;
+	case SETTINGS_TVGUIDE_FRIENDLY_DATE:
+		mythtv_use_friendly_date ^= 1;
+		mvpw_check_menu_item(widget, (void*)key, mythtv_use_friendly_date);
+		config->mythtv_use_friendly_date = mythtv_use_friendly_date;
+		config->bitmask |= CONFIG_FRIENDLY_DATE;
+		break;
+	case SETTINGS_TVGUIDE_DURATION_MINUTES:
+		mythtv_use_duration_minutes ^= 1;
+		mvpw_check_menu_item(widget, (void*)key, mythtv_use_duration_minutes);
+		config->mythtv_use_duration_minutes = mythtv_use_duration_minutes;
+		config->bitmask |= CONFIG_DURATION_MINUTES;
 		break;
 	}
 
@@ -3547,6 +3952,10 @@ popup_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_set_dialog_text(volume_dialog, buf);
 		mvpw_show(volume_dialog);
 		mvpw_focus(volume_dialog);
+		break;
+	case MYTHTV_SETTINGS:
+		mvpw_show(osd_mythtv_options);
+		mvpw_focus(osd_mythtv_options);
 		break;
 	}
 }
@@ -3756,6 +4165,16 @@ settings_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_show(settings_wireless);
 		mvpw_focus(settings_wireless);
 		break;
+	case SETTINGS_MAIN_WEATHER:
+		if (weather_location && weather_cmdline) {
+			if (strcmp(weather_location, weather_cmdline) == 0) {
+				mvpw_check_menu_item(settings_weather,
+						     (void*)SETTINGS_WEATHER_DEFAULT, 1);
+			}
+		}
+		mvpw_show(settings_weather);
+		mvpw_focus(settings_weather);
+		break;
 	}
 }
 
@@ -3877,6 +4296,15 @@ mythtv_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_show(settings_mythtv_filter_pending);
 		mvpw_focus(settings_mythtv_filter_pending);
 		break;
+	case SETTINGS_MYTHTV_OPTIONS:
+		mvpw_check_menu_item(settings_mythtv_options, (void*)COMMSKIP, mythtv_commskip);
+		mvpw_check_menu_item(settings_mythtv_options, (void*)SEEK30, 1);
+		mvpw_show(settings_mythtv_options);
+		mvpw_focus(settings_mythtv_options);
+		break;
+	case SETTINGS_MYTHTV_TESTDB:
+		mythtv_testdb(settings_mythtv_testdb);
+		break;
 	}
 }
 
@@ -3900,6 +4328,84 @@ startup_select_callback(mvp_widget_t *widget, char *item, void *key)
 		config->startup_selection = startup_selection;
 		config->bitmask |= CONFIG_STARTUP_SELECT;
 	}
+}
+
+static void
+settings_weather_callback(mvp_widget_t *widget, char *item, void *key)
+{
+	char *code = (char*)key;
+
+	mvpw_check_all_items(widget, 0);
+
+	if (code && item) {
+		mvpw_check_menu_item(widget, key, 1);
+		printf("Weather Location: %s  Code: %s\n", item, code);
+	}
+
+	if (code) {
+		char *old = weather_location;
+		weather_location = strdup(code);
+		if (old) {
+			free(old);
+		} else {
+			main_menu_items();
+		}
+		sizeof_strncpy(config->weather_location, weather_location);
+		config->bitmask |= CONFIG_WEATHER_LOCATION;
+	}
+}
+
+static void
+weather_select_callback(mvp_widget_t *widget, char *item, void *key)
+{
+	int i = 0;
+	weather_code_t *codes = NULL;
+
+	mvpw_check_all_items(widget, 0);
+
+	switch ((settings_weather_t)key) {
+	case SETTINGS_WEATHER_DEFAULT:
+		settings_weather_callback(widget, NULL,
+					  (void*)weather_cmdline);
+		mvpw_check_menu_item(widget, key, 1);
+		return;
+		break;
+	case SETTINGS_WEATHER_EUROPE:
+		codes = weather_codes_europe;
+		mvpw_set_menu_title(settings_weather_region, "Europe");
+		break;
+	case SETTINGS_WEATHER_NA:
+		codes = weather_codes_na;
+		mvpw_set_menu_title(settings_weather_region, "North America");
+		break;
+	}
+
+	if (codes == NULL) {
+		return;
+	}
+
+	settings_item_attr.select = settings_weather_callback;
+	settings_attr.checkboxes = 1;
+	mvpw_set_menu_attr(settings_weather_region, &settings_attr);
+
+	mvpw_clear_menu(settings_weather_region);
+
+	while (codes[i].name) {
+		mvpw_add_menu_item(settings_weather_region,
+				   codes[i].name,
+				   (void*)codes[i].code,
+				   &settings_item_attr);
+		if (weather_location) {
+			if (strcmp(weather_location, codes[i].code) == 0) {
+				mvpw_check_menu_item(settings_weather_region,
+						     (void*)codes[i].code, 1);
+			}
+		}
+		i++;
+	}
+
+	mvpw_hide(widget);
+	mvpw_show(settings_weather_region);
 }
 
 static void
@@ -4435,6 +4941,8 @@ settings_init(void)
 		mvpw_add_menu_item(settings, "Wireless",
 				   (void*)SETTINGS_MAIN_WIRELESS,
 				   &settings_item_attr);
+	mvpw_add_menu_item(settings, "Weather",
+			   (void*)SETTINGS_MAIN_WEATHER, &settings_item_attr);
 	if (config_file)
 		mvpw_add_menu_item(settings, "Viewport",
 				   (void*)SETTINGS_MAIN_VIEWPORT,
@@ -4521,7 +5029,7 @@ settings_init(void)
 	/*
 	 * mythtv settings menu
 	 */
-	settings_mythtv = mvpw_create_menu(NULL, x, y, w, h,
+	settings_mythtv = mvpw_create_menu(NULL, x, y, w, h+80,
 					   settings_attr.bg,
 					   settings_attr.border,
 					   settings_attr.border_size);
@@ -4552,6 +5060,14 @@ settings_init(void)
 	mvpw_add_menu_item(settings_mythtv,
 			   "Program TCP Receive Buffer",
 			   (void*)SETTINGS_MYTHTV_TCP_PROGRAM,
+			   &settings_item_attr);
+	mvpw_add_menu_item(settings_mythtv,
+			   "MythTV Options",
+			   (void*)SETTINGS_MYTHTV_OPTIONS,
+			   &settings_item_attr);
+	mvpw_add_menu_item(settings_mythtv,
+			   "Test Mythtv DB Connection",
+			   (void*)SETTINGS_MYTHTV_TESTDB,
 			   &settings_item_attr);
 	mvpw_add_menu_item(settings_mythtv,
 			   "Recording Group Filtering",
@@ -4590,6 +5106,25 @@ settings_init(void)
 			   "Audio Bitrate",
 			   (void*)SETTINGS_VLC_AUDIOBITRATE, &settings_item_attr);
 
+	/* 
+	* mythtv options menu
+	*/
+	settings_mythtv_options = mvpw_create_menu(NULL, x, y, w, h,
+					   settings_attr.bg,
+					   settings_attr.border,
+					   settings_attr.border_size);
+	settings_attr.checkboxes = 1;
+	mvpw_set_menu_attr(settings_mythtv_options, &settings_attr);
+	mvpw_set_menu_title(settings_mythtv_options, "MythTV Options");
+	mvpw_set_key(settings_mythtv_options, settings_mythtv_options_key_callback);
+
+	settings_item_attr.hilite = NULL;
+	settings_item_attr.select = settings_mythtv_options_select_callback;
+
+	mvpw_add_menu_item(settings_mythtv_options, "Enable Commercial Skip", (void*)COMMSKIP, &settings_item_attr);
+
+	mvpw_add_menu_item(settings_mythtv_options,"Skip 30 seconds",(void*)SEEK30,&settings_item_attr);
+	mvpw_add_menu_item(settings_mythtv_options,"Skip 60 seconds",(void*)SEEK60,&settings_item_attr);
 
 	/*
 	 * tvguide settings menu
@@ -4612,11 +5147,21 @@ settings_init(void)
 	mvpw_add_menu_item(settings_tvguide,
 			   "Descending Channel Sort Order",
 			   (void*)SETTINGS_TVGUIDE_SORT, &settings_item_attr);
+	mvpw_add_menu_item(settings_tvguide,
+			   "Friendly Date Format",
+			   (void*)SETTINGS_TVGUIDE_FRIENDLY_DATE, &settings_item_attr);
+	mvpw_add_menu_item(settings_tvguide,
+			   "Duration in Minutes",
+			   (void*)SETTINGS_TVGUIDE_DURATION_MINUTES, &settings_item_attr);
 
 	mvpw_check_menu_item(settings_tvguide, (void*)SETTINGS_TVGUIDE_CLOCK_12,
 			     mythtv_use_12hour_clock);
 	mvpw_check_menu_item(settings_tvguide, (void*)SETTINGS_TVGUIDE_SORT,
 			     mythtv_tvguide_sort_desc);
+	mvpw_check_menu_item(settings_tvguide, (void*)SETTINGS_TVGUIDE_FRIENDLY_DATE,
+			     mythtv_use_friendly_date);
+	mvpw_check_menu_item(settings_tvguide, (void*)SETTINGS_TVGUIDE_DURATION_MINUTES,
+			     mythtv_use_duration_minutes);
 
 	/*
 	 * mythtv recording group menu
@@ -4766,6 +5311,45 @@ settings_init(void)
 		mvpw_check_menu_item(settings_startup, (void*)(startup_this_feature - 1), 1);
 	}
 
+	/*
+	 * Yahoo! Weather
+	 */
+	settings_weather = mvpw_create_menu(NULL, x, y, w, h,
+					    settings_attr.bg,
+					    settings_attr.border,
+					    settings_attr.border_size);
+	settings_attr.checkboxes = 1;
+	mvpw_set_menu_attr(settings_weather, &settings_attr);
+	mvpw_set_menu_title(settings_weather, "Yahoo! Weather");
+	mvpw_set_key(settings_weather, settings_weather_key_callback);
+
+	settings_item_attr.hilite = NULL;
+	settings_item_attr.select = weather_select_callback;
+
+	if (weather_cmdline) {
+		mvpw_add_menu_item(settings_weather,
+				   "Default",
+				   (void*)SETTINGS_WEATHER_DEFAULT,
+				   &settings_item_attr);
+	}
+	mvpw_add_menu_item(settings_weather,
+			   "Europe",
+			   (void*)SETTINGS_WEATHER_EUROPE,
+			   &settings_item_attr);
+	mvpw_add_menu_item(settings_weather,
+			   "North America",
+			   (void*)SETTINGS_WEATHER_NA,
+			   &settings_item_attr);
+
+	settings_weather_region = mvpw_create_menu(NULL, x, y, w, h,
+						   settings_attr.bg,
+						   settings_attr.border,
+						   settings_attr.border_size);
+
+	settings_attr.checkboxes = 1;
+	mvpw_set_menu_attr(settings_weather_region, &settings_attr);
+	mvpw_set_key(settings_weather_region,
+		     settings_weather_region_key_callback);
 
 	/*
 	 * wireless settings menu
@@ -4786,10 +5370,6 @@ settings_init(void)
 			   "Signal Strength",
 			   (void*)SETTINGS_WIRELESS_SIGNAL,
 			   &settings_item_attr);
-
-
-
-
 
 	/*
 	 * settings menu with checkboxes
@@ -5636,16 +6216,29 @@ run_mythtv_guide_menu(void)
 static void
 run_mythtv_prog_finder_char_menu(void)
 { 
-
-	fprintf(stderr, "%s : start\n",__FUNCTION__);
 	mvpw_set_key(mythtv_prog_finder_1,mythtv_prog_finder_char_search_keymovement_callback);
 	mvpw_set_key(mythtv_prog_finder_2,mythtv_prog_finder_title_search_keymovement_callback);
 	mvpw_set_key(mythtv_prog_finder_3,mythtv_prog_finder_time_search_keymovement_callback);
-	fprintf(stderr, "%s : back from\n",__FUNCTION__);
-
 	mythtv_prog_finder_char_menu(mythtv_prog_finder_1,mythtv_prog_finder_2,mythtv_prog_finder_3);
 	mvpw_hide(mythtv_menu);
 	mvpw_focus(mythtv_prog_finder_1);
+}
+
+static void
+myth_utils_select_callback(mvp_widget_t *widget, char *item, void *key)
+{
+	int which = (int)key;
+
+	switch (which) {
+	case 1:
+		mythtv_state = MYTHTV_STATE_UTILS;
+		run_mythtv_utils_prevrecorded(widget,mythtv_browser);
+		break;
+	case 2:
+		mythtv_state = MYTHTV_STATE_UTILS;
+		run_mythtv_utils_delrecordings(widget);
+		break;
+	}
 }
 
 static void
@@ -5710,6 +6303,15 @@ myth_menu_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_clear_menu(mythtv_prog_finder_3);
 		run_mythtv_prog_finder_char_menu();
 		break;
+	case 5:
+		busy_start();
+		mythtv_state = MYTHTV_STATE_UTILS;
+		fprintf (stderr, "MythTV Utils\n");
+		mvpw_hide(mythtv_menu);
+		mvpw_show(mythtv_utils);
+		mvpw_focus(mythtv_utils);
+		busy_end();
+		break;
 	}
 }
 
@@ -5717,9 +6319,14 @@ static int
 myth_browser_init(void)
 {
 	mvpw_image_info_t iid;
-	mvpw_widget_info_t wid, wid2, info;
+	mvpw_widget_info_t wid, info;
 	char file[128];
 	int x, y, w, h;
+	int rcol_x, rcol_w; 
+	int description_width;
+	int temp;
+
+        h = FONT_HEIGHT(description_attr);
 
 	splash_update("Creating MythTV browser");
 
@@ -5759,9 +6366,33 @@ myth_browser_init(void)
 			   (void*)3, &myth_menu_item_attr);
 	mvpw_add_menu_item(mythtv_menu, "Program Finder (Scheduling)",
 			   (void*)4, &myth_menu_item_attr);
+	mvpw_add_menu_item(mythtv_menu, "MythTV Utilities",
+			   (void*)5, &myth_menu_item_attr);
 
 
 	mvpw_set_key(mythtv_menu, mythtv_menu_callback);
+	
+	mythtv_utils = mvpw_create_menu(NULL,
+				       viewport_edges[EDGE_LEFT]+iid.width,
+				       viewport_edges[EDGE_TOP],
+				       si.cols-iid.width-
+				       viewport_edges[EDGE_LEFT]-
+				       viewport_edges[EDGE_RIGHT],
+				       si.rows-viewport_edges[EDGE_BOTTOM],
+				       myth_main_attr.bg,
+				       myth_main_attr.border,
+				       myth_main_attr.border_size);
+	mvpw_set_menu_attr(mythtv_utils, &myth_main_attr);
+
+	myth_menu_item_attr.select = myth_utils_select_callback;
+	myth_menu_item_attr.fg = myth_main_attr.fg;
+	myth_menu_item_attr.bg = myth_main_attr.bg;
+
+	mvpw_add_menu_item(mythtv_utils, "Previously Recorded",
+			   (void*)1, &myth_menu_item_attr);
+	mvpw_add_menu_item(mythtv_utils, "Delete Recordedings",
+			   (void*)2, &myth_menu_item_attr);
+	mvpw_set_key(mythtv_utils, mythtv_key_callback);
 
 	mythtv_sched_1 = mvpw_create_menu(NULL,
 					  viewport_edges[EDGE_LEFT]+iid.width,
@@ -5769,7 +6400,8 @@ myth_browser_init(void)
 					  (si.cols-iid.width-
 					  viewport_edges[EDGE_LEFT]-
 					  viewport_edges[EDGE_RIGHT]),
-					  si.rows-190,
+					  /* leave room for channel,date, and description */
+					  si.rows-viewport_edges[EDGE_BOTTOM]-6*h,
 					  mythtv_attr.bg, mythtv_attr.border,
 					  mythtv_attr.border_size);
 	mythtv_sched_option_1 = mvpw_create_menu(NULL,
@@ -5778,31 +6410,57 @@ myth_browser_init(void)
 			(si.cols-iid.width-
 			(viewport_edges[EDGE_LEFT]-
 			viewport_edges[EDGE_RIGHT]))/2-50,
-			si.rows-190,
+			/* leave room for channel,date, and description */
+			si.rows-viewport_edges[EDGE_BOTTOM]-6*h,
 			mythtv_attr.bg, 
 			mythtv_attr.border,
 		  	mythtv_attr.border_size);
+	
+	mvpw_get_widget_info(mythtv_sched_option_1, &wid);
+	rcol_x = wid.x + wid.w + 15;
+	rcol_w = si.cols - viewport_edges[EDGE_RIGHT] - rcol_x - 15;
+
 	mythtv_sched_option_2 = mvpw_create_dialog(NULL,
-			459, 50, 75, 55,
+			rcol_x,
+			viewport_edges[EDGE_TOP],
+			(rcol_w - 15) / 2,
+			55,
 			mythtv_attr.bg,
 			mythtv_attr.border,
 			mythtv_attr.border_size);
+
+	mvpw_get_widget_info(mythtv_sched_option_2, &wid);
+
 	mythtv_sched_option_3 = mvpw_create_dialog(NULL,
-			550, 50, 75, 55,
+			wid.x + wid.w + 15,
+			viewport_edges[EDGE_TOP],
+			(rcol_w - 15) / 2,
+			55,
 			mythtv_attr.bg,
 			mythtv_attr.border,
 			mythtv_attr.border_size);
+
 	mythtv_sched_option_4 = mvpw_create_menu(NULL,
-			459, 150, 125, 150,
+			rcol_x,
+			wid.y + wid.h + 15,
+			rcol_w,
+			150,
 			mythtv_attr.bg,
 			mythtv_attr.border,
 			mythtv_attr.border_size);
+
+	mythtv_options = mvpw_create_menu(NULL,
+                        459, 150, 190, 150,
+                        mythtv_attr.bg,
+                        mythtv_attr.border,
+                        mythtv_attr.border_size);
 
 	mythtv_prog_finder_1 = mvpw_create_menu(NULL,
 			viewport_edges[EDGE_LEFT]+iid.width,
 			viewport_edges[EDGE_TOP],
 			50,
-			si.rows-190,
+			/* leave room for channel,date, and description */
+			si.rows-viewport_edges[EDGE_BOTTOM]-6*h,
 			mythtv_attr.bg, 
 			mythtv_attr.border,
 			mythtv_attr.border_size);
@@ -5813,7 +6471,8 @@ myth_browser_init(void)
 			(si.cols-iid.width-
 			(viewport_edges[EDGE_LEFT]-
 			viewport_edges[EDGE_RIGHT]))/3,
-			si.rows-190,
+			/* leave room for channel,date, and description */
+			si.rows-viewport_edges[EDGE_BOTTOM]-6*h,
 			mythtv_attr.bg, 
 			mythtv_attr.border,
 			mythtv_attr.border_size);
@@ -5824,18 +6483,27 @@ myth_browser_init(void)
 			(si.cols-iid.width-
 			(viewport_edges[EDGE_LEFT]-
 			viewport_edges[EDGE_RIGHT]))/3,
-			si.rows-190,
+			/* leave room for channel,date, and description */
+			si.rows-viewport_edges[EDGE_BOTTOM]-6*h,
 			mythtv_attr.bg,
 			mythtv_attr.border,
 			mythtv_attr.border_size);
  
+ 	/* Leave at least enough space below the browser menu for the thumbnail
+	 * or 6 lines of text, whichever is greatest
+	 */
+ 	temp = av_thumbnail_height(AV_THUMBNAIL_EIGTH);
+	if(temp < 6*h)
+		temp = 6*h;
+
 	mythtv_browser = mvpw_create_menu(NULL,
 					  viewport_edges[EDGE_LEFT]+iid.width,
 					  viewport_edges[EDGE_TOP],
 					  si.cols-iid.width-
 					  viewport_edges[EDGE_LEFT]-
 					  viewport_edges[EDGE_RIGHT],
-					  si.rows-190,
+					  /* leave room for channel,date, and description */
+					  VIEWPORT_BOTTOM - VIEWPORT_TOP - temp,
 					  mythtv_attr.bg, mythtv_attr.border,
 					  mythtv_attr.border_size);
 
@@ -5874,38 +6542,75 @@ myth_browser_init(void)
 
 	mvpw_set_menu_title(mythtv_sched_option_1, "Scheduling Options");
 	mvpw_set_menu_title(mythtv_sched_option_4, "Recording Groups");
+	
+	mvpw_set_menu_attr(osd_mythtv_options, &mythtv_attr);
 
-	h = FONT_HEIGHT(description_attr);
+	/*
+	 * Description widgets
+	 */
+	
+	mvpw_get_widget_info(mythtv_browser, &wid);
+	
+	description_width = VIEWPORT_RIGHT - VIEWPORT_LEFT
+			     - av_thumbnail_width(AV_THUMBNAIL_EIGTH);
 
-	mythtv_channel = mvpw_create_text(NULL, 0, 0, 350, h,
+	/* Thumbnail cannot be placed more than 510 pixels across
+	 * because the MVP's API doesn't support it
+	 */
+	if(description_width + VIEWPORT_LEFT > 510)
+	{
+		description_width = 510 - VIEWPORT_LEFT;
+	}
+
+	/* If the image is longer than the browser then we'll have to
+	 * place the description below the browser, instead of below
+	 * the image, so it'll have to be narrower
+	 */
+	if(wid.h < iid.height)
+		description_width -= iid.width;
+
+	mythtv_channel = mvpw_create_text(NULL, 0, 0, description_width, h,
 					  description_attr.bg,
 					  description_attr.border,
 					  description_attr.border_size);
-	mythtv_date = mvpw_create_text(NULL, 0, 0, 350, h,
+	mythtv_date = mvpw_create_text(NULL, 0, 0, description_width, h,
 				       description_attr.bg,
 				       description_attr.border,
 				       description_attr.border_size);
-	mythtv_description = mvpw_create_text(NULL, 0, 0, 350, h*3,
+	mythtv_description = mvpw_create_text(NULL, 0, 0, description_width, h*3, 
 					      description_attr.bg,
 					      description_attr.border,
 					      description_attr.border_size);
-	mythtv_record = mvpw_create_text(NULL, 0, 0, 350, h,
+
+	settings_mythtv_testdb = mvpw_create_text(NULL, 50, 125, 700, 700, 
+					      description_attr.bg,
+					      description_attr.border,
+					      description_attr.border_size);
+
+	mythtv_record = mvpw_create_text(NULL, 0, 0, description_width, h,
 					 description_attr.bg,
 					 description_attr.border,
 					 description_attr.border_size);
 
+	mvpw_set_key(settings_mythtv_testdb, settings_mythtv_options_key_callback);
+	mvpw_set_text_attr(settings_mythtv_testdb, &description_attr);
 	mvpw_set_text_attr(mythtv_channel, &description_attr);
 	mvpw_set_text_attr(mythtv_date, &description_attr);
 	mvpw_set_text_attr(mythtv_description, &description_attr);
 	mvpw_set_text_attr(mythtv_record, &description_attr);
 
-	mvpw_get_widget_info(mythtv_logo, &wid);
-	mvpw_get_widget_info(mythtv_browser, &wid2);
-	mvpw_moveto(mythtv_channel, wid.x, wid2.y+wid2.h);
-	mvpw_get_widget_info(mythtv_channel, &wid2);
-	mvpw_moveto(mythtv_date, wid.x, wid2.y+wid2.h);
-	mvpw_get_widget_info(mythtv_date, &wid2);
-	mvpw_moveto(mythtv_description, wid.x, wid2.y+wid2.h);
+	mvpw_get_widget_info(mythtv_browser, &wid);
+	if(iid.height <= wid.h)
+	{
+		mvpw_get_widget_info(mythtv_logo, &info);
+		mvpw_moveto(mythtv_channel, info.x, wid.y+wid.h);
+	}
+	else
+		mvpw_moveto(mythtv_channel, wid.x, wid.y+wid.h);
+	mvpw_get_widget_info(mythtv_channel, &wid);
+	mvpw_moveto(mythtv_date, wid.x, wid.y+wid.h);
+	mvpw_get_widget_info(mythtv_date, &wid);
+	mvpw_moveto(mythtv_description, wid.x, wid.y+wid.h);
 
 	mvpw_attach(mythtv_channel, mythtv_record, MVPW_DIR_RIGHT);
 
@@ -5917,6 +6622,7 @@ myth_browser_init(void)
 					300, h, description_attr.bg,
 					description_attr.border,
 					description_attr.border_size);
+	printf("Shows widget: %d.%d.%dx%d\n", info.x, info.y, info.w, info.h);
 	episodes_widget = mvpw_create_text(NULL, 50, 80,
 					   300, h, description_attr.bg,
 					   description_attr.border,
@@ -5926,7 +6632,7 @@ myth_browser_init(void)
 					    description_attr.border,
 					    description_attr.border_size);
 	program_info_widget = mvpw_create_text(NULL, 50, 80,
-					    300, h*6 , description_attr.bg,
+					    300, h*6, description_attr.bg,
 					    description_attr.border,
 					    description_attr.border_size);
 	mvpw_set_text_attr(shows_widget, &description_attr);
@@ -5936,7 +6642,7 @@ myth_browser_init(void)
 
 	mvpw_attach(shows_widget, episodes_widget, MVPW_DIR_DOWN);
 	mvpw_attach(episodes_widget, freespace_widget, MVPW_DIR_DOWN);
-	mvpw_attach(shows_widget, program_info_widget, MVPW_DIR_DOWN);
+	mvpw_attach(mythtv_sched_1, program_info_widget, MVPW_DIR_DOWN);
 
 	/*
 	 * mythtv popup menu
@@ -6008,6 +6714,7 @@ static void
 main_select_callback(mvp_widget_t *widget, char *item, void *key)
 {
 	int k = (int)key;
+	int i;
 	mvpw_surface_attr_t surface;
 
 	if (gui_state==MVPMC_STATE_EMULATE) {
@@ -6075,14 +6782,18 @@ main_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_show(mclient);
 		mvpw_show(mclient_fullscreen);
 		mvpw_show(mclient_sub_softsqueeze);
-		mvpw_show(mclient_sub_image);
+///		mvpw_show(mclient_sub_image); /// Just do there where we pull image
+///		mvpw_show(mclient_sub_alt_image); /// "
 		mvpw_show(mclient_sub_progressbar);
 		mvpw_show(mclient_sub_volumebar);
 		mvpw_raise(mclient_fullscreen);
 		mvpw_raise(mclient_sub_softsqueeze);
-		mvpw_raise(mclient_sub_image);
+///		mvpw_raise(mclient_sub_image); /// "
+///		mvpw_raise(mclient_sub_alt_image); /// "
 		mvpw_raise(mclient_sub_progressbar);
 		mvpw_raise(mclient_sub_volumebar);
+		mvpw_raise(mclient_sub_image);
+		mvpw_raise(mclient_sub_alt_image);
 ///		mvpw_raise(mclient); /// Just don't raise this over other windows.
 ///		mvpw_lower(mclient); /// Really shouldn't need this as other widows have risen above this one.
 		mvpw_focus(mclient);
@@ -6161,6 +6872,26 @@ main_select_callback(mvp_widget_t *widget, char *item, void *key)
 		mvpw_focus(vnc_widget);
 		canvas = surface.wid;
 		break;
+	case MM_WEATHER:
+		if (gui_state != MVPMC_STATE_WEATHER ) {
+			switch_gui_state(MVPMC_STATE_WEATHER);
+	
+			mvpw_hide(mvpmc_logo);
+			mvpw_hide(weather_image);
+			mvpw_hide(main_menu);
+	
+			for (i=0; i<5; i++) {
+				mvpw_hide(forecast[i]);
+				mvpw_hide(forecast_image[i]);
+			}
+			mvpw_hide(current_conditions_image);
+	
+			mvpw_show(weather_widget);
+			mvpw_focus(weather_widget);
+			mvpw_set_key(weather_widget, weather_key_callback);
+			update_weather(weather_widget, &weather_attr);
+		}
+		break;
 	}
 }
 
@@ -6203,17 +6934,23 @@ main_hilite_callback(mvp_widget_t *widget, char *item, void *key, bool hilite)
 			display_send(display_message);
 			break;
 		case MM_MCLIENT:
-			mvpw_show(fb_image);
+			mvpw_show(mclient_image);
 			snprintf(display_message, sizeof(display_message),
 				  "File:%s\n", "Music Client");
 			display_send(display_message);
 			break;
-        case MM_VNC:
-            break;
-        case MM_EMULATE:
+		case MM_VNC:
+		        break;
+		case MM_EMULATE:
 			mvpw_show(emulate_image);
 			snprintf(display_message, sizeof(display_message),
 				  "File:%s\n", "Emulate");
+			display_send(display_message);
+			break;
+		case MM_WEATHER:
+			mvpw_show(weather_image);
+			snprintf(display_message, sizeof(display_message),
+				  "File:%s\n", "Weather");
 			display_send(display_message);
 			break;
 		case MM_ABOUT:
@@ -6244,7 +6981,7 @@ main_hilite_callback(mvp_widget_t *widget, char *item, void *key, bool hilite)
 			mvpw_hide(replaytv_image);
 			break;
 		case MM_MCLIENT:
-			mvpw_hide(fb_image);
+			mvpw_hide(mclient_image);
 			break;
 		case MM_ABOUT:
 			mvpw_hide(about_image);
@@ -6252,8 +6989,12 @@ main_hilite_callback(mvp_widget_t *widget, char *item, void *key, bool hilite)
 		case MM_EXIT:
 			mvpw_hide(exit_image);
 			break;
-        case MM_EMULATE:
+		case MM_EMULATE:
 			mvpw_hide(emulate_image);
+			break;
+		case MM_WEATHER:
+			mvpw_hide(weather_image);
+			break;
 		}
 	}
 }
@@ -6271,23 +7012,27 @@ main_menu_items(void)
 	if (replaytv_server)
 		mvpw_add_menu_item(main_menu, "ReplayTV",
 				   (void*)MM_REPLAYTV, &item_attr);
+	if (mvp_server)
+		mvpw_add_menu_item(main_menu, "Emulation Mode",
+				   (void*)MM_EMULATE, &item_attr);
+	if (mclient_server)
+		mvpw_add_menu_item(main_menu, "Music Client",
+				   (void*)MM_MCLIENT, &item_attr);
 	if (!filebrowser_disable)
 		mvpw_add_menu_item(main_menu, "Filesystem",
 				   (void*)MM_FILESYSTEM, &item_attr);
+	if (weather_location)
+		mvpw_add_menu_item(main_menu, "Weather",
+				   (void*)MM_WEATHER, &item_attr);
+	if (strnlen(vnc_server, 254))
+		mvpw_add_menu_item(main_menu, "VNC",
+			   (void*)MM_VNC, &item_attr);
 	if (!settings_disable)
 		mvpw_add_menu_item(main_menu, "Settings",
 				   (void*)MM_SETTINGS, &item_attr);
 	mvpw_add_menu_item(main_menu, "About",
 			   (void*)MM_ABOUT, &item_attr);
-	if (mclient_server)
-		mvpw_add_menu_item(main_menu, "Music Client",
-				   (void*)MM_MCLIENT, &item_attr);
-	if (strnlen(vnc_server, 254))
-		mvpw_add_menu_item(main_menu, "VNC",
-			   (void*)MM_VNC, &item_attr);
-	if (mvp_server)
-		mvpw_add_menu_item(main_menu, "Emulation Mode",
-				   (void*)MM_EMULATE, &item_attr);
+
 	if (!reboot_disable) {
 #ifdef MVPMC_HOST
 		mvpw_add_menu_item(main_menu, "Exit",
@@ -6316,7 +7061,7 @@ main_menu_init(void)
 
 	splash_update("Creating setup image");
 
-	snprintf(file, sizeof(file), "%s/wrench.png", imagedir);
+	snprintf(file, sizeof(file), "%s/setup.png", imagedir);
 	if (mvpw_get_image_info(file, &iid) < 0)
 		return -1;
 	setup_image = mvpw_create_image(NULL, 50, 25, iid.width, iid.height,
@@ -6372,10 +7117,32 @@ main_menu_init(void)
 	if (mvpw_get_image_info(file, &iid) < 0) {
 	    snprintf(file, sizeof(file), "%s/unknown.png", imagedir);
 	    mvpw_get_image_info(file, &iid);
-    }
+        }
 	emulate_image = mvpw_create_image(NULL, 50, 25, iid.width, iid.height,
 					MVPW_BLACK, 0, 0);
 	mvpw_set_image(emulate_image, file);
+
+	splash_update("Creating weather image");
+
+	snprintf(file, sizeof(file), "%s/weather.png", imagedir);
+	if (mvpw_get_image_info(file, &iid) < 0) {
+	    snprintf(file, sizeof(file), "%s/unknown.png", imagedir);
+	    mvpw_get_image_info(file, &iid);
+         }
+	weather_image = mvpw_create_image(NULL, 50, 25, iid.width, iid.height,
+					MVPW_BLACK, 0, 0);
+	mvpw_set_image(weather_image, file);
+
+	splash_update("Creating mclient image");
+
+	snprintf(file, sizeof(file), "%s/mclient.png", imagedir);
+	if (mvpw_get_image_info(file, &iid) < 0) {
+	    snprintf(file, sizeof(file), "%s/unknown.png", imagedir);
+	    mvpw_get_image_info(file, &iid);
+         }
+	mclient_image = mvpw_create_image(NULL, 50, 25, iid.width, iid.height,
+					MVPW_BLACK, 0, 0);
+	mvpw_set_image(mclient_image, file);
 
 	splash_update("Creating exit image");
 
@@ -6392,8 +7159,8 @@ main_menu_init(void)
 	if (mvpw_get_image_info(file, &iid) < 0)
 		return -1;
 
-	mvpmc_logo = mvpw_create_image(NULL, 50, 25, iid.width, iid.height,
-				       MVPW_BLACK, 0, 0);
+	mvpmc_logo = mvpw_create_image(NULL, viewport_edges[EDGE_LEFT], viewport_edges[EDGE_TOP],
+	                               iid.width, iid.height, MVPW_BLACK, 0, 0);
 	mvpw_set_image(mvpmc_logo, file);
 
 	splash_update("Creating main menu");
@@ -6412,6 +7179,8 @@ main_menu_init(void)
 	mvpw_moveto(about_image, wid.x, wid.y);
 	mvpw_moveto(exit_image, wid.x, wid.y);
 	mvpw_moveto(emulate_image, wid.x, wid.y);
+	mvpw_moveto(weather_image, wid.x, wid.y);
+	mvpw_moveto(mclient_image, wid.x, wid.y);
 	mvpw_set_menu_attr(main_menu, &attr);
 
 	item_attr.select = main_select_callback;
@@ -6437,14 +7206,14 @@ about_init(void)
 		"Audio: mp3, ogg, wav, ac3, flac\n"
 		"Video: mpeg1, mpeg2\n"
 		"Images: bmp, gif, png, jpeg\n"
-		"Servers: MythTV, ReplayTV, NFS, CIFS, SlimServer,\n"
-		"VLC, VNC, HTTP, Hauppauge, UPnP\n";
+		"Servers: MythTV, ReplayTV, NFS, CIFS, SlimServer,"
+		"VLC, VNC, HTTP, Hauppauge, UPnP, Yahoo! Weather\n";
 	struct utsname myname;
 
 	splash_update("Creating about dialog");
 
-	h = 10 * FONT_HEIGHT(about_attr);
-	w = 550;
+	h = 11 * FONT_HEIGHT(about_attr);
+	w = 580;
 
 	x = (si.cols - w) / 2;
 	y = (si.rows - h) / 2;
@@ -6661,11 +7430,15 @@ mclient_sub_softsqueeze_init(void)
 static int
 mclient_sub_image_init(void)
 {
+	#define SIZE_IMAGE_BROWSE 130
+	#define VERT_SPACER_BROWSE 22
+
 	int h, w, x, y;
 
 	splash_update("Creating mclient_sub_image dialog");
 
 	/*
+	 * For "Playing Now" cover art.
 	 * Place image in lower right corner of screen.
 	 */
 	h = 200;
@@ -6680,14 +7453,211 @@ mclient_sub_image_init(void)
 		 	mclient_sub_image_attr.border, 
 			mclient_sub_image_attr.border_size);
 
+	/*
+	 * For "Browse By Cover Art".
+	 * Place image in 2 rows of 3 colums.
+	 * Position 1,1
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - ((w * 3) + (mclient_sub_image_attr.border_size * 4) + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h * 2) + VERT_SPACER_BROWSE + (mclient_sub_image_attr.border_size * 2) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_1_1 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_1_1 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_1_1, &mclient_sub_alt_image_attr);
+	/*
+	 * Position 1,2
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - ((w * 2) + (mclient_sub_image_attr.border_size * 2) + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h * 2) + VERT_SPACER_BROWSE + (mclient_sub_image_attr.border_size * 2) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_1_2 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_1_2 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_1_2, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Position 1,3
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - (w + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h * 2) + VERT_SPACER_BROWSE + (mclient_sub_image_attr.border_size * 2) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_1_3 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_1_3 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_1_3, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Position 2,1
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - ((w * 3) + (mclient_sub_image_attr.border_size * 4) + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h + VERT_SPACER_BROWSE) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_2_1 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_2_1 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_2_1, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Position 2,2
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - ((w * 2) + (mclient_sub_image_attr.border_size * 2) + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h + VERT_SPACER_BROWSE) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_2_2 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_2_2 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_2_2, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Position 2,3
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = ((SIZE_IMAGE_BROWSE * 4)/3);
+
+	x = si.cols - (w + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h + VERT_SPACER_BROWSE) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_image_2_3 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+	mclient_sub_alt_image_2_3 = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_2_3, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Album cover art browser info widget.
+	 */
+	h = SIZE_IMAGE_BROWSE;
+	w = (3 * ((SIZE_IMAGE_BROWSE * 4)/3)) + (mclient_sub_image_attr.border_size * 4);
+
+	x = si.cols - ((w) + (mclient_sub_image_attr.border_size * 0) + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - ((h * 3) + VERT_SPACER_BROWSE + (mclient_sub_image_attr.border_size * 4) + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_alt_image_info = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_image_attr.bg,
+		 	mclient_sub_image_attr.border, 
+			mclient_sub_image_attr.border_size);
+
+			mvpw_set_text_attr(mclient_sub_alt_image_info, &mclient_sub_alt_image_attr);
+
 	return 0;
 }
 
 static int
-mclient_sub_progressbar_init(void)
+mclient_sub_alt_image_init(void)
 {
 	int h, w, x, y;
 
+	splash_update("Creating mclient_sub_alt_image dialog");
+
+	/*
+	 * Place image in lower right corner of screen.
+	 */
+	h = 200;
+	w = ((200*4)/3);
+
+	x = si.cols - (w + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - (h + viewport_edges[EDGE_BOTTOM]);
+
+	mclient_sub_alt_image = mvpw_create_text(NULL, 
+			x, y, w, h,
+			mclient_sub_alt_image_attr.bg,
+		 	mclient_sub_alt_image_attr.border, 
+			mclient_sub_alt_image_attr.border_size);
+
+	mvpw_set_text_attr(mclient_sub_alt_image, &mclient_sub_alt_image_attr);
+
+	/*
+	 * Later we will write mclient_fullscreen's own call back.  For now
+	 * we will use it for displaying only.
+	 */
+	mvpw_set_key(mclient_fullscreen, mclient_key_callback);
+
+	popup_item_attr.select = popup_select_callback;
+
+	/*
+	 * Define the full screen lines here.
+	 */
+	mvpw_set_text_str(mclient_sub_alt_image, "No Album\nArt Work");
+
+	return 0;
+}
+
+static int
+mclient_sub_bar_init(void)
+{
+	int h, w, x, y;
+
+	// Progress bar initialization.
 	h = 5;
 	w = 300;
 
@@ -6703,14 +7673,8 @@ mclient_sub_progressbar_init(void)
 			mclient_sub_progressbar_attr.border_size);
 
         mvpw_set_graph_attr(mclient_sub_progressbar, &mclient_sub_progressbar_attr);
-	return 0;
-}
 
-static int
-mclient_sub_volumebar_init(void)
-{
-	int h, w, x, y;
-
+	// Volume bar initialization.
 	h = 5;
 	w = 300;
 
@@ -6726,6 +7690,65 @@ mclient_sub_volumebar_init(void)
 			mclient_sub_volumebar_attr.border_size);
 
         mvpw_set_graph_attr(mclient_sub_volumebar, &mclient_sub_volumebar_attr);
+
+	// Browse bar initialization.
+	h = 15;
+	w = 534;
+
+	x = si.cols - (w + viewport_edges[EDGE_RIGHT]);
+	y = si.rows - (h + viewport_edges[EDGE_BOTTOM]);
+
+	splash_update("Creating mclient_sub_browse dialog");
+
+        mclient_sub_browsebar = mvpw_create_graph(NULL, 
+			x, y, w, h,
+			mclient_sub_browsebar_attr.bg,
+		 	mclient_sub_browsebar_attr.border, 
+			mclient_sub_browsebar_attr.border_size);
+
+        mvpw_set_graph_attr(mclient_sub_browsebar, &mclient_sub_browsebar_attr);
+	return 0;
+}
+
+static int
+mclient_sub_localmenu_init(void)
+{
+	int h, w, x, y;
+
+	splash_update("Creating mclient_sub_localmenu dialog");
+
+	h = FONT_HEIGHT(mclient_sub_localmenu_attr);
+	w = 400;
+
+	x = si.cols * .22; // About 50% across screen
+	y = si.rows * .46; // About 50% down screen
+
+	mclient_sub_localmenu = mvpw_create_menu(NULL, 
+			x, y, w, (h * 3),
+			mclient_sub_localmenu_attr.bg,
+		 	mclient_sub_localmenu_attr.border, 
+			mclient_sub_localmenu_attr.border_size);
+
+
+	mclient_sub_localmenu_attr.checkboxes = 0;
+	mvpw_set_menu_attr(mclient_sub_localmenu, &mclient_sub_localmenu_attr);
+	mvpw_set_menu_title(mclient_sub_localmenu, "Local Menu...");
+	mvpw_set_key(mclient_sub_localmenu, mclient_localmenu_callback);
+
+	mclient_sub_localmenu_item_attr.fg = mclient_sub_localmenu_attr.fg;
+	mclient_sub_localmenu_item_attr.bg = mclient_sub_localmenu_attr.bg;
+	if (mclient_sub_localmenu_attr.checkbox_fg)
+		mclient_sub_localmenu_item_attr.checkbox_fg = mclient_sub_localmenu_attr.checkbox_fg;
+
+	mclient_sub_localmenu_item_attr.hilite = NULL;
+
+	mvpw_add_menu_item(mclient_sub_localmenu, "Browse by album cover",
+			   (void*)MCLIENT_LOCALMENU_BROWSE_BY_COVER_ART, 
+			   &mclient_sub_localmenu_item_attr);
+
+	mvpw_add_menu_item(mclient_sub_localmenu, "Control another client",
+			   (void*)MCLIENT_LOCALMENU_CONTROL_ANOTHER_CLIENT,
+			   &mclient_sub_localmenu_item_attr);
 	return 0;
 }
 
@@ -6754,7 +7777,7 @@ osd_init(void)
 	/*
 	 * State widgets for pause, mute, fast forward, zoom
 	 */
-	mute_widget = mvpw_create_text(NULL, 50, 25, 75, h,
+	mute_widget = mvpw_create_text(NULL, viewport_edges[EDGE_LEFT], viewport_edges[EDGE_TOP], 75, h,
 				       display_attr.bg,
 				       display_attr.border,
 				       display_attr.border_size);
@@ -6841,8 +7864,8 @@ osd_init(void)
 	/*
 	 * myth OSD
 	 */
-	x = si.cols - 475;
-	y = si.rows - 125;
+	x = si.cols - viewport_edges[EDGE_RIGHT] - 475;
+	y = si.rows - viewport_edges[EDGE_BOTTOM] - 125;
 	h = FONT_HEIGHT(mythtv_program_attr) +
 		(3 * FONT_HEIGHT(mythtv_description_attr));
 	contain = mvpw_create_container(NULL, x, y,
@@ -7010,6 +8033,8 @@ popup_init(void)
 			   (void*)MENU_BRIGHT, &popup_item_attr);
 	mvpw_add_menu_item(popup_menu, "Volume",
 			   (void*)MENU_VOLUME, &popup_item_attr);
+	mvpw_add_menu_item(popup_menu, "MythTV Settings",
+			   (void*)MYTHTV_SETTINGS, &popup_item_attr);
 
 	mvpw_set_key(popup_menu, popup_key_callback);
 
@@ -7089,6 +8114,23 @@ popup_init(void)
 			     osd_settings.program);
 	mvpw_check_menu_item(osd_menu, (void*)OSD_TIMECODE,
 			     osd_settings.timecode);
+
+
+	/* mythtv options */
+	osd_mythtv_options = mvpw_create_menu(NULL, x, y, w, h,
+				    popup_attr.bg,
+				    popup_attr.border,
+				    popup_attr.border_size);
+	mvpw_set_menu_attr(osd_mythtv_options, &popup_attr);
+	mvpw_set_menu_title(osd_mythtv_options, "OSD MythTV Options");
+	mvpw_set_key(osd_mythtv_options, popup_key_callback);
+	popup_item_attr.select = settings_mythtv_options_select_callback;
+	mvpw_add_menu_item(osd_mythtv_options, "Enable Commercial Skip", (void*)COMMSKIP, &popup_item_attr);
+	mvpw_check_menu_item(osd_mythtv_options, (void*)COMMSKIP, mythtv_commskip);
+	
+	mvpw_add_menu_item(osd_mythtv_options,"Skip 30 seconds",(void*)SEEK30,&popup_item_attr);
+	mvpw_add_menu_item(osd_mythtv_options,"Skip 60 seconds",(void*)SEEK60,&popup_item_attr);
+	mvpw_check_menu_item(osd_mythtv_options, (void*)SEEK30, 1);
 
 	/*
 	 * Brightness menu
@@ -7221,22 +8263,26 @@ screensaver_event(mvp_widget_t *widget, int activate)
 			 * Only show mclient widget if mclient has control
 			 * of the gui.
 			 */
-			if(gui_state == MVPMC_STATE_MCLIENT || gui_state == MVPMC_STATE_HTTP )
-			{
-///				mvpw_raise(mclient); /// This window has focus, but we don't want to see it.
-				mvpw_lower(mclient);
-				if(gui_state == MVPMC_STATE_MCLIENT ) {
-					mvpw_show(mclient);
-					mvpw_focus(mclient);
-				} else {
-					mvpw_focus(playlist_widget);
-				}
-
-				/*
-				 * Initialize small widget hide time out.
-				 */
-				cli_small_widget_timeout = time (NULL) + 10;
+			mvpw_lower(mclient);
+			if(gui_state == MVPMC_STATE_MCLIENT ) {
+				mvpw_show(mclient);
+				mvpw_focus(mclient);
+			} else {
+				mvpw_focus(playlist_widget);
 			}
+
+                        // Exit local menus in case they were being accessed.
+                        // Hide the BROWSE and LOCAL MENU widgets.
+                        mclient_localmenu_hide_all_widgets();
+
+                        // Exit out of BROWSE and LOCAL MENU mode.
+                        remote_buttons.local_menu = FALSE;
+                        remote_buttons.local_menu_browse = FALSE;
+
+			/*
+			 * Initialize small widget hide time out.
+			 */
+			cli_small_widget_timeout = time (NULL) + 10;
 		}
 		else
 		{
@@ -7282,12 +8328,49 @@ screensaver_init(void)
 
 	screensaver_enable();
 
-/// ### START
-///	screensaver_mclient = mvpmw_create_container(NULL, 0, 0,
-///						     si.cols, si.rows,
-///						     MVPW_BLACK, 0, 0);
-///	widget = mvpw_create_0
-/// ### END
+	return 0;
+}
+
+static int
+weather_init(void)
+{
+	int x, y, w, h;
+	int i;
+
+	splash_update("Creating weather menus");
+
+	weather_widget = mvpw_create_container(NULL, 40, 40,
+					       si.cols - 40, si.rows - 40,
+					       weather_attr.bg,
+					       weather_attr.border,
+					       weather_attr.border_size);
+
+	h = 6 * FONT_HEIGHT(weather_menu_attr);
+	w = (si.cols - 250);
+	x = (si.cols - w) / 2;
+	y = (si.rows - h) / 2;
+
+	weather_menu = mvpw_create_menu(NULL, x, y, w, h,
+					weather_menu_attr.bg,
+					weather_menu_attr.border,
+					weather_menu_attr.border_size);
+
+	for (i=0; i<5; i++) {
+		forecast[i] = mvpw_create_text(weather_widget,
+					       i * 130 + 10, 270, 130, 210,
+					       MVPW_BLACK, MVPW_BLACK, 0);
+		forecast_image[i] = mvpw_create_image(weather_widget,
+						      i * 130 + 10, 190,
+						      80, 80,
+						      MVPW_WHITE, MVPW_BLUE,
+						      2);
+	}
+
+	current_conditions_image = mvpw_create_image(weather_widget,
+						     30, 95, 75, 75,
+						     MVPW_WHITE,
+						     MVPW_LIGHTGREY, 2);
+
 	return 0;
 }
 
@@ -7573,6 +8656,7 @@ gui_init(char *server, char *replaytv)
 	if (myth_browser_init() < 0)
 		return -1;
 	file_browser_init();
+
 	settings_init();
 	colortest_init();
 	viewport_init();
@@ -7592,8 +8676,10 @@ gui_init(char *server, char *replaytv)
 	mclient_fullscreen_init();
 	mclient_sub_softsqueeze_init();
 	mclient_sub_image_init();
-	mclient_sub_progressbar_init();
-	mclient_sub_volumebar_init();
+	mclient_sub_alt_image_init();
+	mclient_sub_bar_init();
+	mclient_sub_localmenu_init();
+	weather_init();
 
 	thruput_init();
 
@@ -7607,6 +8693,10 @@ gui_init(char *server, char *replaytv)
 		mvpw_show(mythtv_image);
 	else if (replaytv)
 		mvpw_show(replaytv_image);
+	else if (mvp_server)
+		mvpw_show(emulate_image);
+	else if (mclient_server)
+		mvpw_show(mclient_image);
 	else
 		mvpw_show(fb_image);
 	mvpw_show(mvpmc_logo);
@@ -7733,6 +8823,7 @@ gui_init(char *server, char *replaytv)
 	case MM_MCLIENT:
 		if (mclient_server)
 		{
+			mvpw_hide(fb_image);
 			mvpw_hide(setup_image);
 			mvpw_hide(mythtv_image);
 			mvpw_hide(replaytv_image);
@@ -7740,7 +8831,7 @@ gui_init(char *server, char *replaytv)
 			mvpw_hide(exit_image);
 			mvpw_hide(emulate_image);
 
-			mvpw_show(fb_image);
+			mvpw_show(mclient_image);
 		
 			mvpw_menu_hilite_item(main_menu, (void*)startup_this_feature);
 

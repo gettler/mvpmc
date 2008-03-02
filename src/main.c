@@ -95,6 +95,8 @@ static struct option opts[] = {
 	{ "mythtv", required_argument, 0, 's' },
 	{ "mythtv-debug", no_argument, 0, 'M' },
 	{ "no-wss", no_argument, 0, 0 },
+	{ "jit-sync", no_argument, 0, 0 },
+	{ "no-seek-sync", no_argument, 0, 0 },
 	{ "no-filebrowser", no_argument, 0, 0 },
 	{ "no-reboot", no_argument, 0, 0 },
 	{ "no-settings", no_argument, 0, 0 },
@@ -121,12 +123,16 @@ static struct option opts[] = {
 	{ "mythtv-username", required_argument, 0, 'u'},
 	{ "mythtv-password", required_argument, 0, 'p'},
 	{ "mythtv-database", required_argument, 0, 'T'},
+	{ "weather-location", required_argument, 0, 0},
+	{ "friendly-date", no_argument, 0, 0 },
+	{ "duration-minutes", no_argument, 0, 0 },
 	{ 0, 0, 0, 0 }
 };
 
 
 int settings_disable = 0;
 int reboot_disable = 0;
+int jit_mode = 1;
 int filebrowser_disable = 0;
 int mplayer_disable = 1;
 int em_connect_wait = 0;
@@ -137,6 +143,9 @@ int em_rtwin = -1;
 int rfb_mode = 3;
 int flicker = -1;
 int wireless = 0;
+int mythtv_seek_amount=2;
+int mythtv_commskip=1;
+
 
 int mount_djmount(char *);
 int unmount_djmount(void);
@@ -154,6 +163,8 @@ char *replaytv_server = NULL;
 char *mclient_server = NULL;
 char *vlc_server = NULL;
 char *mvp_server = NULL;
+char *weather_location = NULL;
+char *weather_cmdline = NULL;
 
 char vnc_server[256];
 int vnc_port = 0;
@@ -190,6 +201,7 @@ av_demux_mode_t demux_mode;
 int (*DEMUX_PUT)(demux_handle_t*, void*, int);
 int (*DEMUX_WRITE_VIDEO)(demux_handle_t*, int);
 int (*DEMUX_WRITE_AUDIO)(demux_handle_t*, int);
+int (*DEMUX_JIT_WRITE_AUDIO)(demux_handle_t*, int, unsigned int,int,int*,int*);
 
 #define DATA_SIZE (1024*1024)
 static char *data = NULL;
@@ -249,6 +261,12 @@ buffer_write(demux_handle_t *handle, int fd)
 	return n;
 }
 
+static int
+jit_buffer_write(demux_handle_t *handle, int fd, unsigned int pts, int mode, int *flags, int *duration)
+{
+    return buffer_write(handle,fd);
+}
+
 /*
  * print_help() - print command line arguments
  *
@@ -288,6 +306,8 @@ print_help(char *prog)
 	printf("\t-c server \tslimdevices musicClient server IP address\n");
 	printf("\n");
 	printf("\t--no-wss  \tdisable Wide Screen Signalling(WSS)\n");
+	printf("\t--jit-sync\tenable JIT a/v Sync\n");
+	printf("\t--no-seek-sync\tdisable post-seek a/v Sync attempts\n");
 	printf("\t--no-filebrowser\n");
 	printf("\t--no-reboot\n");
 	printf("\t--no-settings\n");
@@ -309,6 +329,10 @@ print_help(char *prog)
 	printf("\t--flicker value\tflicker value 0-3\n");
 	printf("\t--rtwin size \tbuffer size of global rt_window\n");
 	printf("\t--fs-rtwin size \tbuffer size of filesystem rt_window\n");
+	printf("\t--weather-location location \tZIP code or location code for weather\n");
+	printf("\n");
+	printf("\t--friendly-date \tSat Dec 15 instead of 12/15\n");
+	printf("\t--duration-minutes \tDisplay duration in minutes intead of a date/time range\n");
 }
 
 /*
@@ -598,6 +622,8 @@ mvpmc_main(int argc, char **argv)
 	config->av_video_output = AV_OUTPUT_COMPOSITE;
 	config->av_tv_aspect = AV_TV_ASPECT_4x3;
 	config->av_mode = AV_MODE_PAL;
+	//config->mythtv_use_friendly_date = mythtv_use_friendly_date;
+	//config->mythtv_use_duration_minutes = mythtv_use_duration_minutes;
 	vnc_server[0] = 0;
 	em_wol_mac[0] = 0;
 	/*
@@ -629,6 +655,12 @@ mvpmc_main(int argc, char **argv)
 			}
 			if (strcmp(opts[opt_index].name, "no-wss") == 0) {
 			    	av_wss_visible(0);
+			}
+			if (strcmp(opts[opt_index].name, "jit-sync") == 0) {
+			    	jit_mode = jit_mode | 2;
+			}
+			if (strcmp(opts[opt_index].name, "no-seek-sync") == 0) {
+			    	jit_mode = jit_mode & (~1);
 			}
 			if (strcmp(opts[opt_index].name, "no-filebrowser") == 0) {
 				filebrowser_disable = 1;
@@ -703,6 +735,13 @@ mvpmc_main(int argc, char **argv)
 			if (strcmp(opts[opt_index].name, "flicker") == 0) {
 				flicker = atoi(optarg);
 			}
+			if (strcmp(opts[opt_index].name, "weather-location") == 0) {
+				weather_location = strdup(optarg);
+				printf("cmdline location '%s' %p\n", weather_location, weather_location);
+				weather_cmdline = strdup(optarg);
+				sizeof_strncpy(config->weather_location, optarg);
+				config->bitmask |= CONFIG_WEATHER_LOCATION;
+			}
 			if (strcmp (opts[opt_index].name, "startup") == 0) {
 			/*
 			 * Decode the "startup" option parameter.
@@ -743,6 +782,14 @@ mvpmc_main(int argc, char **argv)
 						}
 					}
 			      	}
+			}
+			if (strcmp(opts[opt_index].name, "friendly-date") == 0) {
+				mythtv_use_friendly_date = 1;
+				config->mythtv_use_friendly_date = 1;
+			}
+			if (strcmp(opts[opt_index].name, "duration-minutes") == 0) {
+				mythtv_use_duration_minutes = 1;
+				config->mythtv_use_duration_minutes = 1;
 			}
 			break;
 		case 'a':
@@ -919,7 +966,11 @@ mvpmc_main(int argc, char **argv)
 		if ( settings_disable == 1) {
 			web_port = 0;
 		} else {
-			web_port = 80;
+			if (replaytv_server) {
+				web_port = 8080;
+			} else {
+				web_port = 80;
+			}
 		}
 	}
 
@@ -1098,12 +1149,14 @@ mvpmc_main(int argc, char **argv)
 		DEMUX_PUT = demux_put;
 		DEMUX_WRITE_VIDEO = demux_write_video;
 		DEMUX_WRITE_AUDIO = demux_write_audio;
+		DEMUX_JIT_WRITE_AUDIO = demux_jit_write_audio;
 		pthread_create(&audio_write_thread, &thread_attr,
 			       audio_write_start, NULL);
 	} else {
 		DEMUX_PUT = buffer_put;
 		DEMUX_WRITE_VIDEO = buffer_write;
 		DEMUX_WRITE_AUDIO = buffer_write;
+		DEMUX_JIT_WRITE_AUDIO = jit_buffer_write;
 		if ((data=malloc(DATA_SIZE)) == NULL) {
 			perror("malloc()");
 			exit(1);
@@ -1205,6 +1258,10 @@ re_exec(void)
 	exit(0);
 }
 
+/*
+ * Call appropriate shutdown function to prepare to switch between
+ * applications.
+ */
 void
 switch_hw_state(mvpmc_state_t new)
 {
@@ -1217,22 +1274,30 @@ switch_hw_state(mvpmc_state_t new)
 	case MVPMC_STATE_NONE:
 		break;
 	case MVPMC_STATE_FILEBROWSER:
+	case MVPMC_STATE_FILEBROWSER_SHUTDOWN:
 	case MVPMC_STATE_HTTP:
+	case MVPMC_STATE_HTTP_SHUTDOWN:
 		fb_exit();
 		if (strstr(cwd,"/uPnP")!=NULL ){
 			unmount_djmount();
 		}
 		break;
 	case MVPMC_STATE_MYTHTV:
+	case MVPMC_STATE_MYTHTV_SHUTDOWN:
 		mythtv_exit();
 		break;
 	case MVPMC_STATE_REPLAYTV:
+	case MVPMC_STATE_REPLAYTV_SHUTDOWN:
 		replaytv_exit();
 		break;
 	case MVPMC_STATE_MCLIENT:
+	case MVPMC_STATE_MCLIENT_SHUTDOWN:
 		mclient_exit();
 		break;
 	case MVPMC_STATE_EMULATE:
+	case MVPMC_STATE_EMULATE_SHUTDOWN:
+		break;
+	case MVPMC_STATE_WEATHER:
 		break;
 	}
 
@@ -1275,40 +1340,54 @@ atexit_handler(void)
 	case MVPMC_STATE_NONE:
 		break;
 	case MVPMC_STATE_FILEBROWSER:
+	case MVPMC_STATE_FILEBROWSER_SHUTDOWN:
 	case MVPMC_STATE_HTTP:
+	case MVPMC_STATE_HTTP_SHUTDOWN:
 		fb_exit();
 		break;
 	case MVPMC_STATE_MYTHTV:
+	case MVPMC_STATE_MYTHTV_SHUTDOWN:
 		mythtv_atexit();
 		break;
 	case MVPMC_STATE_REPLAYTV:
+	case MVPMC_STATE_REPLAYTV_SHUTDOWN:
 		break;
 	case MVPMC_STATE_MCLIENT:
+	case MVPMC_STATE_MCLIENT_SHUTDOWN:
 		break;
 	case MVPMC_STATE_EMULATE:
+	case MVPMC_STATE_EMULATE_SHUTDOWN:
 		break;
-
+	case MVPMC_STATE_WEATHER:
+		break;
 	}
 
 	switch (gui_state) {
 	case MVPMC_STATE_NONE:
 		break;
 	case MVPMC_STATE_HTTP:
+	case MVPMC_STATE_HTTP_SHUTDOWN:
 	case MVPMC_STATE_FILEBROWSER:
+	case MVPMC_STATE_FILEBROWSER_SHUTDOWN:
 		if (strstr(cwd,"/uPnP")!=NULL ){
 			unmount_djmount();
 		}
 		break;
 	case MVPMC_STATE_MYTHTV:
+	case MVPMC_STATE_MYTHTV_SHUTDOWN:
 		break;
 	case MVPMC_STATE_REPLAYTV:
+	case MVPMC_STATE_REPLAYTV_SHUTDOWN:
 		replaytv_atexit();
 		break;
 	case MVPMC_STATE_MCLIENT:
+	case MVPMC_STATE_MCLIENT_SHUTDOWN:
 		break;
 	case MVPMC_STATE_EMULATE:
+	case MVPMC_STATE_EMULATE_SHUTDOWN:
 		break;
-
+	case MVPMC_STATE_WEATHER:
+		break;
 	}
 
 	printf("%s(): exiting...\n", __FUNCTION__);
@@ -1319,6 +1398,7 @@ main(int argc, char **argv)
 {
 	extern int ticonfig_main(int argc, char **argv);
 	extern int vpdread_main(int argc, char **argv);
+	extern int splash_main(int argc, char **argv);
 	char *prog;
 
 	prog = basename(argv[0]);
@@ -1330,6 +1410,8 @@ main(int argc, char **argv)
 		return ticonfig_main(argc, argv);
 	} else if (strcmp(prog, "vpdread") == 0) {
 		return vpdread_main(argc, argv);
+	} else if (strcmp(prog, "splash") == 0) {
+		return splash_main(argc, argv);
 #endif /* !MVPMC_HOST */
 	}
 

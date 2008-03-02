@@ -35,7 +35,6 @@
 #include <cmyth_local.h>
 #include <time.h>
 
-
 /*
  * cmyth_timestamp_create(void)
  * 
@@ -310,6 +309,45 @@ cmyth_timestamp_to_string(char *str, cmyth_timestamp_t ts)
 		ts->timestamp_hour,
 		ts->timestamp_minute,
 		ts->timestamp_second);
+	return 0;
+}
+
+/*
+ * cmyth_timestamp_to_isostring(char *str, cmyth_timestamp_t ts)
+ * 
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Create a string from the timestamp structure 'ts' and put it in the
+ * user supplied buffer 'str'.  The size of 'str' must be
+ * CMYTH_TIMESTAMP_LEN + 1 or this will overwrite beyond 'str'.
+ * 
+ *
+ * Return Value:
+ *
+ * Success: 0
+ *
+ * Failure: -(ERRNO)
+ */
+int
+cmyth_timestamp_to_isostring(char *str, cmyth_timestamp_t ts)
+{
+	if (!str) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: NULL output string provided\n",
+			  __FUNCTION__);
+		return -EINVAL;
+	}
+	if (!ts) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: NULL timestamp provided\n",
+			  __FUNCTION__);
+		return -EINVAL;
+	}
+	sprintf(str,
+		"%4.4ld-%2.2ld-%2.2ld",
+		ts->timestamp_year,
+		ts->timestamp_month,
+		ts->timestamp_day);
 	return 0;
 }
 

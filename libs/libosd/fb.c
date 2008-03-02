@@ -161,6 +161,8 @@ fb_fill_rect(osd_surface_t *surface, int x, int y, int width, int height,
 	int i, j;
 	int pixel;
 
+	fb_add_color(surface, c);
+
 	if ((pixel=find_color(surface, c)) == -1) {
 		return -1;
 	}

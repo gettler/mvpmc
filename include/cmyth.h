@@ -91,6 +91,7 @@ typedef enum {
 	CMYTH_EVENT_QUIT_LIVETV,
 	CMYTH_EVENT_LIVETV_CHAIN_UPDATE,
 	CMYTH_EVENT_SIGNAL,
+	CMYTH_EVENT_ASK_RECORDING,
 } cmyth_event_t;
 
 #define CMYTH_NUM_SORTS 2
@@ -116,9 +117,9 @@ typedef struct cmyth_file *cmyth_file_t;
 
 struct cmyth_commbreak {
         long start_mark;
-        long start_offset;
+        long long start_offset;
         long end_mark;
-        long end_offset;
+        long long end_offset;
 };
 typedef struct cmyth_commbreak *cmyth_commbreak_t;
 
@@ -320,6 +321,13 @@ extern int cmyth_conn_get_protocol_version(cmyth_conn_t conn);
  * \return event type
  */
 extern cmyth_event_t cmyth_event_get(cmyth_conn_t conn, char * data, int len);
+
+/**
+ * Selects on the event socket, waiting for an event to show up.
+ * allows nonblocking access to events.
+ * \return <= 0 on failure
+ */
+extern int cmyth_event_select(cmyth_conn_t conn, struct timeval *timeout);
 
 /*
  * -----------------------------------------------------------------
@@ -573,6 +581,8 @@ extern cmyth_timestamp_t cmyth_timestamp_from_unixtime(time_t l);
 extern time_t cmyth_timestamp_to_unixtime(cmyth_timestamp_t ts);
 
 extern int cmyth_timestamp_to_string(char *str, cmyth_timestamp_t ts);
+
+extern int cmyth_timestamp_to_isostring(char *str, cmyth_timestamp_t ts);
 
 extern int cmyth_timestamp_to_display_string(char *str, cmyth_timestamp_t ts,
 																						 int time_format_12);
@@ -935,7 +945,7 @@ typedef struct cmyth_program {
 	char seriesid[24];
 	char category[84];
 	int recording;
-	char rec_status[2];
+	int rec_status;
 	int channum;
 	int event_flags;
 	int startoffset;
@@ -956,14 +966,17 @@ extern int cmyth_get_offset_mysql(cmyth_database_t, int, char *, int, char *, ch
 extern int cmyth_mysql_get_prog_finder_char_title(cmyth_database_t db, cmyth_program_t **prog, time_t starttime, char *program_name);
 extern int cmyth_mysql_get_prog_finder_time(cmyth_database_t db, cmyth_program_t **prog,  time_t starttime, char *program_name);
 extern int cmyth_mysql_get_guide(cmyth_database_t db, cmyth_program_t **prog, time_t starttime, time_t endtime);
-
+extern int cmyth_mysql_testdb_connection(cmyth_database_t db,char **message);
 extern int cmyth_schedule_recording(cmyth_conn_t conn, char * msg);
 extern char * cmyth_mysql_escape_chars(cmyth_database_t db, char * string);
 extern int cmyth_mysql_get_commbreak_list(cmyth_database_t db, int chanid, char * start_ts_dt, cmyth_commbreaklist_t breaklist);
 
+extern int cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_program_t **prog);
+
+extern int cmyth_get_delete_list(cmyth_conn_t, char *, cmyth_proglist_t);
 
 #define PROGRAM_ADJUST  3600
 
-
+extern int cmyth_mythtv_remove_previos_recorded(cmyth_database_t db,char *query);
 
 #endif /* __CMYTH_H */

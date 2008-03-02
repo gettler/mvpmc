@@ -55,6 +55,7 @@ if target == 'mvp':
                              CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                          '.', '../include' ],
                              LIBS = ['osd', 'av', 'dl'],
+			     CCFLAGS = env['CCFLAGS'] + ' -DSTANDALONE',
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 

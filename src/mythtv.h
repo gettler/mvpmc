@@ -40,6 +40,7 @@ typedef enum {
 	MYTHTV_STATE_UPCOMING,
 	MYTHTV_STATE_SCHEDULE,
 	MYTHTV_STATE_PROG_FINDER,
+	MYTHTV_STATE_UTILS,
 } mythtv_state_t;
 
 extern volatile mythtv_state_t mythtv_state;
@@ -86,6 +87,8 @@ extern mythtv_color_t mythtv_colors;
 extern char *mythtv_server;
 extern int mythtv_debug;
 extern int mythtv_use_12hour_clock;
+extern int mythtv_use_duration_minutes;
+extern int mythtv_use_friendly_date;
 extern int mythtv_tvguide_sort_desc;
 extern char *mythtv_recdir;
 extern char *mythtv_ringbuf;
@@ -125,6 +128,7 @@ extern mvp_widget_t *mythtv_popup;
 extern mvp_widget_t *mythtv_program_widget;
 extern mvp_widget_t *mythtv_osd_program;
 extern mvp_widget_t *mythtv_osd_description;
+extern mvp_widget_t *mythtv_utils;
 
 extern mvpw_menu_attr_t mythtv_attr;
 
@@ -195,6 +199,11 @@ extern void myth_tvguide_clear_hilites(void);
 
 /* ----------------------------------------------------------------- */
 
+extern void run_mythtv_utils_prevrecorded(mvp_widget_t *,mvp_widget_t *);
+extern void run_mythtv_utils_priorities(mvp_widget_t *widget);
+extern void run_mythtv_utils_delrecordings(mvp_widget_t *widget);
+
+
 extern int mythtv_back(mvp_widget_t*);
 extern int mythtv_update(mvp_widget_t*);
 extern int mythtv_livetv_menu_start(void);
@@ -248,6 +257,7 @@ extern void livetv_select_callback(mvp_widget_t *widget, char *item, void *key);
 extern int mythtv_verify(void);
 extern void mythtv_shutdown(int display);
 extern void mythtv_fullscreen(void);
+extern int mythtv_testdb(mvp_widget_t *widget);
 
 /*
  * Swap a reference counted global for a new reference (including NULL).

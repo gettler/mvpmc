@@ -10,7 +10,24 @@ Import('env')
 target = env['TARG']
 
 freetype = env.SConscript('freetype/SConscript')
+#zlib = env.SConscript('zlib/SConscript')
+#png = env.SConscript('libpng/SConscript')
+#jpg = env.SConscript('jpeg/SConscript')
+#mw = env.SConscript('microwindows/SConscript')
+#a52 = env.SConscript('a52dec/SConscript')
+#expat = env.SConscript('expat/SConscript')
+#dvb = env.SConscript('libdvbpsi/SConscript')
+#id3 = env.SConscript('libid3/SConscript')
+#tremor = env.SConscript('Tremor/SConscript')
+#ncurses = env.SConscript('ncurses/SConscript')
+#mysql = env.SConscript('mysql/SConscript')
 
-lib = [ freetype ]
+#libs = [ zlib, png, jpg, mw, a52, expat, dvb, id3, tremor, ncurses, mysql ]
 
-Return('lib')
+#if target == 'mvp':
+#	flac = env.SConscript('flac/SConscript')
+#	libs.append(flac)
+
+libs = [ freetype ]
+
+Return('libs')

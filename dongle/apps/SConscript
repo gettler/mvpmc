@@ -1,4 +1,7 @@
 #!/usr/bin/python
+#
+# Third-Party Applications
+#
 
 import os
 
@@ -13,5 +16,7 @@ djmount = env.SConscript('djmount/SConscript')
 nbtscan = env.SConscript('nbtscan/SConscript')
 
 apps = [ busybox, ntp, dropbear, mtd, fuse, djmount, nbtscan ]
+
+env.Depends(djmount, fuse)
 
 Return('apps')

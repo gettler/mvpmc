@@ -3,6 +3,31 @@
 # mvpmc startup script
 #
 
+check_proc() {
+    #/proc is needed for /bin/splash to determine PAL vs NTSC
+    if ! [ -e /proc/mtd ]; then
+	mount proc /proc -t proc
+    fi
+}
+
+progress() {
+    check_proc
+    /bin/splash --progress $PROGRESS --state 1
+    let PROGRESS=PROGRESS+1
+}
+
+progress_test() {
+    check_proc
+    /bin/splash --progress $PROGRESS --state 2
+}
+
+progress_done() {
+    check_proc
+    /bin/splash --progress $PROGRESS --state 3
+}
+
+PROGRESS=4
+
 #
 # Connect to the first available NTP server
 #
@@ -27,6 +52,7 @@ do_ntp() {
 #
 /bin/umount /oldroot
 /sbin/freeramdisk /dev/ram0
+progress
 
 #
 # Create the tmpfs filesystem and mount it on top of the squashfs root
@@ -37,6 +63,8 @@ mount -t unionfs -o dirs=/memory=rw:/=ro unionfs /union
 cd /union
 mkdir live
 pivot_root . live
+umount /live/proc
+progress
 
 #
 # Remount everything read/write
@@ -89,11 +117,15 @@ fi
 # Iterate over the two devices waiting for one of them to get an address.
 #
 while [ $LEASE -eq 0 ] ; do
+    progress_test
     udhcpc -i eth1 -n
     RET=$?
+    progress_done
     if [ $RET -ne 0 ] ; then
+	progress_test
 	udhcpc -i eth0 -n
 	RET=$?
+	progress_done
     fi
     if [ $RET -eq 0 ] ; then
 	LEASE=1
@@ -101,6 +133,7 @@ while [ $LEASE -eq 0 ] ; do
 done
 
 . /etc/udhcpc.config
+progress
 
 #
 # Make sure the hostname is set to something
@@ -131,11 +164,25 @@ mkdir /uPnP
 # Download the users config and theme files, if they exist.
 #
 if [ -n "$DONGLE" ] ; then
-    tftp -g -l /etc/dongle.config -r ${DONGLE}.config ${SERVER}
-    tftp -g -l /tmp/themes/default.xml -r ${DONGLE}.xml ${SERVER}
-    . /etc/dongle.config
-    if [ "$NOMVPMC" != "" ] ; then
-        exit 0
+    tftp -g -l /etc/dongle.config -r ${DONGLE}.config ${SERVER}    
+    if [ -e "/etc/dongle.config" ] ; then
+        tftp -g -l /tmp/themes/default.xml -r ${DONGLE}.xml ${SERVER}
+        dos2unix -u /etc/dongle.config
+        . /etc/dongle.config    
+        if [ "$NOMVPMC" != "" ] ; then
+            exit 0
+        fi
+    fi
+fi
+progress
+
+#
+# Free up some memory if the wireless device is not being used.
+#
+if [ "$ETH" == "eth0" ] ; then
+    if [ "$TIWLAN_KEEP" == "" ] ; then
+	/sbin/ifconfig eth1 down
+	/sbin/rmmod tiwlan_drv
     fi
 fi
 
@@ -159,18 +206,21 @@ if [ -z "`pidof mvpmc`" ] ; then
     vpdread -t
     . /etc/tftp.config
     mkdir /etc/mvpmc
-    mount.cifs "//${TFTP}/mvpmc" /etc/mvpmc -o username=guest,password=guest,ro ;
+    mount.cifs "//${TFTP}/mvpmc" /etc/mvpmc -o guest,ro ;
     if [ -e "/etc/mvpmc/dongle.bin.config" ] ; then
         cp /etc/mvpmc/dongle.bin.config /etc/dongle.config
+	dos2unix -u /etc/dongle.config
         . /etc/dongle.config
     fi
     #
     # mounting a share failed lets try a tftp from the same server
-    #
+    #   
     if [ -z "`pidof mvpmc`" ] ; then    
         tftp -g -l /etc/dongle.config -r dongle.bin.config ${TFTP}
-        tftp -g -l /tmp/themes/default.xml -r dongle.bin.xml ${TFTP}
-        . /etc/dongle.config
+        if [ -e "/etc/dongle.config" ] ; then
+	    dos2unix -u /etc/dongle.config        
+            . /etc/dongle.config
+        fi
     fi
     
     #
@@ -179,12 +229,12 @@ if [ -z "`pidof mvpmc`" ] ; then
     if [ -z "`pidof mvpmc`" ] ; then
         if [ -z $SERVER ] ; then
             if [ -z $HOST ] ; then
-    	        mvpmc -s ${TFTP} -c ${TFTP} -R "ip=discover" --startup setup --emulate ? &
+    	        mvpmc -c ${TFTP} --startup setup --emulate ? &
             else
-    	        mvpmc -s $HOST -c $HOST --vlc $HOST -R "ip=discover" --emulate ? &
+    	        mvpmc -c $HOST --vlc $HOST --emulate ? &
             fi    
         else        
-    	    mvpmc -s $SERVER -c $SERVER --vlc $SERVER -R "ip=discover" --emulate ? &
+    	    mvpmc -c $SERVER --vlc $SERVER --emulate ? &
         fi
     fi    
 fi    

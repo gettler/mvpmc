@@ -908,7 +908,7 @@ int mvp_config_general(char *line)
 			default:
 				break;
 			}
-		} else if (strcmp(ptr,"SetTime=Set Time")==0 ) {
+		} else if (strcmp(ptr,"SetTime=Set Time")==0 || strcmp(ptr,"SetTime=Set+Time")==0 ) {
 			setenv("TZ",web_config->tz,1);
 			tzset();
 			pthread_mutex_lock (&web_server_mutex);
@@ -1103,8 +1103,11 @@ int mvp_load_data(FILE *stream,char *line)
 							ptm = localtime(&tm);
 							fprintf(stream,"Built: %s<BR />", compile_time);
 							fprintf(stream,"System Time %s<BR />",asctime(ptm));
-							fprintf(stream, "%s/%s<BR />", cwd, current_hilite);
-							if (audio_playing &&  gui_state == MVPMC_STATE_FILEBROWSER) {
+							if ( gui_state == MVPMC_STATE_EMULATE && current !=NULL) {
+								fprintf(stream,"Now Playing:<BR />");
+								fprintf(stream,"%s<BR />", current);
+							} else if (audio_playing &&  gui_state == MVPMC_STATE_FILEBROWSER) {
+								fprintf(stream, "%s/%s<BR />", cwd, current_hilite);
 								fprintf (stream,"Playing Audio<BR />");
 								fprintf(stream,"%s<BR />", playlist->name);
 							}

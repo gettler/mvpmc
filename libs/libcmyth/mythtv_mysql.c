@@ -38,6 +38,7 @@
 #define TRC(fmt, args...) 
 #endif
 
+
 void
 cmyth_database_close(cmyth_database_t db)
 {
@@ -362,6 +363,54 @@ cmyth_mysql_insert_into_record(cmyth_database_t db, char * query, char * query1,
 	}
 
 
+	return rows;
+}
+
+int
+cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_program_t **prog)
+{
+	MYSQL_RES *res= NULL;
+	MYSQL_ROW row;
+	int n=0;
+	int rows=0;
+        const char *query = "SELECT oldrecorded.chanid, UNIX_TIMESTAMP(starttime), UNIX_TIMESTAMP(endtime), title, subtitle, description, category, seriesid, programid, channel.channum, channel.callsign, channel.name, findid, rectype, recstatus, recordid, duplicate FROM oldrecorded LEFT JOIN channel ON oldrecorded.chanid = channel.chanid ORDER BY `starttime` ASC";
+	if(cmyth_db_check_connection(db) != 0)
+	{
+               cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_db_check_connection failed\n", __FUNCTION__);
+               fprintf(stderr,"%s: cmyth_db_check_connection failed\n", __FUNCTION__);
+	       return -1;
+	}
+        if(mysql_query(db->mysql,query)) {
+                 cmyth_dbg(CMYTH_DBG_ERROR, "%s: mysql_query() Failed: %s\n", 
+                           __FUNCTION__, mysql_error(db->mysql));
+		return -1;
+        }
+        res = mysql_store_result(db->mysql);
+	while((row = mysql_fetch_row(res))) {
+        	if (rows >= n) {
+                	n+=10;
+                       	*prog=realloc(*prog,sizeof(**prog)*(n));
+               	}
+		(*prog)[rows].chanid = safe_atoi(row[0]);
+               	(*prog)[rows].recording=0;
+		(*prog)[rows].starttime=(time_t)safe_atol(row[1]);
+		(*prog)[rows].endtime= (time_t)safe_atol(row[2]);
+		sizeof_strncpy((*prog)[rows].title, row[3]);
+		sizeof_strncpy((*prog)[rows].subtitle, row[4]);
+		sizeof_strncpy((*prog)[rows].description, row[5]);
+		sizeof_strncpy((*prog)[rows].category, row[6]);
+		sizeof_strncpy((*prog)[rows].seriesid, row[7]);
+		sizeof_strncpy((*prog)[rows].programid, row[8]);
+		(*prog)[rows].channum = safe_atoi(row[9]);
+		sizeof_strncpy((*prog)[rows].callsign, row[10]);
+		sizeof_strncpy((*prog)[rows].name, row[11]);
+		//sizeof_strncpy((*prog)[rows].rec_status, row[14]);
+		(*prog)[rows].rec_status=safe_atoi(row[14]);
+		//fprintf(stderr, "row=%s   val=%d\n",row[14],(*prog)[rows].rec_status);
+          	rows++;
+        }
+        mysql_free_result(res);
+        cmyth_dbg(CMYTH_DBG_ERROR, "%s: rows= %d\n", __FUNCTION__, rows);
 	return rows;
 }
 
@@ -729,4 +778,70 @@ cmyth_mysql_get_commbreak_list(cmyth_database_t db, int chanid, char * start_ts_
 	mysql_free_result(res);
 	cmyth_dbg(CMYTH_DBG_ERROR, "%s: rows= %d\n", __FUNCTION__, rows);
 	return rows;
+}
+
+int
+cmyth_mythtv_remove_previos_recorded(cmyth_database_t db,char *query)
+{
+	MYSQL_RES *res=NULL;
+	char N_query[128];
+	int rows;
+
+	if(cmyth_db_check_connection(db) != 0)
+	{
+               cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_db_check_connection failed\n",
+                           __FUNCTION__);
+               fprintf(stderr,"%s: cmyth_db_check_connection failed\n", __FUNCTION__);
+	       return -1;
+	}
+
+	mysql_real_escape_string(db->mysql,N_query,query,strlen(query)); 
+
+        if(mysql_query(db->mysql,query)) {
+                 cmyth_dbg(CMYTH_DBG_ERROR, "%s: mysql_query() Failed: %s\n", 
+                           __FUNCTION__, mysql_error(db->mysql));
+		return -1;
+       	}
+	res = mysql_store_result(db->mysql);
+	rows=mysql_insert_id(db->mysql);
+	if (rows <=0) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: mysql_query() Failed: %s\n", 
+			__FUNCTION__, mysql_error(db->mysql));
+	}
+
+	return rows;
+}
+
+int
+cmyth_mysql_testdb_connection(cmyth_database_t db,char **message) {
+	char buf[1000];
+	int new_conn = 0;
+	if (db->mysql != NULL) {
+		if (mysql_stat(db->mysql) == NULL) {
+			cmyth_database_close(db);
+			return -1;
+			}
+	}
+	if (db->mysql == NULL) {
+		db->mysql = mysql_init(NULL);
+		new_conn = 1;
+		if(db->mysql == NULL) {
+			fprintf(stderr,"%s: mysql_init() failed, insufficient memory?", __FUNCTION__);
+			snprintf(buf, sizeof(buf), "mysql_init() failed, insufficient memory?");
+			*message=buf;
+			return -1;
+		}
+		if (NULL == mysql_real_connect(db->mysql, db->db_host,db->db_user,db->db_pass,db->db_name,0,NULL,0)) {
+			fprintf(stderr,"%s: mysql_connect() failed: %s\n", __FUNCTION__,
+			mysql_error(db->mysql));
+			snprintf(buf, sizeof(buf), "%s",mysql_error(db->mysql));
+			fprintf (stderr,"buf = %s\n",buf);
+			*message=buf;
+			cmyth_database_close(db);
+			return -1;
+		}
+	}
+	snprintf(buf, sizeof(buf), "All Test Successful\n");
+	*message=buf;
+	return 1;
 }

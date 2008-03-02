@@ -28,16 +28,25 @@
 
 /**
  * Portion of the mvpmc application which owns either the gui or
- * the audio/video playback hardware.
+ * the audio/video playback hardware. 
+ * Note: shutdown state used when previous application requires 
+ * delays when turning off.
  */
 typedef enum {
 	MVPMC_STATE_NONE = 1,		/**< no state */
 	MVPMC_STATE_MYTHTV,		/**< mythtv */
+	MVPMC_STATE_MYTHTV_SHUTDOWN,	/**< mythtv shutdown */
 	MVPMC_STATE_FILEBROWSER,	/**< filebrowser */
+	MVPMC_STATE_FILEBROWSER_SHUTDOWN,	/**< filebrowser shutdown */
 	MVPMC_STATE_REPLAYTV,		/**< replaytv */
+	MVPMC_STATE_REPLAYTV_SHUTDOWN,	/**< replaytv shutdown */
 	MVPMC_STATE_MCLIENT,		/**< slimserver mclient */
+	MVPMC_STATE_MCLIENT_SHUTDOWN,	/**< slimserver mclient shutdown */
 	MVPMC_STATE_HTTP,		/**< http */
+	MVPMC_STATE_HTTP_SHUTDOWN,	/**< http shutdown */
 	MVPMC_STATE_EMULATE,		/**< hauppauge emulation */
+	MVPMC_STATE_EMULATE_SHUTDOWN,	/**< hauppauge emulation shutdown */
+	MVPMC_STATE_WEATHER,
 } mvpmc_state_t;
 
 /**
@@ -203,6 +212,7 @@ extern mvp_widget_t *episodes_widget;
 extern mvp_widget_t *shows_widget;
 extern mvp_widget_t *freespace_widget;
 extern mvp_widget_t *program_info_widget;
+extern mvp_widget_t *mythtv_options;
 
 extern mvp_widget_t *popup_menu;
 
@@ -228,8 +238,30 @@ extern mvp_widget_t *volume_dialog;
 extern mvp_widget_t *mclient_fullscreen;
 extern mvp_widget_t *mclient_sub_softsqueeze;
 extern mvp_widget_t *mclient_sub_image;
+extern mvp_widget_t *mclient_sub_image_1_1;
+extern mvp_widget_t *mclient_sub_image_1_2;
+extern mvp_widget_t *mclient_sub_image_1_3;
+extern mvp_widget_t *mclient_sub_image_2_1;
+extern mvp_widget_t *mclient_sub_image_2_2;
+extern mvp_widget_t *mclient_sub_image_2_3;
+extern mvp_widget_t *mclient_sub_image_3_1;
+extern mvp_widget_t *mclient_sub_image_3_2;
+extern mvp_widget_t *mclient_sub_image_3_3;
+extern mvp_widget_t *mclient_sub_alt_image_1_1;
+extern mvp_widget_t *mclient_sub_alt_image_1_2;
+extern mvp_widget_t *mclient_sub_alt_image_1_3;
+extern mvp_widget_t *mclient_sub_alt_image_2_1;
+extern mvp_widget_t *mclient_sub_alt_image_2_2;
+extern mvp_widget_t *mclient_sub_alt_image_2_3;
+extern mvp_widget_t *mclient_sub_alt_image_3_1;
+extern mvp_widget_t *mclient_sub_alt_image_3_2;
+extern mvp_widget_t *mclient_sub_alt_image_3_3;
+extern mvp_widget_t *mclient_sub_alt_image_info;
+extern mvp_widget_t *mclient_sub_alt_image;
 extern mvp_widget_t *mclient_sub_progressbar;
 extern mvp_widget_t *mclient_sub_volumebar;
+extern mvp_widget_t *mclient_sub_browsebar;
+extern mvp_widget_t *mclient_sub_localmenu;
 
 extern void volume_key_callback(mvp_widget_t *widget, char key);
 
@@ -290,8 +322,20 @@ extern void video_stop_play(void);
 
 extern int fb_update(mvp_widget_t*);
 
+extern int weather_update(mvp_widget_t*);
+
 extern void video_callback(mvp_widget_t*, char);
-extern void video_thumbnail(int on);
+
+/* vid_thumb_loc & 1 = left/right, vid_thumb_loc & 2 = top/bottom */
+typedef enum {
+	VID_THUMB_TOP_LEFT = 0,
+	VID_THUMB_TOP_RIGHT = 1,
+	VID_THUMB_BOTTOM_LEFT = 2,
+	VID_THUMB_BOTTOM_RIGHT = 3
+} vid_thumb_location_t;
+
+extern void video_thumbnail(av_thumbnail_mode_t thumb_mode,
+			    vid_thumb_location_t loc);
 
 extern void fb_program(mvp_widget_t *widget);
 extern void fb_shuffle(int);
@@ -304,6 +348,7 @@ extern void video_switch_stream(mvp_widget_t*, int);
 extern void add_audio_streams(mvp_widget_t*, mvpw_menu_item_attr_t*);
 extern void add_video_streams(mvp_widget_t*, mvpw_menu_item_attr_t*);
 
+extern void *av_sync_start(void*);
 extern void *video_events_start(void*);
 extern void *video_read_start(void*);
 extern void *video_write_start(void*);
@@ -387,6 +432,7 @@ extern demux_handle_t *handle;
 extern int (*DEMUX_PUT)(demux_handle_t*, void*, int);
 extern int (*DEMUX_WRITE_VIDEO)(demux_handle_t*, int);
 extern int (*DEMUX_WRITE_AUDIO)(demux_handle_t*, int);
+extern int (*DEMUX_JIT_WRITE_AUDIO)(demux_handle_t*, int,unsigned int,int,int*,int*);
 
 extern void empty_ac3(void);
 
@@ -485,6 +531,8 @@ typedef struct {
 } osd_settings_t;
 
 extern osd_settings_t osd_settings;
+extern int mythtv_seek_amount;
+extern int mythtv_commskip;
 
 extern void switch_hw_state(mvpmc_state_t new);
 extern void switch_gui_state(mvpmc_state_t new);
@@ -506,7 +554,20 @@ extern int reboot_disable;
 extern int filebrowser_disable;
 extern int startup_this_feature;
 
+enum {
+        VIEWPORT_EDGE_TOP = 0,
+	VIEWPORT_EDGE_LEFT = 1,
+	VIEWPORT_EDGE_BOTTOM = 2,
+	VIEWPORT_EDGE_RIGHT = 3,
+};
+
+
 extern unsigned short viewport_edges[4];
+
+#define VIEWPORT_TOP (viewport_edges[VIEWPORT_EDGE_TOP])
+#define VIEWPORT_LEFT (viewport_edges[VIEWPORT_EDGE_LEFT])
+#define VIEWPORT_BOTTOM (si.rows - viewport_edges[VIEWPORT_EDGE_BOTTOM])
+#define VIEWPORT_RIGHT (si.cols - viewport_edges[VIEWPORT_EDGE_RIGHT])
 
 extern void start_thruput_test(void);
 extern void end_thruput_test(void);
@@ -522,6 +583,7 @@ enum {
 	MM_REPLAYTV,
 	MM_MCLIENT,
 	MM_EMULATE,
+	MM_WEATHER,
 };
 
 extern int startup_selection;
@@ -535,6 +597,8 @@ extern int rfb_mode;
 extern int flicker;
 extern char *rtv_init_str;
 extern char *mclient_server;
+extern char *weather_location;
+extern char *weather_cmdline;
 
 extern char cwd[];
 

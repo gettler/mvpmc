@@ -1,7 +1,4 @@
 #!/usr/bin/python
-#
-# $Id: SConscript 20 2006-03-14 05:26:56Z gettler $
-#
 
 import os
 
@@ -11,8 +8,8 @@ sharedir = env['INSTSHAREDIR']
 
 image = [ 'mvpmc_logo.png', 'mythtv_logo_rotate.png', 'replaytv1.png',
           'replaytv1_rotate.png', 'stop.png', 'tv2.png', 'unknown.png',
-          'video_folder.png', 'warning.png', 'wrench.png',
-          'emulate.png' ]
+          'video_folder.png', 'warning.png', 'setup.png', 'mclient.png',
+	  'weather.png', 'emulate.png', 'weather_unknown.png' ]
 
 inst = env.Install(sharedir, image)
 

@@ -1230,7 +1230,7 @@ cmyth_rcv_datetime(cmyth_conn_t conn, int *err, cmyth_timestamp_t *ts,
 		return 0;
 	}
 	*err = 0;
-	tbuf[CMYTH_TIMESTAMP_LEN] = '\0';
+	tbuf[CMYTH_LONG_LEN] = '\0';
 	consumed = cmyth_rcv_string(conn, err, tbuf, CMYTH_LONG_LEN, count);
 	if (*err) {
 		cmyth_dbg(CMYTH_DBG_ERROR,
@@ -1943,7 +1943,7 @@ cmyth_rcv_proginfo(cmyth_conn_t conn, int *err, cmyth_proginfo_t buf,
 		/*
 		 * Get original_air_date (string)
 		 */
-		if (buf->proginfo_version >= 14) {
+		if ((buf->proginfo_version >= 14) & (buf->proginfo_version <=32)) {
 			consumed =
 				cmyth_rcv_datetime(conn, err,
 						   &(buf->proginfo_originalairdate),
@@ -2036,8 +2036,35 @@ cmyth_rcv_proginfo(cmyth_conn_t conn, int *err, cmyth_proginfo_t buf,
 			ref_release(buf->proginfo_storagegroup);
 		buf->proginfo_storagegroup = ref_strdup(tmp_str);
 	}
-	
- 
+	if (buf->proginfo_version >= 35) {
+		/*
+		 * Get audioproperties,videoproperties,subtitletype (int)
+		 */
+		consumed = cmyth_rcv_ulong(conn, err,
+				&buf->proginfo_audioproperties, count);
+		count -= consumed;
+		total += consumed;
+		if (*err) {
+			failed = "cmyth_rcv_ulong audio";
+			goto fail;
+		}
+		consumed = cmyth_rcv_ulong(conn, err,
+				&buf->proginfo_videoproperties, count);
+		count -= consumed;
+		total += consumed;
+		if (*err) {
+			failed = "cmyth_rcv_ulong video";
+			goto fail;
+		}
+		consumed = cmyth_rcv_ulong(conn, err,
+				&buf->proginfo_subtitletype, count);
+		count -= consumed;
+		total += consumed;
+		if (*err) {
+			failed = "cmyth_rcv_ulong subtitletype";
+			goto fail;
+		}
+	}	
 	cmyth_dbg(CMYTH_DBG_INFO, "%s: got recording info\n", __FUNCTION__);
 
 	cmyth_proginfo_parse_url(buf);
@@ -2405,7 +2432,7 @@ cmyth_rcv_proglist(cmyth_conn_t conn, int *err, cmyth_proglist_t buf,
 		if (*err) {
 			ref_release(pi);
 			cmyth_dbg(CMYTH_DBG_ERROR,
-				  "%s: cmyth_rcv_long() failed (%d)\n",
+				  "%s: cmyth_rcv_proginfo() failed (%d)\n",
 				  __FUNCTION__, *err);
 			break;
 		}
