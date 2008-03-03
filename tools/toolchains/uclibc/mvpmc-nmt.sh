@@ -21,7 +21,7 @@ tar -xjf uClibc-0.9.28.3.tar.bz2
 export CTARGET=mipsel-linux-uclibc
 export ARCH=mips
 
-export TOOLCHAIN=/home/gettler/toolchains/
+export TOOLCHAIN=$HOME/toolchains/
 TOP=`pwd`
 
 rm -rf build
