@@ -3,7 +3,7 @@
 # http://www.mvpmc.org/
 #
 
-all: mvp host
+all: mvp nmt mg35 host
 
 mvp:
 	scons -Q -j 2 TARGET=mvp

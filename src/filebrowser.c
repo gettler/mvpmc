@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -49,7 +49,7 @@ static gw_t *fb;
 
 static char cwd[1024] = "/";
 
-static int dir_count = 0;
+static long dir_count = 0;
 static int file_count = 0;
 
 static void fb_exit(void);

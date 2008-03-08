@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, Eric Lund, Jon Gettler
+ *  Copyright (C) 2004-2008, Eric Lund, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -83,6 +83,11 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
                 "       .set    mips0                                   \n"
                 : "=&r" (tmp1), "=m" (__val)
                 : "Ir" (inc), "m" (__val));
+#elif defined __x86_64__
+        __asm__ __volatile__(
+                "incl %0"
+                :"=m" (__val)
+                :"m" (__val));
 #else
 	/*
 	 * Don't know how to atomic increment for a generic architecture
@@ -155,6 +160,11 @@ __mvp_atomic_decrement(mvp_atomic_t *valp)
                 "       .set    mips0                                   \n"
                 : "=&r" (tmp1), "=m" (__val)
                 : "Ir" (inc), "m" (__val));
+#elif defined __x86_64__
+        __asm__ __volatile__(
+                "decl %0"
+                :"=m" (__val)
+                :"m" (__val));
 #elif defined __sparcv9__
 	mvp_atomic_t __newval, __oldval = (*valp);
 	do

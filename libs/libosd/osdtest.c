@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, Jon Gettler
+ *  Copyright (C) 2004-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -28,8 +28,11 @@
 #include "mvp_osd.h"
 
 #define INCLUDE_LINUX_LOGO_DATA
+
+#if defined(MVPMC_MEDIAMVP)
 #define __initdata
 #include <linux/linux_logo.h>
+#endif
 
 #if !defined(LINUX_LOGO_COLORS)
 #undef __initdata
