@@ -17,6 +17,6 @@ if target == 'mvp':
     url = 'http://www.mvpmc.org/dl/buildroot-20060710.tar.bz2'
     uclibc = os.system(pwd +'/mvpmc-uclibc.sh '+file + ' ' + url)
 elif target == 'nmt':
-    uclibc = os.system(pwd +'/mvpmc-nmt.sh')
+    uclibc = os.system(pwd +'/mvpmc-nmt.sh ' + downloads)
 
 Return('uclibc')

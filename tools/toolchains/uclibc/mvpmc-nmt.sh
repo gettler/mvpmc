@@ -8,15 +8,23 @@
 
 set -x
 
-wget http://www.mvpmc.org/dl/binutils-2.17.tar.gz
-wget http://www.mvpmc.org/dl/gcc-4.0.4.tar.gz
-wget http://www.mvpmc.org/dl/linux-2.6.15.7.tar.gz
-wget http://www.mvpmc.org/dl/uClibc-0.9.28.3.tar.bz2
+if [ "$1" = "" ] ; then
+    DOWNLOADS=`pwd`
+else
+    DOWNLOADS=$1
+fi
 
-tar -xzf binutils-2.17.tar.gz
-tar -xzf gcc-4.0.4.tar.gz
-tar -xzf linux-2.6.15.7.tar.gz
-tar -xjf uClibc-0.9.28.3.tar.bz2
+for i in binutils-2.17.tar.gz \
+         gcc-4.0.4.tar.gz \
+         linux-2.6.15.7.tar.gz \
+         uClibc-0.9.28.3.tar.bz2 ; do
+    wget -c -O $DOWNLOADS/$i http://www.mvpmc.org/dl/$i
+done
+
+tar -xzf $DOWNLOADS/binutils-2.17.tar.gz
+tar -xzf $DOWNLOADS/gcc-4.0.4.tar.gz
+tar -xzf $DOWNLOADS/linux-2.6.15.7.tar.gz
+tar -xjf $DOWNLOADS/uClibc-0.9.28.3.tar.bz2
 
 export CTARGET=mipsel-linux-uclibc
 export ARCH=mips

@@ -79,9 +79,9 @@ elif target == 'mg35':
 		sys.exit(1)
 elif target == 'nmt':
 	if cross == '':
-		arch = 'mipsel-linux-uclibc'
+		arch = 'mips'
+		prefix = 'mipsel-linux-uclibc-'
 		gcc = ''
-		prefix = arch + '-'
 		crossroot = toolchains + '/mips/' + gcc + '/'
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_NMT'
@@ -150,6 +150,16 @@ env.Replace(CROSSPATH = crossroot)
 Export('env','crossroot')
 
 #
+# Dynamically loadable plugins are only avaiable with dynamic linking
+#
+linkmode = env['LINKMODE']
+if linkmode == 'static':
+	env.Append(CCFLAGS = ' -DLINKMODE_STATIC')
+if linkmode == 'dynamic':
+	env.Append(CCFLAGS = ' -DLINKMODE_DYNAMIC')
+	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+
+#
 # ensure the download directory exits
 #
 downloads = env['DOWNLOADS']
@@ -183,15 +193,18 @@ elif target == 'mg35':
 	env.Depends(mvpmc, libs)
 elif target == 'nmt':
 	dir = env['BUILD_DIR']
-	cc = env['CC']
-	if os.path.exists(cc) == 0:
-		print "build application cross-compiler"
-		gcc = env.SConscript('tools/toolchains/uclibc/SConscript')
 	libs = env.SConscript('dongle/libs/SConscript')
 	mvplibs = env.SConscript('libs/SConscript')
 	plugins = env.SConscript('plugins/SConscript')
 	mvpmc = env.SConscript('src/SConscript',
 			       build_dir='src/'+dir, duplicate=0)
+	cc = env['CC']
+	if os.path.exists(cc) == 0:
+		print "build application cross-compiler"
+		gcc = env.SConscript('tools/toolchains/uclibc/SConscript')
+		env.Depends(libs, gcc)
+		env.Depends(mvplibs, gcc)
+		env.Depends(mvpmc, gcc)
 	inc = env.SConscript('include/SConscript')
 	env.Depends(mvplibs, inc)
 	env.Depends(mvplibs, libs)

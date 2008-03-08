@@ -68,7 +68,7 @@ static int
 lib_open(void)
 {
 	if (handle == NULL) {
-#if !defined(MVPMC_MG35)
+#if defined(LINKMODE_DYNAMIC)
 		if ((handle=dlopen("libfreetype.so", RTLD_LAZY)) == NULL) {
 			return -1;
 		}
