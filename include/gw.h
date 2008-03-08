@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -61,6 +61,8 @@ typedef int (*gw_hilite_t)(gw_t*, char*, void*, bool);
 extern int gw_init(unsigned int dev);
 extern int gw_shutdown(void);
 extern gw_t *gw_root(void);
+extern int gw_device_add(unsigned int dev);
+extern int gw_device_remove(unsigned int dev);
 
 extern gw_t* gw_create(gw_type_t type, gw_t *parent);
 

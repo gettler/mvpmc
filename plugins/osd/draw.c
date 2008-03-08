@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -28,24 +28,14 @@
 
 static osd_surface_t *drawable;
 
-int screen_width = -1;
-int screen_height = -1;
-
 int
 draw_init(void)
 {
-#if defined(MVPMC_MG35)
-	int w = 640, h = 465;
-#else
-	int w = 720, h = 480;
-#endif
 	unsigned int bg = OSD_COLOR_BLACK;
 	osd_surface_t *s;
 
-	screen_width = w;
-	screen_height = h;
-
-	if ((s=osd_create_surface(w, h, bg, OSD_GFX)) == NULL) {
+	if ((s=osd_create_surface(screen_width, screen_height,
+				  bg, OSD_GFX)) == NULL) {
 		return -1;
 	}
 

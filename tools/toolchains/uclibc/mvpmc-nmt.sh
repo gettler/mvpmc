@@ -143,3 +143,5 @@ rm -rf *
 
 make 
 make install
+
+exit 0

@@ -51,10 +51,10 @@ if os.path.exists(toolchains) == 0:
 if target == 'mvp':
 	prefix = 'powerpc-linux-uclibc-'
 	if cross == '':
-		powerpc = 'powerpc-405-linux-uclibc'
+		arch = 'powerpc-405-linux-uclibc'
 		gcc = 'gcc-3.4.5-uClibc-0.9.28'
-		prefix = powerpc + '-'
-		crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
+		prefix = arch + '-'
+		crossroot = toolchains + '/' + arch + '/' + gcc + '/'
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_MEDIAMVP'
 	cc = cross + 'gcc'
@@ -78,11 +78,10 @@ elif target == 'mg35':
 		print "Please see http://dslinux.org/wiki/Compiling_DSLinux"
 		sys.exit(1)
 elif target == 'nmt':
-	print "Doing NMT build..."
 	if cross == '':
-		powerpc = 'mipsel-linux-uclibc'
+		arch = 'mipsel-linux-uclibc'
 		gcc = ''
-		prefix = powerpc + '-'
+		prefix = arch + '-'
 		crossroot = toolchains + '/mips/' + gcc + '/'
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_NMT'
@@ -107,10 +106,10 @@ elif target == 'host':
 	env.Replace(CROSS = '')
 elif target == 'kernel':
 	print "kernel build"
-	powerpc = 'powerpc-405-linux-uclibc'
+	arch = 'powerpc-405-linux-uclibc'
 	gcc = 'gcc-3.4.5-uClibc-0.9.28'
-	crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
-	prefix = powerpc + '-'
+	crossroot = toolchains + '/' + arch + '/' + gcc + '/'
+	prefix = arch + '-'
 	cross = crossroot + '/bin/' + prefix
 	cc = cross + 'gcc'
 	cppflags = ''
@@ -123,7 +122,7 @@ else:
 #
 if (target != 'host') and (os.path.exists(cc) == 0):
 	toolchains =  home + '/toolchains/'
-	crossroot = toolchains + '/' + powerpc + '/' + gcc + '/'
+	crossroot = toolchains + '/' + arch + '/' + gcc + '/'
 	cross = crossroot + '/bin/' + prefix
 	cc = cross + 'gcc'
 

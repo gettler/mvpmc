@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2007, Jon Gettler
+ *  Copyright (C) 2006-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -62,7 +62,8 @@ expose_callback (GtkWidget * widget, guint * datum)
 {
 	if (drawable) {
 		gdk_draw_drawable(drawing_area->window,
-				gc, drawable, 0, 0, 0, 0, 720, 480);
+				  gc, drawable, 0, 0, 0, 0,
+				  full_width, full_height);
 	} else {
 		printf("bad expose!\n");
 	}
@@ -74,7 +75,6 @@ static gint
 quit_program (GtkWidget * widget, gpointer datum)
 {
 	printf("Bye!\n");
-	gtk_main_quit ();
 	exit(0);
 	return (TRUE);
 }
@@ -326,8 +326,9 @@ thread(void *arg)
 {
 	while (1) {
 		gdk_threads_enter();
-		while (gtk_events_pending())
+		while (gtk_events_pending()) {
 			gtk_main_iteration_do(FALSE);
+		}
 		gdk_threads_leave();
 		usleep(10000);
 	}
@@ -338,7 +339,7 @@ thread(void *arg)
 int
 gtk_open(void)
 {
-	int w = 720, h = 480;
+	int w = full_width, h = full_height;
 	GdkRectangle rectangle = {
 		0, 0, w, h
 	};

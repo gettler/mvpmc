@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, Jon Gettler
+ *  Copyright (C) 2004-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -124,6 +124,15 @@ extern int osd_get_surface_size(osd_surface_t *surface, int *w, int *h);
  * \retval -1 error
  */
 extern int osd_set_screen_size(int w, int h);
+
+/**
+ * Get the full size of the screen.
+ * \param[out] w screen width
+ * \param[out] h screen height
+ * \retval 0 success
+ * \retval -1 error
+ */
+extern int osd_get_screen_size(int *w, int *h);
 
 /**
  * Shut down access to the hardware OSD device.

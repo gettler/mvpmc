@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -34,6 +34,8 @@ gw_t *commands = NULL;
 
 plugin_osd_t *osd = NULL;
 plugin_html_t *html = NULL;
+
+static unsigned int current = 0;
 
 gw_t*
 gw_root(void)
@@ -75,13 +77,25 @@ gw_load_plugins(unsigned int dev)
 int
 gw_device_add(unsigned int dev)
 {
-	return -1;
+	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+		return -1;
+	}
+
+	current |= dev;
+
+	return 0;
 }
 
 int
 gw_device_remove(unsigned int dev)
 {
-	return -1;
+	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+		return -1;
+	}
+
+	current &= ~dev;
+
+	return 0;
 }
 
 int
@@ -137,13 +151,11 @@ gw_shutdown(void)
 int
 gw_output(void)
 {
-#if 0
-	plugin_html_t *h = (plugin_html_t*)html;
+	if (current & GW_DEV_HTML)
+		html->generate(fileno(stdout));
 
-	h->generate(fileno(stdout));
-#endif
-
-	osd->generate(root);
+	if (current & GW_DEV_OSD)
+		osd->generate(root);
 
 	return 0;
 }

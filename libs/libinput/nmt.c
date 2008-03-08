@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,19 +17,38 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef INPUT_LOCAL_H
-#define INPUT_LOCAL_H
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/select.h>
 
-struct input_s {
-	input_type_t type;
-	int flags;
-	int fd;
-	int fd_write;
-	unsigned int down;
-};
+#include "input.h"
+#include "input_local.h"
 
-extern int input_init_local(void);
-extern input_t* input_open_kbd(int flags);
-extern int input_read_kbd(input_t *handle, int raw);
+int
+input_init_local(void)
+{
+	return 0;
+}
 
-#endif /* INPUT_LOCAL_H */
+input_t*
+input_open_kbd(int flags)
+{
+	return NULL;
+}
+
+int
+input_read_kbd(input_t *handle, int raw)
+{
+	return -1;
+}
+
+const char*
+input_key_name(int key)
+{
+	return NULL;
+}

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, BtB, Jon Gettler
+ *  Copyright (C) 2004-2008, BtB, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -47,7 +47,23 @@ extern osd_font_t font_CaslonRoman_1_25;
 osd_font_t *osd_default_font = &font_CaslonRoman_1_25;
 #endif
 
-int full_width = 720, full_height = 480;
+#if defined(MVPMC_MEDIAMVP)
+#define OSD_MAX_WIDTH	720
+#define OSD_MAX_HEIGHT	576
+#elif defined(MVPMC_MG35)
+#define OSD_MAX_WIDTH	640
+#define OSD_MAX_HEIGHT	465
+#elif defined(MVPMC_NMT)
+#define OSD_MAX_WIDTH	720
+#define OSD_MAX_HEIGHT	576
+#elif defined(MVPMC_HOST)
+#define OSD_MAX_WIDTH	960
+#define OSD_MAX_HEIGHT	540
+#else
+#error unknown max OSD size
+#endif
+
+int full_width = OSD_MAX_WIDTH, full_height = OSD_MAX_HEIGHT;
 
 osd_surface_t *all[OSD_MAX_SURFACES];
 
@@ -472,13 +488,25 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 int
 osd_set_screen_size(int w, int h)
 {
-	if ((w < 1) || (h < 1) ||
-	    (w > 720) || (h > 576)) {
+	if ((w < 1) || (h < 1)) {
+		return -1;
+	}
+
+	if ((w > OSD_MAX_WIDTH) || (h > OSD_MAX_HEIGHT)) {
 		return -1;
 	}
 
 	full_width = w;
 	full_height = h;
+
+	return 0;
+}
+
+int
+osd_get_screen_size(int *w, int *h)
+{
+	*w = full_width;
+	*h = full_height;
 
 	return 0;
 }

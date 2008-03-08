@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -26,6 +26,11 @@
 #include <string.h>
 #include <sys/select.h>
 
+#include <gtk/gtk.h>
+#include <glib/gthread.h>
+#include <gdk/gdkx.h>
+#include <gdk/gdkkeysyms.h>
+
 #include "input.h"
 #include "input_local.h"
 
@@ -35,16 +40,78 @@ input_init_local(void)
 	return 0;
 }
 
+static gint
+snoop(GtkWidget *grab_widget, GdkEventKey *event, gpointer func_data)
+{
+	input_t *input;
+
+	input = (input_t*)func_data;
+
+	if (event->type == GDK_KEY_PRESS) {
+		input->down = event->keyval;
+	} else if (event->type == GDK_KEY_RELEASE) {
+		if (input->down == event->keyval) {
+			write(input->fd_write, &event->keyval,
+			      sizeof(event->keyval));
+		}
+		input->down = 0;
+	}
+
+	return 0;
+}
+
 input_t*
 input_open_kbd(int flags)
 {
-	return NULL;
+	input_t *input;
+	int fds[2];
+
+	if ((input=(input_t*)malloc(sizeof(*input))) == NULL) {
+		return NULL;
+	}
+	memset(input, 0, sizeof(*input));
+
+	pipe(fds);
+
+	input->type = INPUT_KEYBOARD;
+	input->fd = fds[0];
+	input->fd_write = fds[1];
+
+	gtk_key_snooper_install(snoop, (void*)input);
+
+	return input;
 }
 
 int
 input_read_kbd(input_t *handle, int raw)
 {
-	return -1;
+	guint c;
+	int cmd;
+
+	read(handle->fd, &c, sizeof(guint));
+
+	switch (c) {
+	case GDK_Return:
+		cmd = INPUT_CMD_SELECT;
+		break;
+	case GDK_Up:
+		cmd = INPUT_CMD_UP;
+		break;
+	case GDK_Down:
+		cmd = INPUT_CMD_DOWN;
+		break;
+	case GDK_Left:
+		cmd = INPUT_CMD_LEFT;
+		break;
+	case GDK_Right:
+		cmd = INPUT_CMD_RIGHT;
+		break;
+	default:
+		cmd = INPUT_CMD_ERROR;
+		break;
+	}
+
+	return cmd;
 }
 
 const char*

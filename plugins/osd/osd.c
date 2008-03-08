@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -42,6 +42,8 @@ static int fd = -1;
 static input_t *input;
 
 static osd_widget_t *list[128];
+
+int screen_width = -1, screen_height = -1;
 
 static int
 osd_input_fd(void)
@@ -237,6 +239,8 @@ init_osd(void)
 	if (osd_open() < 0) {
 		return NULL;
 	}
+
+	osd_get_screen_size(&screen_width, &screen_height);
 
 	osd_css_load(CSS_DEFAULT);
 

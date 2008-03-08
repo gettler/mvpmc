@@ -9,6 +9,8 @@ dir = env['BUILD_DIR']
 target = env['TARG']
 libdir = env['INSTLIBDIR']
 ldflags = env['LDFLAGS']
+gtkcflags = env['GTKCFLAGS']
+gtkldflags = env['GTKLDFLAGS']
 linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
 
@@ -18,15 +20,19 @@ if target == 'mvp':
     src = [ common, 'ir.c' ]
 elif target == 'mg35':
     src = [ common, 'fip.c' ]
+elif target == 'nmt':
+    src = [ common, 'nmt.c' ]
 else:
     src = [ common, 'gtk.c']
+
+env.Append(CCFLAGS = ' ' + gtkcflags)
 
 inputtest = env.Program('inputtest',
                         [ 'inputtest.c' ],
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
                         LIBS = [ 'input' ],
                         LIBPATH = [ libdir ],
-                        LINKFLAGS = ldflags )
+                        LINKFLAGS = ldflags + ' ' + gtkldflags )
 
 static = env.StaticLibrary('input', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],

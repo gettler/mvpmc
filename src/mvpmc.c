@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, Jon Gettler
+ *  Copyright (C) 2004-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -277,6 +277,8 @@ mvpmc_main(int argc, char **argv)
 		exit(1);
 	}
 
+	gw_device_add(GW_DEV_OSD);
+
 	printf("gw initialized\n");
 
 	gui_start(NULL);
@@ -300,35 +302,15 @@ vpdread_main(int argc, char **argv)
 }
 #endif /* MVPMC_MEDIAMVP */
 
-#if 0
-static void*
-thread_test(void *arg)
-{
-	printf("test thread pid %d\n", getpid());
-	return NULL;
-}
-#endif
-
 int
 main(int argc, char **argv)
 {
 	char *prog;
-#if 0
-	pthread_t t;
-#endif
 
 #ifdef MVPMC_MG35
 	extern int pthread_init(char*);
 	printf("%s(): start pid %d...\n", __FUNCTION__, getpid());
 	pthread_init(argv[0]);
-#endif
-
-#if 0
-	printf("creating thread...\n");
-	pthread_create(&t, NULL, thread_test, NULL);
-	sleep(5);
-	printf("main thread exiting...\n");
-	exit(1);
 #endif
 
 	prog = basename(argv[0]);
