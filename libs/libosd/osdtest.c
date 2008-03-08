@@ -913,6 +913,8 @@ main(int argc, char **argv)
 
 	fb_clear();
 
+	osd_get_screen_size(&width, &height);
+
 	while (tests[i].name) {
 		if (test && (strcmp(test, tests[i].name) != 0)) {
 			i++;
