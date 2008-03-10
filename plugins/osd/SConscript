@@ -24,14 +24,7 @@ env.CFile('css_lexer.c', 'css_lexer.l')
 env.CFile('css_parser.c', 'css_parser.y')
 env.CFile('css_parser_test.c', 'css_parser.y')
 
-common = [ 'css.c', 'osd.c', 'css_parser.c', 'list.c', 'draw.c' ]
-
-if target == 'mvp':
-    src = [ common ]
-elif target == 'mg35':
-    src = [ common ]
-else:
-    src = [ common ]
+src = [ 'css.c', 'osd.c', 'css_parser.c', 'list.c', 'draw.c' ]
 
 osdlib = libdir + '/libosd.a'
 osdlibso = libdir + '/libosd.so'
@@ -42,8 +35,11 @@ libs = '-a ' + osdlib + ' -a ' + inputlib + ' -a ' + ftlib
 
 plugin = pwd + '/libmvpmc_osd.plugin.a'
 
-foo = env.Command('dummy.a', 0,
-	    'scons/build_plugin.sh -t ' + plugin + ' ' + libs)
+dummy = env.Command('dummy.a', 0,
+		    'scons/build_plugin.sh -t ' + plugin + ' ' + libs)
+env.Depends(dummy, osdlib)
+env.Depends(dummy, inputlib)
+env.Depends(dummy, ftlib)
 
 static = env.StaticLibrary('mvpmc_osd.plugin.a', [ src, osdlib ],
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
@@ -58,8 +54,8 @@ if linkmode == 'dynamic':
 else:
     inst = env.Install(libdir, [ static ])
 
-env.Depends(foo, static)
-env.Depends(inst, foo)
+env.Depends(dummy, static)
+env.Depends(inst, dummy)
 
 csstest = env.Program('csstest',
                         [ 'csstest.c', 'css_parser_test.c' ],

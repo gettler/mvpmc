@@ -7,13 +7,12 @@ import os
 
 Import ('env')
 
-mvp = env.Copy()
-libdir = mvp['INSTLIBDIR']
-mysql_libdir = mvp['INSTLIBDIR'] + '/mysql'
-target = mvp['TARG']
-toplevel = mvp['TOPLEVEL']
-bindir = mvp['INSTBINDIR']
-linkmode = mvp['LINKMODE']
+libdir = env['INSTLIBDIR']
+mysql_libdir = env['INSTLIBDIR'] + '/mysql'
+target = env['TARG']
+toplevel = env['TOPLEVEL']
+bindir = env['INSTBINDIR']
+linkmode = env['LINKMODE']
 gtkcflags = env['GTKCFLAGS']
 gtkldflags = env['GTKLDFLAGS']
 ldflags = env['LDFLAGS']
@@ -22,10 +21,11 @@ ldflags = env['LDFLAGS']
 # XXX: dslinux uclibc build does not include large file support...
 #
 if target != 'mg35':
-	mvp.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
+	env.Append(CCFLAGS = ' -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE')
 	env.Append(CCFLAGS = ' ' + gtkcflags)
 
-version = os.system(toplevel + '/src/version.sh ' + toplevel + ' ' + toplevel + '/src')
+version = os.system(toplevel + '/src/version.sh ' + toplevel + ' ' +
+		    toplevel + '/src ' + target)
 
 if target == 'host':
 	libx11dir = ['/usr/X11R6/lib']
@@ -43,7 +43,7 @@ else:
 	mvpapps = ['ticonfig.c', 'vpdread.c']
 
 if target == 'mvp':
-	splash = mvp.Program('splash',
+	splash = env.Program('splash',
                              ['splash.c'],
                              CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                          '.', '../include' ],
@@ -52,12 +52,9 @@ if target == 'mvp':
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 
-common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version.c' ]
+common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version_%s.c' % target ]
 
-if target == 'mvp':
-	src = [ common ]
-	pt = 'pthread'
-elif target == 'mg35':
+if target == 'mg35':
 	src = [ common ]
 	pt = 'pthread_nommu'
 else:
@@ -73,12 +70,17 @@ else:
 	libs = [ 'dl', 'gw', 'refmem', pt ]
 	linkflags = ''
 
-mvpmc = mvp.Program('mvpmc', src,
+mvpmc = env.Program('mvpmc', src,
                     CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                 '.', '../include' ],
                     LIBS = plugins + libs ,
                     LIBPATH = [ libdir ],
                     LINKFLAGS = ldflags + ' ' + linkflags + ' ' + gtkldflags)
+
+# XXX: for static linking, the dependencies are not correct
+if linkmode == 'static':
+	env.Depends(mvpmc, libdir + '/libmvpmc_html.plugin.a')
+	env.Depends(mvpmc, libdir + '/libmvpmc_osd.plugin.a')
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])
@@ -88,6 +90,4 @@ else:
 env.Depends(mvpmc, version)
 env.Depends(inst, mvpmc)
 
-ret = [ mvpmc, inst ]
-
-Return('ret')
+Return('inst')

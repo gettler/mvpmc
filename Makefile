@@ -32,15 +32,19 @@ cscope:
 mvp_clean:
 	scons -c TARGET=mvp
 	rm -f dongle.bin.mvpmc.ver
+	rm -rf dongle/install/mvp
 
 host_clean:
 	scons -c TARGET=host
+	rm -rf dongle/install/host
 
 mg35_clean:
 	scons -c TARGET=mg35
+	rm -rf dongle/install/mg35
 
 nmt_clean:
 	scons -c TARGET=nmt
+	rm -rf dongle/install/nmt
 
 clean: mvp_clean host_clean mg35_clean nmt_clean
 	rm -rf `find libs -name obj -type d`

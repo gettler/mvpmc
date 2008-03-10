@@ -6,10 +6,13 @@
 
 WORKING_DIR=$1
 DIR=$2
+TARGET=$3
 
-if [ "$WORKING_DIR" = "" -o "$DIR" = "" ] ; then
+if [ "$WORKING_DIR" = "" -o "$DIR" = "" -o "$TARGET" = "" ] ; then
     exit 1
 fi
+
+OUTPUT="version_${TARGET}.c"
 
 GIT_REV_LIST=`which git-rev-list`
 if [ "$GIT_REV_LIST" != "" ] ; then
@@ -42,8 +45,8 @@ echo char git_diffs[] =  \"$GIT_DIFFS\"\; >> "$DIR/version_new.c"
 # If we have no git revision info, then we have to assume a rebuild is needed.
 #
 if [ "$GIT_REVISION" != "" ] ; then
-    if [ -a $DIR/version.c ] ; then
-	OLD_MD5=`grep git_ $DIR/version.c | md5sum | cut -d' ' -f1`
+    if [ -a $DIR/$OUTPUT ] ; then
+	OLD_MD5=`grep git_ $DIR/$OUTPUT | md5sum | cut -d' ' -f1`
 	NEW_MD5=`md5sum $DIR/version_new.c | cut -d' ' -f1`
 
 	if [ "$OLD_MD5" = "$NEW_MD5" ] ; then
@@ -53,9 +56,9 @@ if [ "$GIT_REVISION" != "" ] ; then
     fi
 fi
 
-mv $DIR/version_new.c $DIR/version.c
+mv $DIR/version_new.c $DIR/$OUTPUT
 
-echo char compile_time[] = \"`LANG=C date`\" \; >> "$DIR/version.c"
-echo char version_number[] =  \"$VERSION\"\; >> "$DIR/version.c"
-echo char build_user[] =  \"$USER\"\; >> "$DIR/version.c"
+echo char compile_time[] = \"`LANG=C date`\" \; >> "$DIR/$OUTPUT"
+echo char version_number[] =  \"$VERSION\"\; >> "$DIR/$OUTPUT"
+echo char build_user[] =  \"$USER\"\; >> "$DIR/$OUTPUT"
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# Create a static plugin library that contains all the libraries that
+# it depends on.  This is required for platforms that do not support
+# shared libraries.
+#
 
 help() {
     exit 0
@@ -48,6 +53,8 @@ for i in $ARCHIVES ; do
 done
 
 ar r $TARGET $DIR/*.o
+
+cp $TARGET `dirname $TARGET`/dummy.a
 
 rm -rf $DIR
 

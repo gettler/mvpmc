@@ -15,14 +15,7 @@ bindir = env['INSTBINDIR']
 if linkmode == 'dynamic':
 	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
 	
-common = [ 'html.c' ]
-
-if target == 'mvp':
-    src = [ common ]
-elif target == 'mg35':
-    src = [ common ]
-else:
-    src = [ common ]
+src = [ 'html.c' ]
 
 static = env.StaticLibrary('mvpmc_html.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],

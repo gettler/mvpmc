@@ -20,7 +20,7 @@ dongle/kernel/filesystem
 libs/*/obj
 plugins/*/obj
 src/obj
-src/version.c
+src/version*.c
 tools/*/*.o
 tools/dongle_passwd/dongle_passwd
 tools/misc/mvpdbg
