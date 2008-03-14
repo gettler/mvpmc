@@ -1,0 +1,34 @@
+Index: gcc/config/mips/linux.h
+===================================================================
+RCS file: /home/cvs/tools/gcc-3.3.2/gcc/config/mips/linux.h,v
+retrieving revision 1.1.1.1
+retrieving revision 1.2
+diff -d -u -r1.1.1.1 -r1.2
+--- gcc-3.3.2/gcc/config/mips/linux.h	4 Dec 2003 01:19:29 -0000	1.1
++++ gcc-3.3.2/gcc/config/mips/linux.h	8 Jan 2004 05:25:00 -0000	1.2
+@@ -175,6 +175,17 @@
+ 
+ /* Borrowed from sparc/linux.h */
+ #undef LINK_SPEC
++#ifdef USE_UCLIBC
++#define LINK_SPEC \
++ "%(endian_spec) \
++  %{shared:-shared} \
++  %{!shared: \
++    %{!ibcs: \
++      %{!static: \
++        %{rdynamic:-export-dynamic} \
++        %{!dynamic-linker:-dynamic-linker /lib/ld-uClibc.so.0}} \
++        %{static:-static}}}"
++#else
+ #define LINK_SPEC \
+  "%(endian_spec) \
+   %{shared:-shared} \
+@@ -184,6 +195,7 @@
+         %{rdynamic:-export-dynamic} \
+         %{!dynamic-linker:-dynamic-linker /lib/ld.so.1}} \
+         %{static:-static}}}"
++#endif
+ 
+ #undef SUBTARGET_ASM_SPEC
+ #define SUBTARGET_ASM_SPEC "\

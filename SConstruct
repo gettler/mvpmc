@@ -86,7 +86,7 @@ elif target == 'nmt':
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_NMT'
 	cc = cross + 'gcc'
-	ldflags = '-Wl,--dynamic-linker,/lib/ld-uClibc.so.0'
+	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
 	env.Replace(GTKCFLAGS = '')
 	env.Replace(GTKLDFLAGS = '')

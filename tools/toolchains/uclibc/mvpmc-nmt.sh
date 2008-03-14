@@ -8,6 +8,8 @@
 
 set -x
 
+TOP=`pwd`
+
 if [ "$1" = "" ] ; then
     DOWNLOADS=`pwd`
 else
@@ -21,21 +23,27 @@ for i in binutils-2.17.tar.gz \
     wget -c -O $DOWNLOADS/$i http://www.mvpmc.org/dl/$i
 done
 
+mkdir source
+cd source
+
 tar -xzf $DOWNLOADS/binutils-2.17.tar.gz
 tar -xzf $DOWNLOADS/gcc-4.0.4.tar.gz
 tar -xzf $DOWNLOADS/linux-2.6.15.7.tar.gz
 tar -xjf $DOWNLOADS/uClibc-0.9.28.3.tar.bz2
 
+cd gcc-4.04
+patch -p1 < ../../gcc-uclibc-mips.patch
+cd $TOP
+
 export CTARGET=mipsel-linux-uclibc
 export ARCH=mips
 
 export TOOLCHAIN=$HOME/toolchains/
-TOP=`pwd`
 
 rm -rf build
 mkdir build
 cd build
-../binutils-2.17/configure \
+$TOP/source/binutils-2.17/configure \
 	--target=$CTARGET \
 	--prefix=$TOOLCHAIN/$ARCH/ \
 	--with-sysroot=$TOOLCHAIN/$ARCH/$CTARGET \
@@ -49,7 +57,7 @@ rm -rf $TOOLCHAIN/$ARCH/{info,lib,man,share}
 export PATH=$TOOLCHAIN/$ARCH/bin:$PATH
 
 
-cd ../linux-2.6.15.7
+cd $TOP/source/linux-2.6.15.7
 yes "" | make ARCH=$ARCH oldconfig prepare
 
 #With 2.6.x, this will probably end in an error because you don't have a gcc 
@@ -59,9 +67,9 @@ mkdir -p $TOOLCHAIN/$ARCH/$CTARGET/usr/include/
 rsync -arv include/linux include/asm-generic $TOOLCHAIN/$ARCH/$CTARGET/usr/include/
 rsync -arv include/asm-$ARCH/ $TOOLCHAIN/$ARCH/$CTARGET/usr/include/asm
  
-cd ../uClibc-0.9.28.3/
+cd $TOP/source/uClibc-0.9.28.3/
 
-cp ../uclibc.config .config
+cp $TOP/uclibc.config .config
 make oldconfig
 #make menuconfig
 #Target Architecture: mips
@@ -87,10 +95,10 @@ make CROSS=mipsel-linux-uclibc-
 rsync -arvL include/ $TOOLCHAIN/$ARCH/$CTARGET/sys-include
 
 
-cd ../build/
+cd $TOP/build/
 rm -rf *
 
-../gcc-4.0.4/configure \
+$TOP/source/gcc-4.0.4/configure \
 	--target=$CTARGET \
 	--prefix=$TOOLCHAIN/mips \
 	--with-sysroot=$TOOLCHAIN/mips/$CTARGET \
@@ -113,7 +121,7 @@ make install
 rm -rf $TOOLCHAIN/$ARCH/$CTARGET/sys-include
 
 
-cd ../uClibc-0.9.28.3/
+cd $TOP/source/uClibc-0.9.28.3/
 
 make CROSS=mipsel-linux-uclibc-
 make install
@@ -127,7 +135,7 @@ ln -s ../usr/lib//crt1.o .
 # Now recompile gcc fully.
 cd $TOP/build/
 rm -rf *
-../gcc-4.0.4/configure \
+$TOP/source/gcc-4.0.4/configure \
        --target=$CTARGET \
        --prefix=$TOOLCHAIN/mips \
        --with-sysroot=$TOOLCHAIN/mips/$CTARGET \
