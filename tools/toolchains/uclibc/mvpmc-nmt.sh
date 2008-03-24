@@ -36,7 +36,7 @@ tar -xjf $DOWNLOADS/uClibc-0.9.28.3.tar.bz2
 tar -xjf $DOWNLOADS/gdb-6.3.tar.bz2
 
 cd gcc-4.0.4
-patch -p1 < ../../gcc-uclibc-mips.patch
+patch -p1 < $TOP/gcc-uclibc-mips.patch
 cd $TOP
 
 export CTARGET=mipsel-linux-uclibc
