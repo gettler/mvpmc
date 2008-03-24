@@ -9,6 +9,8 @@
 set -x
 
 TOP=`pwd`
+SOURCE=$TOP/source/nmt
+BUILD=$TOP/build/nmt
 
 if [ "$1" = "" ] ; then
     DOWNLOADS=`pwd`
@@ -19,19 +21,21 @@ fi
 for i in binutils-2.17.tar.gz \
          gcc-4.0.4.tar.gz \
          linux-2.6.15.7.tar.gz \
+         gdb-6.3.tar.bz2 \
          uClibc-0.9.28.3.tar.bz2 ; do
     wget -c -O $DOWNLOADS/$i http://www.mvpmc.org/dl/$i
 done
 
-mkdir source
-cd source
+mkdir -p $SOURCE
+cd $SOURCE
 
 tar -xzf $DOWNLOADS/binutils-2.17.tar.gz
 tar -xzf $DOWNLOADS/gcc-4.0.4.tar.gz
 tar -xzf $DOWNLOADS/linux-2.6.15.7.tar.gz
 tar -xjf $DOWNLOADS/uClibc-0.9.28.3.tar.bz2
+tar -xjf $DOWNLOADS/gdb-6.3.tar.bz2
 
-cd gcc-4.04
+cd gcc-4.0.4
 patch -p1 < ../../gcc-uclibc-mips.patch
 cd $TOP
 
@@ -40,10 +44,10 @@ export ARCH=mips
 
 export TOOLCHAIN=$HOME/toolchains/
 
-rm -rf build
-mkdir build
-cd build
-$TOP/source/binutils-2.17/configure \
+rm -rf $BUILD
+mkdir -p $BUILD
+cd $BUILD
+$SOURCE/binutils-2.17/configure \
 	--target=$CTARGET \
 	--prefix=$TOOLCHAIN/$ARCH/ \
 	--with-sysroot=$TOOLCHAIN/$ARCH/$CTARGET \
@@ -57,7 +61,7 @@ rm -rf $TOOLCHAIN/$ARCH/{info,lib,man,share}
 export PATH=$TOOLCHAIN/$ARCH/bin:$PATH
 
 
-cd $TOP/source/linux-2.6.15.7
+cd $SOURCE/linux-2.6.15.7
 yes "" | make ARCH=$ARCH oldconfig prepare
 
 #With 2.6.x, this will probably end in an error because you don't have a gcc 
@@ -67,7 +71,7 @@ mkdir -p $TOOLCHAIN/$ARCH/$CTARGET/usr/include/
 rsync -arv include/linux include/asm-generic $TOOLCHAIN/$ARCH/$CTARGET/usr/include/
 rsync -arv include/asm-$ARCH/ $TOOLCHAIN/$ARCH/$CTARGET/usr/include/asm
  
-cd $TOP/source/uClibc-0.9.28.3/
+cd $SOURCE/uClibc-0.9.28.3/
 
 cp $TOP/uclibc.config .config
 make oldconfig
@@ -95,10 +99,10 @@ make CROSS=mipsel-linux-uclibc-
 rsync -arvL include/ $TOOLCHAIN/$ARCH/$CTARGET/sys-include
 
 
-cd $TOP/build/
+cd $BUILD
 rm -rf *
 
-$TOP/source/gcc-4.0.4/configure \
+$SOURCE/gcc-4.0.4/configure \
 	--target=$CTARGET \
 	--prefix=$TOOLCHAIN/mips \
 	--with-sysroot=$TOOLCHAIN/mips/$CTARGET \
@@ -121,7 +125,7 @@ make install
 rm -rf $TOOLCHAIN/$ARCH/$CTARGET/sys-include
 
 
-cd $TOP/source/uClibc-0.9.28.3/
+cd $SOURCE/uClibc-0.9.28.3/
 
 make CROSS=mipsel-linux-uclibc-
 make install
@@ -133,9 +137,9 @@ ln -s ../usr/lib//crtn.o .
 ln -s ../usr/lib//crt1.o .
 
 # Now recompile gcc fully.
-cd $TOP/build/
+cd $BUILD
 rm -rf *
-$TOP/source/gcc-4.0.4/configure \
+$SOURCE/gcc-4.0.4/configure \
        --target=$CTARGET \
        --prefix=$TOOLCHAIN/mips \
        --with-sysroot=$TOOLCHAIN/mips/$CTARGET \
@@ -159,5 +163,24 @@ $TOP/source/gcc-4.0.4/configure \
 
 make 
 make install
+
+# Build a host copy of gdb
+cd $SOURCE/gdb-6.3
+./configure --target=$CTARGET --prefix=$TOOLCHAIN/mips
+make
+make install
+
+make distclean
+
+# Build a target copy of gdb
+#export PATH=$PATH:$TOOLCHAIN/mips/bin
+#CC=$TOOLCHAIN/mips/bin/${CTARGET}-gcc ./configure \
+#    --disable-nls \
+#    --target=$CTARGET \
+#    --host=$CTARGET \
+#    --build=i686-pc-linux-gnu \
+#    --prefix=$TOOLCHAIN/mips/$CTARGET/target_utils
+#make
+#make install
 
 exit 0
