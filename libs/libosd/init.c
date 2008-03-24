@@ -180,6 +180,8 @@ yuv2rgb(unsigned char y, unsigned char u, unsigned char v,
 int
 osd_open(void)
 {
+	extern int dfb_init(void);
+
 	gfx_init();
 
 #if defined(MVPMC_MG35)
@@ -187,6 +189,12 @@ osd_open(void)
 		return -1;
 	}
 #endif /* MVPMC_MG35 */
+
+#if defined(MVPMC_NMT)
+	if (dfb_init() < 0) {
+		return -1;
+	}
+#endif
 
 	return 0;
 }

@@ -914,6 +914,8 @@ main(int argc, char **argv)
 
 	srand(getpid());
 
+	osd_open();
+
 	fb_clear();
 
 	osd_get_screen_size(&width, &height);

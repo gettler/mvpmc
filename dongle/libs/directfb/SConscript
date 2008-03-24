@@ -1,0 +1,33 @@
+#!/usr/bin/python
+#
+# build directfb
+#
+
+import os
+import mvpmc
+
+Import('env')
+
+build_target = env['TARG']
+topdir = env['TOPDIR']
+libdir = '%s/dongle/install/%s/lib/' % (topdir,build_target)
+incdir = '%s/dongle/install/%s/include/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
+
+url = [ 'http://www.mvpmc.org/dl/DirectFB-1.0.1.tar.gz' ]
+
+config = '--host=mips-linux --enable-x11=no --enable-png=no --with-gfxdrivers=none --build=i386'
+
+e = Environment()
+
+target = [ incdir + 'directfb.h' ]
+cmd = [ './configure --prefix=%s %s' % (prefix,config),
+        'make || true',
+        'cp lib/direct/.libs/libdirect* %s' % libdir,
+        'cp src/.libs/libdirect* %s' % libdir,
+        'cp lib/fusion/.libs/libfusion* %s' % libdir,
+        'cp include/*.h %s' % incdir ]
+
+build = mvpmc.OSSBuild(target, url, env, e, cmd)
+
+Return('build')

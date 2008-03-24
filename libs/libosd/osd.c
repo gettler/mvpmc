@@ -176,6 +176,10 @@ osd_draw_line(osd_surface_t *surface, int x1, int y1, int x2, int y2,
 	if (surface == NULL)
 		return -1;
 
+	if (surface->fp->draw_line) {
+		return surface->fp->draw_line(surface, x1, y1, x2, y2, c);
+	}
+
 	dy = y2 - y1;
 	dx = x2 - x1;
 
@@ -458,6 +462,7 @@ osd_surface_t*
 osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 {
 	extern osd_surface_t* gtk_create(int w, int h, unsigned long color);
+	extern osd_surface_t* dfb_create(int w, int h, unsigned long color);
 	switch (type) {
 #if defined(MVPMC_MG35)
 	case OSD_GFX:
@@ -478,6 +483,11 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 #if defined(MVPMC_HOST)
 	case OSD_GFX:
 		return gtk_create(w, h, color);
+		break;
+#endif
+#if defined(MVPMC_NMT)
+	case OSD_GFX:
+		return dfb_create(w, h, color);
 		break;
 #endif
 	default:

@@ -22,12 +22,18 @@ freetype = env.SConscript('freetype/SConscript')
 #ncurses = env.SConscript('ncurses/SConscript')
 #mysql = env.SConscript('mysql/SConscript')
 
+if target == 'nmt':
+    directfb = env.SConscript('directfb/SConscript')
+
 #libs = [ zlib, png, jpg, mw, a52, expat, dvb, id3, tremor, ncurses, mysql ]
 
 #if target == 'mvp':
 #	flac = env.SConscript('flac/SConscript')
 #	libs.append(flac)
 
-libs = [ freetype ]
+if target == 'nmt':
+    libs = [ freetype, directfb ]
+else:
+    libs = [ freetype ]
 
 Return('libs')

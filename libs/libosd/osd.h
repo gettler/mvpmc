@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2007, BtB, Jon Gettler
+ *  Copyright (C) 2004-2008, BtB, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -34,6 +34,8 @@ typedef struct osd_func_s osd_func_t;
 #include "mg35.h"
 #elif defined(MVPMC_HOST)
 #include <gtk/gtk.h>
+#elif defined(MVPMC_NMT)
+#include <directfb.h>
 #endif
 
 #define full_width	__osd_full_width
@@ -53,6 +55,7 @@ struct osd_func_s {
 			       unsigned char, unsigned char,
 			       unsigned char, unsigned char);
 	unsigned int (*read_pixel)(osd_surface_t*, int, int);
+	int (*draw_line)(osd_surface_t*, int, int, int, int, unsigned int);
 	int (*draw_horz_line)(osd_surface_t*, int, int, int, unsigned int);
 	int (*draw_vert_line)(osd_surface_t*, int, int, int, unsigned int);
 	int (*fill_rect)(osd_surface_t*, int, int, int, int, unsigned int);
@@ -97,6 +100,8 @@ struct osd_surface_s {
 		overlay_data_t overlay;
 #elif defined(MVPMC_HOST)
 		GdkDrawable *drawable;
+#elif defined(MVPMC_NMT)
+		IDirectFBSurface *primary;
 #endif
 	} data;
 };

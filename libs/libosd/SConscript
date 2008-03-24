@@ -20,15 +20,19 @@ common = [ 'font.c', 'init.c', 'osd.c' ]
 if target == 'mg35':
 	src = [ common, 'mg35.c' ]
 	dl = ''
+	libs = []
 elif target == 'mvp':
 	src = [ common, 'cursor.c', 'gfx.c', 'fb.c' ]
 	dl = 'dl'
+	libs = []
 elif target == 'nmt':
-	src = [ common ]
-	dl = 'dl'
+	src = [ common, 'dfb.c' ]
+	dl = ''
+	libs = [ 'directfb', 'fusion', 'direct', 'pthread' ]
 else:
 	src = [ common, 'gtk.c' ]
 	dl = ''
+	libs = []
 
 env.Append(CCFLAGS = ' ' + gtkcflags)
 
@@ -39,7 +43,7 @@ static = env.StaticLibrary('osd', src,
 osdtest = env.Program('osdtest',
 		      [ 'osdtest.c' ],
 		      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
-		      LIBS = [ 'osd', 'freetype', dl ],
+		      LIBS = [ 'osd', 'freetype', dl ] + libs,
 		      LIBPATH = [ libdir ],
 		      LINKFLAGS = ldflags + ' ' + gtkldflags )
 
