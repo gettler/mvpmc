@@ -22,7 +22,7 @@ elif build_target == 'mg35':
   config = '--host=arm-linux --disable-shared'
 elif build_target == 'nmt':
   cross = env['CROSS']
-  config = '--host=mips-linux --disable-shared'
+  config = '--host=mips-linux'
 else:
   cross = ''
   config = ''
