@@ -206,6 +206,7 @@ elif target == 'nmt':
 		env.Depends(mvplibs, gcc)
 		env.Depends(mvpmc, gcc)
 	inc = env.SConscript('include/SConscript')
+	apps = env.SConscript('dongle/apps/SConscript')
 	env.Depends(mvplibs, inc)
 	env.Depends(mvplibs, libs)
 	env.Depends(plugins, mvplibs)

@@ -110,7 +110,7 @@ def build_action(source, target, env):
         os.system('cd %s && patch -p1 < ../../%s' % (dir,i))
 
     cc = cross + 'gcc'
-    command = 'CROSS=%s CROSS_PREFIX=%s CC=%s INSTALL_PREFIX=%s sh -c "cd %s' % (cross,cross,cc,prefix,dir)
+    command = 'CROSS=%s CROSS_COMPILE=%s CROSS_PREFIX=%s CC=%s INSTALL_PREFIX=%s sh -c "cd %s' % (cross,cross,cross,cc,prefix,dir)
     for i in cmd:
         command += ' && %s' % i
     command += '"'

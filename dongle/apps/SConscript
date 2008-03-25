@@ -7,16 +7,23 @@ import os
 
 Import('env')
 
-busybox = env.SConscript(['busybox/SConscript'])
-ntp = env.SConscript(['ntpclient/SConscript'])
-dropbear = env.SConscript(['dropbear/SConscript'])
-mtd = env.SConscript(['mtd/SConscript'])
-fuse = env.SConscript([ 'fuse/SConscript'])
-djmount = env.SConscript('djmount/SConscript')
-nbtscan = env.SConscript('nbtscan/SConscript')
+target = env['TARG']
 
-apps = [ busybox, ntp, dropbear, mtd, fuse, djmount, nbtscan ]
+if target == 'nmt':
+    busybox = env.SConscript(['busybox/SConscript'])
+    apps = [ busybox ]
 
-env.Depends(djmount, fuse)
+if target == 'mvp':
+    busybox = env.SConscript(['busybox/SConscript'])
+    ntp = env.SConscript(['ntpclient/SConscript'])
+    dropbear = env.SConscript(['dropbear/SConscript'])
+    mtd = env.SConscript(['mtd/SConscript'])
+    fuse = env.SConscript([ 'fuse/SConscript'])
+    djmount = env.SConscript('djmount/SConscript')
+    nbtscan = env.SConscript('nbtscan/SConscript')
+
+    apps = [ busybox, ntp, dropbear, mtd, fuse, djmount, nbtscan ]
+
+    env.Depends(djmount, fuse)
 
 Return('apps')

@@ -5,6 +5,7 @@ doc/latex
 dongle.bin.mvpmc
 dongle.bin.mvpmc.ver
 dongle/apps/*/mvp
+dongle/apps/*/nmt
 dongle/filesystem/install
 dongle/filesystem/install_wrapper
 dongle/install
