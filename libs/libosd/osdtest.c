@@ -947,5 +947,7 @@ main(int argc, char **argv)
 
 	fb_clear();
 
+	osd_close();
+
 	return ret;
 }

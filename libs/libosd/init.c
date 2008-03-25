@@ -202,8 +202,14 @@ osd_open(void)
 int
 osd_close(void)
 {
+	extern void dfb_deinit();
+
 	close(stbgfx);
 	stbgfx = -1;
+
+#if defined(MVPMC_NMT)
+	dfb_deinit();
+#endif
 
 	return 0;
 }

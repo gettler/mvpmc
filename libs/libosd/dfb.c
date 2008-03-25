@@ -37,7 +37,7 @@
 
 static IDirectFB               *dfb = NULL;
 static IDirectFBSurface        *dfb_root;
-static IDirectFBDisplayLayer   *osd_layer;
+IDirectFBDisplayLayer   *osd_layer;
 static IDirectFBInputDevice    *remote;
 static IDirectFBEventBuffer    *input_buffer;
 
@@ -127,6 +127,10 @@ static int
 dfb_display_surface(osd_surface_t *surface)
 {
 	DBG;
+	if (visible != surface) {
+		visible = surface;
+		DFBCHECK (dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+	}
 	return 0;
 }
 
@@ -205,23 +209,9 @@ dfb_create(int w, int h, unsigned long color)
 int
 dfb_init(void)
 {
-	static int numopt = 0;
-	char modebuf[50];
-	char *options[5];
-
 	DBG;
-	if (numopt!=0) {
-		return 1;
-	}
-
-	DBG;
-	snprintf(modebuf,50,"--dfb:mode=%dx%d",720,480);
-	options[0] = "libosd";
-	options[1] = "--dfb:mode=720x576";
-	options[2] = NULL;
-	numopt = 2;
-
-	printf("av %d %s\n",numopt,options[2]);
+	if (dfb)
+		return 0;
 
 	DBG;
 	DFBCHECK(DirectFBInit( NULL, NULL));
@@ -255,4 +245,26 @@ dfb_init(void)
 	DBG;
 
 	return 0;
+}
+
+void 
+dfb_deinit()
+{
+	DBG;
+
+	if (input_buffer)
+		input_buffer->Release(input_buffer);
+	if (remote)
+		remote->Release( remote );
+	if (osd_layer)
+		osd_layer->Release( osd_layer );
+	if (dfb)
+		dfb->Release( dfb ); 
+
+	input_buffer = NULL;
+	remote = NULL;
+	osd_layer = NULL;
+	dfb = NULL;
+
+	DBG;
 }
