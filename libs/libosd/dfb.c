@@ -94,7 +94,7 @@ dfb_read_pixel(osd_surface_t *surface, int x, int y)
 	int offset=0;
 	unsigned char r,g,b,a;
 
-	if (surface->data.primary->Lock(surface->data.primary, DSLF_WRITE,
+	if (surface->data.primary->Lock(surface->data.primary, DSLF_READ,
 					(void **) (void*)&dst, &pitch) ==DFB_OK) {
 		offset = y * pitch + x*4;
 		b = dst[offset++];
@@ -171,7 +171,7 @@ dfb_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 	if ((y+h) >= surface->height)
 		h = surface->height - y;
 
-	if ((x == 0) || (y == 0) || (h == 0) || (w == 0)) {
+	if ((x < 0) || (y < 0) || (h <= 0) || (w <= 0)) {
 		return 0;
 	}
 
@@ -185,6 +185,29 @@ dfb_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 	if (surface == visible ) {
 		DFBCHECK (dfb_root->SetColor(dfb_root,r,g,b,a));
 		DFBCHECK (dfb_root->FillRectangle (dfb_root,x,y,w,h));
+	}
+
+	return 0;
+}
+
+static int
+dfb_blit(osd_surface_t *dstsfc, int dstx, int dsty,
+	 osd_surface_t *srcsfc, int srcx, int srcy, int w, int h)
+{
+	DFBRectangle rect;
+	IDirectFBSurface *dst, *src;
+
+	dst = dstsfc->data.primary;
+	src = srcsfc->data.primary;
+
+	rect.x = srcx;
+	rect.y = srcy;
+	rect.w = w;
+	rect.h = h;
+	dst->Blit(dst, src, &rect, dstx, dsty);
+
+	if (dstsfc == visible) {
+		dfb_root->Blit(dfb_root, src, &rect, dstx, dsty);
 	}
 
 	return 0;
@@ -241,6 +264,7 @@ static osd_func_t fp_dfb = {
 	.undisplay = dfb_undisplay_surface,
 	.destroy = dfb_destroy_surface,
 	.palette_add_color = dfb_add_color,
+	.blit = dfb_blit,
 };
 
 osd_surface_t*
@@ -320,15 +344,16 @@ dfb_deinit()
 		input_buffer->Release(input_buffer);
 	if (remote)
 		remote->Release( remote );
-	if (osd_layer)
-		osd_layer->Release( osd_layer );
 	if (dfb_root)
 		dfb_root->Release( dfb_root );
+	if (osd_layer)
+		osd_layer->Release( osd_layer );
 	if (dfb)
 		dfb->Release( dfb ); 
 
 	input_buffer = NULL;
 	remote = NULL;
 	osd_layer = NULL;
+	dfb_root = NULL;
 	dfb = NULL;
 }
