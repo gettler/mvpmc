@@ -54,7 +54,7 @@ osd_font_t *osd_default_font = &font_CaslonRoman_1_25;
 #define OSD_MAX_WIDTH	640
 #define OSD_MAX_HEIGHT	465
 #elif defined(MVPMC_NMT)
-#define OSD_MAX_WIDTH	720
+#define OSD_MAX_WIDTH	640
 #define OSD_MAX_HEIGHT	576
 #elif defined(MVPMC_HOST)
 #define OSD_MAX_WIDTH	960
@@ -482,11 +482,13 @@ osd_create_surface(int w, int h, unsigned long color, osd_type_t type)
 #endif /* MVPMC_MEDIAMVP */
 #if defined(MVPMC_HOST)
 	case OSD_GFX:
+	case OSD_FB:
 		return gtk_create(w, h, color);
 		break;
 #endif
 #if defined(MVPMC_NMT)
 	case OSD_GFX:
+	case OSD_FB:
 		return dfb_create(w, h, color);
 		break;
 #endif

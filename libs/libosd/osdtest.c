@@ -208,6 +208,46 @@ test_text(char *name)
 }
 
 static int
+test_pattern(char *name)
+{
+	int x, y;
+	osd_surface_t *surface = NULL;
+
+	printf("drawing pattern\n");
+
+	timer_start();
+
+	if ((surface=osd_create_surface(width, height, 0, OSD_GFX)) == NULL)
+		FAIL;
+
+	if (osd_display_surface(surface) < 0)
+		FAIL;
+
+	for (x=0; x<width; x+=20) {
+		for (y=0; y<height; y+=20) {
+			if (osd_fill_rect(surface, x, y, 10, 10, OSD_BLUE) < 0)
+				FAIL;
+		}
+	}
+
+	for (x=0; x<width; x+=20) {
+		if (osd_draw_vert_line(surface, x, 0, height, OSD_RED) < 0)
+			FAIL;
+	}
+	for (y=0; y<height; y+=20) {
+		if (osd_draw_horz_line(surface, 0, width, y, OSD_GREEN) < 0)
+			FAIL;
+	}
+
+	timer_end();
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
 test_rectangles(char *name)
 {
 	int i;
@@ -849,6 +889,7 @@ static tester_t tests[] = {
 	{ "surfaces",		0,	test_create_surfaces },
 	{ "text",		2,	test_text },
 	{ "font",		2,	test_font },
+	{ "pattern",		2,	test_pattern },
 	{ "rectangles",		2,	test_rectangles },
 	{ "circles",		2,	test_circles },
 	{ "lines",		2,	test_lines },

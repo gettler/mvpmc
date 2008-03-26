@@ -204,6 +204,8 @@ osd_close(void)
 {
 	extern void dfb_deinit();
 
+	osd_destroy_all_surfaces();
+
 	close(stbgfx);
 	stbgfx = -1;
 

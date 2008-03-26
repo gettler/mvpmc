@@ -46,6 +46,12 @@ static DFBDisplayLayerConfig layer_config;
 static DFBSurfaceDescription dsc;
 
 static int
+dfb_add_color(osd_surface_t *surface, unsigned int c)
+{
+	return 0;
+}
+
+static int
 dfb_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 {
 	char *dst=NULL;
@@ -68,6 +74,7 @@ dfb_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 	if (surface == visible) {
 		if (dfb_root->Lock(dfb_root, DSLF_WRITE,
 				   (void**) (void*)&dst, &pitch) ==DFB_OK) {
+			offset = y * pitch + x*4;
 			dst[offset++]=b;
 			dst[offset++]=g;
 			dst[offset++]=r;
@@ -82,6 +89,23 @@ dfb_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 static unsigned int
 dfb_read_pixel(osd_surface_t *surface, int x, int y)
 {
+	char *dst=NULL;
+	int pitch;	   /* number of bytes per row */
+	int offset=0;
+	unsigned char r,g,b,a;
+
+	if (surface->data.primary->Lock(surface->data.primary, DSLF_WRITE,
+					(void **) (void*)&dst, &pitch) ==DFB_OK) {
+		offset = y * pitch + x*4;
+		b = dst[offset++];
+		g = dst[offset++];
+		r = dst[offset++];
+		a = dst[offset];
+		surface->data.primary->Unlock (surface->data.primary);
+
+		return rgba2c(r, g, b, a);
+	}
+
 	return 0;
 }
 
@@ -94,16 +118,11 @@ dfb_draw_line(osd_surface_t *surface, int x1, int y1, int x2, int y2,
 	c2rgba(c,&r,&g,&b,&a);
 
 	surface->data.primary->SetColor(surface->data.primary,r,g,b,a);
-
 	surface->data.primary->DrawLine(surface->data.primary,x1,y1,x2,y2);
 
 	if (surface == visible ) {
-		DFBRectangle rect;
-		rect.x = x1;
-		rect.y = y1;
-		rect.h = x2-x1;
-		rect.w = y2-y1;
-		dfb_root->Blit(dfb_root,surface->data.primary,&rect,x1,y1);
+		dfb_root->SetColor(dfb_root,r,g,b,a);
+		dfb_root->DrawLine(dfb_root,x1,y1,x2,y2);
 	}
 
 	return 0;
@@ -113,6 +132,26 @@ static int
 dfb_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
 		   int x, int y)
 {
+	int i, p, X, Y;
+	unsigned char r, g, b;
+	unsigned int c;
+
+	i = 0;
+	for (X=0; X<image->width; X++) {
+		for (Y=0; Y<image->height; Y++) {
+			i = (Y*image->width) + X;
+			p = image->image[i] - 32;
+			if ((p < 0) || (p >= image->colors)) {
+				return -1;
+			}
+			r = image->red[p];
+			g = image->green[p];
+			b = image->blue[p];
+			c = rgba2c(r, g, b, 0xff);
+			dfb_draw_pixel(surface, x+X, y+Y, c);
+		}
+	}
+
 	return 0;
 }
 
@@ -120,31 +159,75 @@ static int
 dfb_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 		  unsigned int c)
 {
+	unsigned char r,g,b,a;
+
+	if (x > surface->width)
+		x = surface->width - 1;
+	if (y > surface->height)
+		y = surface->height - 1;
+
+	if ((x+w) >= surface->width)
+		w = surface->width - x;
+	if ((y+h) >= surface->height)
+		h = surface->height - y;
+
+	if ((x == 0) || (y == 0) || (h == 0) || (w == 0)) {
+		return 0;
+	}
+
+	c2rgba(c,&r,&g,&b,&a);
+
+	DFBCHECK (surface->data.primary->SetColor(surface->data.primary,
+						  r,g,b,a));
+	DFBCHECK (surface->data.primary->FillRectangle(surface->data.primary,
+						       x,y,w,h));
+
+	if (surface == visible ) {
+		DFBCHECK (dfb_root->SetColor(dfb_root,r,g,b,a));
+		DFBCHECK (dfb_root->FillRectangle (dfb_root,x,y,w,h));
+	}
+
 	return 0;
 }
 
 static int
 dfb_display_surface(osd_surface_t *surface)
 {
-	DBG;
+	DFBRectangle rect;
+
 	if (visible != surface) {
 		visible = surface;
 		DFBCHECK (dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+		rect.x = 0;
+		rect.y = 0;
+		rect.w = surface->width;
+		rect.h = surface->height;
+		dfb_root->Blit(dfb_root, surface->data.primary,&rect, 0, 0);
 	}
+
 	return 0;
 }
 
 static int
 dfb_undisplay_surface(osd_surface_t *surface)
 {
-	DBG;
+	if (visible) {
+		DFBCHECK (dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+	}
+
+	visible = NULL;
 	return 0;
 }
 
 static int
 dfb_destroy_surface(osd_surface_t *surface)
 {
-	DBG;
+	if (visible == surface) {
+		dfb_undisplay_surface(surface);
+	}
+
+	surface->data.primary->Release( surface->data.primary );
+
 	return 0;
 }
 
@@ -157,6 +240,7 @@ static osd_func_t fp_dfb = {
 	.display = dfb_display_surface,
 	.undisplay = dfb_undisplay_surface,
 	.destroy = dfb_destroy_surface,
+	.palette_add_color = dfb_add_color,
 };
 
 osd_surface_t*
@@ -166,12 +250,10 @@ dfb_create(int w, int h, unsigned long color)
 	osd_surface_t *surface;
 	unsigned char r,g,b,a;
 
-	DBG;
 	if ((surface=malloc(sizeof(*surface))) == NULL)
 		return NULL;
 	memset(surface, 0, sizeof(*surface));
 
-	DBG;
 	memset( &dsc, 0, sizeof(DFBSurfaceDescription) );
 	dsc.flags = DSDESC_CAPS | DSDESC_WIDTH | DSDESC_HEIGHT;
 
@@ -180,23 +262,19 @@ dfb_create(int w, int h, unsigned long color)
 
 	dsc.caps = DSCAPS_NONE;
 
-	DBG;
 	DFBCHECK(dfb->CreateSurface(dfb, &dsc, &surface->data.primary ));
 
 	c2rgba(color,&r,&g,&b,&a);
 
-	DBG;
 	DFBCHECK(surface->data.primary->Clear(surface->data.primary,r,g,b,a));
 	DFBCHECK(surface->data.primary->SetBlittingFlags (surface->data.primary, DSBLIT_NOFX));
 
-	DBG;
 	i = 0;
 	while ((all[i] != NULL) && (i < OSD_MAX_SURFACES))
 		i++;
 	if (i < OSD_MAX_SURFACES)
 		all[i] = surface;
 
-	DBG;
 	surface->type = OSD_GFX;
 	surface->fp = &fp_dfb;
 
@@ -209,40 +287,28 @@ dfb_create(int w, int h, unsigned long color)
 int
 dfb_init(void)
 {
-	DBG;
 	if (dfb)
 		return 0;
 
-	DBG;
 	DFBCHECK(DirectFBInit( NULL, NULL));
 
-	DBG;
 	DFBCHECK(DirectFBSetOption ("mode", "640x576"));
 	/* create the super interface */
-	DBG;
 	DFBCHECK(DirectFBCreate( &dfb ));
 
-	DBG;
 	dfb->SetCooperativeLevel(dfb, DFSCL_FULLSCREEN);
 
-	DBG;
 	DFBCHECK(dfb->GetDisplayLayer( dfb, DLID_PRIMARY, &osd_layer ));
 	osd_layer->SetCooperativeLevel(osd_layer, DLSCL_EXCLUSIVE);
-	DBG;
 	osd_layer->GetConfiguration (osd_layer, &layer_config);
-	DBG;
 	DFBCHECK(osd_layer->GetSurface(osd_layer, &dfb_root ));
-	DBG;
 	
 	DFBCHECK(dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
-	DBG;
 
 
 	DFBCHECK(dfb->GetInputDevice(dfb, DIDID_REMOTE, &remote ));
-	DBG;
 	DFBCHECK(dfb->CreateInputEventBuffer(dfb, DICAPS_ALL, DFB_FALSE, &input_buffer));
 
-	DBG;
 
 	return 0;
 }
@@ -250,14 +316,14 @@ dfb_init(void)
 void 
 dfb_deinit()
 {
-	DBG;
-
 	if (input_buffer)
 		input_buffer->Release(input_buffer);
 	if (remote)
 		remote->Release( remote );
 	if (osd_layer)
 		osd_layer->Release( osd_layer );
+	if (dfb_root)
+		dfb_root->Release( dfb_root );
 	if (dfb)
 		dfb->Release( dfb ); 
 
@@ -265,6 +331,4 @@ dfb_deinit()
 	remote = NULL;
 	osd_layer = NULL;
 	dfb = NULL;
-
-	DBG;
 }

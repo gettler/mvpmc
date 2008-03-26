@@ -7,7 +7,7 @@ export PLUGIN_PATH=$STARTPATH/lib
 export LD_LIBRARY_PATH="$STARTPATH/lib:$LD_LIBRARY_PATH"
 
 if [ "$1" = "osdtest" ] ; then
-    "$STARTPATH/bin/osdtest"
+    "$STARTPATH/bin/osdtest" "$@"
 else
     "$STARTPATH/bin/mvpmc" "$@"
 fi

@@ -80,6 +80,12 @@ quit_program (GtkWidget * widget, gpointer datum)
 }
 
 static int
+gtk_add_color(osd_surface_t *surface, unsigned int c)
+{
+	return 0;
+}
+
+static int
 gtk_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 {
 	GdkColor color;
@@ -146,6 +152,33 @@ gtk_draw_vert_line(osd_surface_t *surface, int x, int y1, int y2,
 		   unsigned int c)
 {
 	return osd_draw_line(surface, x, y1, x, y2, c);
+}
+
+static int
+gtk_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
+		   int x, int y)
+{
+	int i, p, X, Y;
+	unsigned char r, g, b;
+	unsigned int c;
+
+	i = 0;
+	for (X=0; X<image->width; X++) {
+		for (Y=0; Y<image->height; Y++) {
+			i = (Y*image->width) + X;
+			p = image->image[i] - 32;
+			if ((p < 0) || (p >= image->colors)) {
+				return -1;
+			}
+			r = image->red[p];
+			g = image->green[p];
+			b = image->blue[p];
+			c = rgba2c(r, g, b, 0xff);
+			gtk_draw_pixel(surface, x+X, y+Y, c);
+		}
+	}
+
+	return 0;
 }
 
 static int
@@ -285,6 +318,8 @@ static osd_func_t fp = {
 	.display = gtk_display_surface,
 	.undisplay = gtk_undisplay_surface,
 	.destroy = gtk_destroy_surface,
+	.draw_indexed_image = gtk_draw_image,
+	.palette_add_color = gtk_add_color,
 };
 
 osd_surface_t*
