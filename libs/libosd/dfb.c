@@ -35,11 +35,11 @@
 
 #define DBG fprintf(stdout,"%s: %s():%d\n",__FILE__,__FUNCTION__,__LINE__)
 
-#define DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
+
+IDirectFBDisplayLayer   *osd_layer;
 
 static IDirectFB               *dfb = NULL;
 static IDirectFBSurface        *dfb_root;
-IDirectFBDisplayLayer   *osd_layer;
 static IDirectFBInputDevice    *remote;
 static IDirectFBEventBuffer    *input_buffer;
 
@@ -48,6 +48,20 @@ static DFBDisplayLayerConfig layer_config;
 static DFBSurfaceDescription dsc;
 static DFBFontDescription font_dsc;
 static IDirectFBFont *font = NULL;
+
+#if defined(USE_LIBDL)
+static DFBResult (*dl_DirectFBCreate)(IDirectFB **) = NULL;
+static DFBResult (*dl_DirectFBInit)(int*, char *(*argv[])) = NULL;
+static DFBResult (*dl_DirectFBSetOption)(const char*, const char*) = NULL;
+static DFBResult (*dl_DirectFBErrorFatal)(const char*, DFBResult) = NULL;
+
+static void *handle = NULL;
+#else
+#define dl_DirectFBCreate	DirectFBCreate
+#define dl_DirectFBInit		DirectFBInit
+#define dl_DirectFBSetOption	DirectFBSetOption
+#define dl_DirectFBErrorFatal	DirectFBErrorFatal
+#endif /* USE_LIBDL */
 
 static int
 dfb_add_color(osd_surface_t *surface, unsigned int c)
@@ -347,11 +361,25 @@ dfb_init(void)
 	if (dfb)
 		return 0;
 
-	DFBCHECK(DirectFBInit( NULL, NULL));
+#if defined(USE_LIBDL)
+	if (handle == NULL) {
+		if ((handle=dlopen("libdirectfb-1.0.so.0",
+				   RTLD_LAZY)) == NULL) {
+			return -1;
+		}
+		
+		dl_DirectFBCreate = dlsym(handle, "DirectFBCreate");
+		dl_DirectFBInit = dlsym(handle, "DirectFBInit");
+		dl_DirectFBSetOption = dlsym(handle, "DirectFBSetOption");
+		dl_DirectFBErrorFatal = dlsym(handle, "DirectFBErrorFatal");
+	}
+#endif /* USE_LIBDL */
 
-	DFBCHECK(DirectFBSetOption ("mode", "640x576"));
+	DFBCHECK(dl_DirectFBInit( NULL, NULL));
+
+	DFBCHECK(dl_DirectFBSetOption ("mode", "640x576"));
 	/* create the super interface */
-	DFBCHECK(DirectFBCreate( &dfb ));
+	DFBCHECK(dl_DirectFBCreate( &dfb ));
 
 	dfb->SetCooperativeLevel(dfb, DFSCL_FULLSCREEN);
 
@@ -395,4 +423,9 @@ dfb_deinit()
 	osd_layer = NULL;
 	dfb_root = NULL;
 	dfb = NULL;
+
+#if defined(USE_LIBDL)
+	dlclose(handle);
+	handle = NULL;
+#endif /* USE_LIBDL */
 }

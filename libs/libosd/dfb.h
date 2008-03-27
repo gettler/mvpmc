@@ -29,10 +29,12 @@
     if (err != DFB_OK)                                         \
       {                                                        \
         fprintf( stderr, "%s <%d>:\n\t", __FILE__, __LINE__ ); \
-        DirectFBErrorFatal( #x, err );                         \
+        dl_DirectFBErrorFatal( #x, err );                         \
       }                                                        \
   }
 
-extern DFBResult (*dl_DirectFBErrorFatal)(const char*, DFBResult);
+#define osd_layer	__dfb_osd_layer
+
+#define DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
 
 #endif /* OSD_DFB_H */

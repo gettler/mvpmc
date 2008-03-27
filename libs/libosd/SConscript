@@ -17,22 +17,31 @@ linkmode = env['LINKMODE']
 
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
+# XXX: using libdl works, but it is horribly slow for some reason...
+nmt_dl = 'no'
+
 if target == 'mg35':
 	src = [ common, 'mg35.c' ]
 	dl = ''
-	libs = []
+	libs = [ 'freetype' ]
 elif target == 'mvp':
 	src = [ common, 'cursor.c', 'gfx.c', 'fb.c' ]
 	dl = 'dl'
-	libs = []
+	libs = [ 'freetype' ]
 elif target == 'nmt':
 	src = [ common, 'dfb.c' ]
-	dl = ''
-	libs = [ 'directfb', 'fusion', 'direct', 'pthread' ]
+	if nmt_dl == 'no':
+		dl = ''
+		libs = [ 'directfb', 'fusion', 'direct', 'freetype',
+			 'pthread' ]
+	else:
+		dl = 'dl'
+		libs = []
+		env.Append(CCFLAGS = ' -DUSE_LIBDL')
 else:
 	src = [ common, 'gtk.c' ]
 	dl = ''
-	libs = []
+	libs = [ 'freetype' ]
 
 env.Append(CCFLAGS = ' ' + gtkcflags)
 
@@ -43,7 +52,7 @@ static = env.StaticLibrary('osd', src,
 osdtest = env.Program('osdtest',
 		      [ 'osdtest.c' ],
 		      CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
-		      LIBS = [ 'osd', 'freetype', dl ] + libs,
+		      LIBS = [ 'osd', dl ] + libs,
 		      LIBPATH = [ libdir ],
 		      LINKFLAGS = ldflags + ' ' + gtkldflags )
 
