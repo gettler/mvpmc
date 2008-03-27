@@ -43,6 +43,7 @@ typedef struct osd_func_s osd_func_t;
 #define all		__osd_all
 #define visible		__osd_visible
 #define clip_visible	__osd_clip_visible
+#define font_draw_text	__osd_font_draw_text
 
 struct osd_func_s {
 	int (*destroy)(osd_surface_t*);
@@ -78,6 +79,8 @@ struct osd_func_s {
 	int (*get_display_options)(osd_surface_t*);
 	int (*set_display_options)(osd_surface_t*, unsigned char);
 	int (*memcpy)(osd_surface_t*,int, int, unsigned char *,int, int);
+	int (*draw_text)(osd_surface_t*, int, int, const char*, unsigned int,
+			 unsigned int, int, osd_font_t*);
 };
 
 /**
@@ -153,4 +156,7 @@ extern osd_surface_t *visible;
 
 #define OSD_MAX_SURFACES	128
 
+extern int font_draw_text(osd_surface_t *surface, int x, int y,
+			  const char *text, unsigned int fg, unsigned int bg,
+			  int background, osd_font_t *font);
 #endif /* OSD_H */

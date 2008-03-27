@@ -346,9 +346,9 @@ get_default_font(void)
 }
 
 int
-osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
-	      unsigned int fg, unsigned int bg, int background,
-	      osd_font_t *font)
+font_draw_text(osd_surface_t *surface, int x, int y, const char *text,
+	       unsigned int fg, unsigned int bg, int background,
+	       osd_font_t *font)
 {
 	FT_GlyphSlot slot;
 	glyph_str_t *g;

@@ -213,7 +213,7 @@ test_pattern(char *name)
 	int x, y;
 	osd_surface_t *surface = NULL;
 
-	printf("drawing pattern\n");
+	printf("drawing pattern\t\t");
 
 	timer_start();
 

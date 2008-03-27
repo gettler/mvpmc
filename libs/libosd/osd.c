@@ -839,3 +839,18 @@ osd_memcpy(osd_surface_t *surface,int base, int destOffset, unsigned char *Data,
 		return -1;
 }
 
+int
+osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
+	      unsigned int fg, unsigned int bg, int background,
+	      osd_font_t *font)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->draw_text)
+		return surface->fp->draw_text(surface, x, y, text, fg, bg,
+					      background, font);
+	else
+		return font_draw_text(surface, x, y, text, fg, bg,
+				      background, font);
+}

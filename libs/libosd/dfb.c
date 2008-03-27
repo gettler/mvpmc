@@ -35,6 +35,8 @@
 
 #define DBG fprintf(stdout,"%s: %s():%d\n",__FILE__,__FUNCTION__,__LINE__)
 
+#define DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
+
 static IDirectFB               *dfb = NULL;
 static IDirectFBSurface        *dfb_root;
 IDirectFBDisplayLayer   *osd_layer;
@@ -44,6 +46,8 @@ static IDirectFBEventBuffer    *input_buffer;
 static DFBDisplayLayerConfig layer_config;
 
 static DFBSurfaceDescription dsc;
+static DFBFontDescription font_dsc;
+static IDirectFBFont *font = NULL;
 
 static int
 dfb_add_color(osd_surface_t *surface, unsigned int c)
@@ -254,6 +258,34 @@ dfb_destroy_surface(osd_surface_t *surface)
 	return 0;
 }
 
+static int
+dfb_draw_text(osd_surface_t *surface, int x, int y, const char *text,
+	      unsigned int fg, unsigned int bg, int background,
+	      osd_font_t *osd_font)
+{
+	IDirectFBSurface *s = surface->data.primary;
+	unsigned char r,g,b,a;
+	int h;
+
+	c2rgba(fg,&r,&g,&b,&a);
+
+	DFBCHECK(font->GetHeight(font, &h));
+	y += h;
+
+	s->SetColor(s,r,g,b,a);
+	DFBCHECK (s->SetFont (s, font));
+	DFBCHECK(s->DrawString(s, text, -1, x, y, DSTF_LEFT));
+
+	if (surface == visible) {
+		dfb_root->SetColor(dfb_root,r,g,b,a);
+		DFBCHECK (dfb_root->SetFont (dfb_root, font));
+		DFBCHECK (dfb_root->DrawString(dfb_root, text, -1, x, y,
+					       DSTF_LEFT));
+	}
+
+	return 0;
+}
+
 static osd_func_t fp_dfb = {
 	.draw_pixel = dfb_draw_pixel,
 	.read_pixel = dfb_read_pixel,
@@ -265,6 +297,7 @@ static osd_func_t fp_dfb = {
 	.destroy = dfb_destroy_surface,
 	.palette_add_color = dfb_add_color,
 	.blit = dfb_blit,
+	.draw_text = dfb_draw_text,
 };
 
 osd_surface_t*
@@ -333,6 +366,9 @@ dfb_init(void)
 	DFBCHECK(dfb->GetInputDevice(dfb, DIDID_REMOTE, &remote ));
 	DFBCHECK(dfb->CreateInputEventBuffer(dfb, DICAPS_ALL, DFB_FALSE, &input_buffer));
 
+	font_dsc.flags = DFDESC_HEIGHT;
+	font_dsc.height = 26;
+	DFBCHECK(dfb->CreateFont(dfb, DATADIR"/decker.ttf", &font_dsc, &font));
 
 	return 0;
 }
@@ -340,6 +376,8 @@ dfb_init(void)
 void 
 dfb_deinit()
 {
+	if (font)
+		font->Release(font);
 	if (input_buffer)
 		input_buffer->Release(input_buffer);
 	if (remote)
@@ -351,6 +389,7 @@ dfb_deinit()
 	if (dfb)
 		dfb->Release( dfb ); 
 
+	font = NULL;
 	input_buffer = NULL;
 	remote = NULL;
 	osd_layer = NULL;
