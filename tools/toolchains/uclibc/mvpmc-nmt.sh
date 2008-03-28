@@ -2,7 +2,7 @@
 #
 # Build toolchain for NMT in ~/toolchains
 #
-# This is a slightly modified version of what is found here:
+# This is a modified version of what is found here:
 #   http://www.lundman.net/wiki/index.php/NMT:cross
 #
 
@@ -21,11 +21,13 @@ fi
 for i in binutils-2.17.tar.gz \
          gcc-4.0.4.tar.gz \
          linux-2.6.15.7.tar.gz \
-         gdb-6.3.tar.bz2 \
+         gdb-6.8.tar.gz \
+         termcap-1.3.1.tar.gz \
          uClibc-0.9.28.3.tar.bz2 ; do
     wget -c -O $DOWNLOADS/$i http://www.mvpmc.org/dl/$i
 done
 
+rm -rf $SOURCE
 mkdir -p $SOURCE
 cd $SOURCE
 
@@ -33,7 +35,8 @@ tar -xzf $DOWNLOADS/binutils-2.17.tar.gz
 tar -xzf $DOWNLOADS/gcc-4.0.4.tar.gz
 tar -xzf $DOWNLOADS/linux-2.6.15.7.tar.gz
 tar -xjf $DOWNLOADS/uClibc-0.9.28.3.tar.bz2
-tar -xjf $DOWNLOADS/gdb-6.3.tar.bz2
+tar -xzf $DOWNLOADS/gdb-6.8.tar.gz
+tar -xzf $DOWNLOADS/termcap-1.3.1.tar.gz
 
 cd gcc-4.0.4
 patch -p1 < $TOP/gcc-uclibc-mips.patch
@@ -164,8 +167,17 @@ $SOURCE/gcc-4.0.4/configure \
 make 
 make install
 
+# Build a target copy of libtermcap
+cd $SOURCE/termcap-1.3.1
+CC=$TOOLCHAIN/mips/bin/${CTARGET}-gcc ./configure \
+    --target=$CTARGET \
+    --host=$CTARGET \
+    --prefix=$TOOLCHAIN/mips/$CTARGET
+make
+make install
+
 # Build a host copy of gdb
-cd $SOURCE/gdb-6.3
+cd $SOURCE/gdb-6.8
 ./configure --target=$CTARGET --prefix=$TOOLCHAIN/mips
 make
 make install
@@ -173,14 +185,11 @@ make install
 make distclean
 
 # Build a target copy of gdb
-#export PATH=$PATH:$TOOLCHAIN/mips/bin
-#CC=$TOOLCHAIN/mips/bin/${CTARGET}-gcc ./configure \
-#    --disable-nls \
-#    --target=$CTARGET \
-#    --host=$CTARGET \
-#    --build=i686-pc-linux-gnu \
-#    --prefix=$TOOLCHAIN/mips/$CTARGET/target_utils
-#make
-#make install
+CC=$TOOLCHAIN/mips/bin/${CTARGET}-gcc ./configure \
+    --target=$CTARGET \
+    --host=$CTARGET \
+    --prefix=$TOOLCHAIN/mips/$CTARGET/target_utils
+make
+make install
 
 exit 0
