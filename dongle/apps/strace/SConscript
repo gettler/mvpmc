@@ -1,0 +1,33 @@
+#!/usr/bin/python
+#
+# build strace
+#
+
+import os
+import mvpmc
+
+Import('env')
+
+build_target = env['TARG']
+topdir = env['TOPDIR']
+bindir = '%s/dongle/install/%s/bin/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
+
+e = Environment()
+
+if build_target == 'mvp':
+    config = '--host=powerpc-linux'
+elif build_target == 'nmt':
+    config = '--host=mips-linux'
+
+url = [ 'http://www.mvpmc.org/dl/strace-4.5.16.tar.bz2' ]
+
+target = [ bindir + 'strace' ]
+cmd = [ './configure --prefix=%s %s' % (prefix,config),
+        'make',
+        'make install' ]
+patches = []
+
+build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
+
+Return('build')
