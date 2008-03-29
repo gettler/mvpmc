@@ -1,0 +1,43 @@
+--- uClibc-0.9.28.3/libc/sysdeps/linux/mips/bits/stat.h-orig	2008-03-28 19:12:05.000000000 -0500
++++ uClibc-0.9.28.3/libc/sysdeps/linux/mips/bits/stat.h	2008-03-28 19:13:03.000000000 -0500
+@@ -37,7 +37,7 @@
+ struct stat
+   {
+ 	__dev_t st_dev;
+-    long int st_pad1[2];
++    long int st_pad1[3];
+ #ifndef __USE_FILE_OFFSET64
+     __ino_t st_ino;		/* File serial number.		*/
+ #else
+@@ -49,12 +49,12 @@
+     __gid_t st_gid;		/* Group ID of the file's group.*/
+     __dev_t st_rdev;	/* Device number, if device.  */
+ #ifndef __USE_FILE_OFFSET64
+-    long int st_pad2[1];
++    long int st_pad2[2];
+     __off_t st_size;		/* Size of file, in bytes.  */
+     /* SVR4 added this extra long to allow for expansion of off_t.  */
+     long int st_pad3;
+ #else
+-    long int st_pad2[2];
++    long int st_pad2[3];
+     __off64_t st_size;		/* Size of file, in bytes.  */
+ #endif
+     /*
+@@ -81,14 +81,14 @@
+ struct stat64
+   {
+     __dev_t st_dev;
+-    long int st_pad1[2];
++    long int st_pad1[3];
+     __ino64_t st_ino;		/* File serial number.		*/
+     __mode_t st_mode;		/* File mode.  */
+     __nlink_t st_nlink;		/* Link count.  */
+     __uid_t st_uid;		/* User ID of the file's owner.	*/
+     __gid_t st_gid;		/* Group ID of the file's group.*/
+     __dev_t st_rdev;	/* Device number, if device.  */
+-    long int st_pad2[2];
++    long int st_pad2[3];
+     __off64_t st_size;		/* Size of file, in bytes.  */
+     /*
+      * Actually this should be timestruc_t st_atime, st_mtime and

@@ -75,6 +75,7 @@ rsync -arv include/linux include/asm-generic $TOOLCHAIN/$ARCH/$CTARGET/usr/inclu
 rsync -arv include/asm-$ARCH/ $TOOLCHAIN/$ARCH/$CTARGET/usr/include/asm
  
 cd $SOURCE/uClibc-0.9.28.3/
+patch -p1 < $TOP/uclibc-stat.patch
 
 cp $TOP/uclibc.config .config
 make oldconfig
