@@ -20,6 +20,10 @@
 #ifndef __MVP_ATOMIC_H
 #define __MVP_ATOMIC_H
 
+#if defined __mips__
+#include <atomic.h>
+#endif
+
 typedef	volatile unsigned int mvp_atomic_t;
 
 /**
@@ -72,17 +76,7 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
 		: "r" (valp), "r"(inc) 
 		: "cc", "memory");
 #elif defined __mips__
-	int tmp1;
-	int inc = 1;
-	__asm__ __volatile__(
-                "       .set    mips3                                   \n"
-                "1:     ll      %0, %1          # atomic_sub            \n"
-                "       subu    %0, %2                                  \n"
-                "       sc      %0, %1                                  \n"
-                "       beqz    %0, 1b                                  \n"
-                "       .set    mips0                                   \n"
-                : "=&r" (tmp1), "=m" (__val)
-                : "Ir" (inc), "m" (__val));
+	__val = atomic_increment_val(valp);
 #elif defined __x86_64__
         __asm__ __volatile__(
                 "incl %0"
@@ -149,17 +143,7 @@ __mvp_atomic_decrement(mvp_atomic_t *valp)
 		: "r" (valp), "r"(inc) 
 		: "cc", "memory");
 #elif defined __mips__
-	int tmp1;
-	int inc = -1;
-	__asm__ __volatile__(
-                "       .set    mips3                                   \n"
-                "1:     ll      %0, %1          # atomic_sub            \n"
-                "       subu    %0, %2                                  \n"
-                "       sc      %0, %1                                  \n"
-                "       beqz    %0, 1b                                  \n"
-                "       .set    mips0                                   \n"
-                : "=&r" (tmp1), "=m" (__val)
-                : "Ir" (inc), "m" (__val));
+	__val = atomic_decrement_val(valp);
 #elif defined __x86_64__
         __asm__ __volatile__(
                 "decl %0"
