@@ -40,6 +40,7 @@ tar -xzf $DOWNLOADS/termcap-1.3.1.tar.gz
 
 cd gcc-4.0.4
 patch -p1 < $TOP/gcc-uclibc-mips.patch
+patch -p1 < $TOP/libstdc++-3.4.0-uclibc.patch
 cd $TOP
 
 export CTARGET=mipsel-linux-uclibc
@@ -143,6 +144,9 @@ ln -s ../usr/lib//crt1.o .
 # Now recompile gcc fully.
 cd $BUILD
 rm -rf *
+ln -s $TOOLCHAIN/mips/$CTARGET/usr/include/ $TOOLCHAIN/mips/$CTARGET/sys-include
+cp -R $SOURCE/gcc-4.0.4/libstdc++-v3/ $TOOLCHAIN/mips/$CTARGET/sys-include/
+
 $SOURCE/gcc-4.0.4/configure \
        --target=$CTARGET \
        --prefix=$TOOLCHAIN/mips \
