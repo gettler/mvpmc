@@ -2,7 +2,7 @@
 #define MVPMC_PLUGIN_H
 
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,8 +20,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#include "mvp_atomic.h"
+
 #define PLUGIN_MAJOR_VER	0
-#define PLUGIN_MINOR_VER	2
+#define PLUGIN_MINOR_VER	3
 
 #define PLUGIN_MAJOR(x)		((x >> 16) & 0xffff)
 #define PLUGIN_MINOR(x)		(x & 0xffff)
@@ -34,6 +36,7 @@
 #define PLUGIN_PATH		"/usr/share/mvpmc/plugins"
 
 #define PLUGIN_NAME_MAX		32
+#define PLUGIN_MAX_LOAD		128
 
 /*
  * Symbols from the mvpmc application
@@ -56,5 +59,11 @@ extern int plugin_release(void);
 #define PLUGIN_INIT(x)		void *plugin_##x(void) { return x(); }
 #define PLUGIN_RELEASE(x)	int plugin_##x(void) { return x(); }
 #endif /* !PLUGIN_SUPPORT */
+
+typedef struct {
+	char name[PLUGIN_NAME_MAX+1];
+	mvp_atomic_t ref;
+	void *handle;
+} plugin_dl_t;
 
 #endif /* MVPMC_PLUGIN_H */

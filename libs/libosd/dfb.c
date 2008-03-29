@@ -32,6 +32,7 @@
 
 #include "osd.h"
 #include "dfb.h"
+#include "piutil.h"
 
 #define DBG fprintf(stdout,"%s: %s():%d\n",__FILE__,__FUNCTION__,__LINE__)
 
@@ -39,7 +40,7 @@
 IDirectFBDisplayLayer   *osd_layer;
 
 static IDirectFB               *dfb = NULL;
-static IDirectFBSurface        *dfb_root;
+static IDirectFBSurface        *root;
 static IDirectFBInputDevice    *remote;
 static IDirectFBEventBuffer    *input_buffer;
 
@@ -90,14 +91,14 @@ dfb_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 	}
 
 	if (surface == visible) {
-		if (dfb_root->Lock(dfb_root, DSLF_WRITE,
-				   (void**) (void*)&dst, &pitch) ==DFB_OK) {
+		if (root->Lock(root, DSLF_WRITE,
+			       (void**) (void*)&dst, &pitch) ==DFB_OK) {
 			offset = y * pitch + x*4;
 			dst[offset++]=b;
 			dst[offset++]=g;
 			dst[offset++]=r;
 			dst[offset]=a;
-			dfb_root->Unlock (dfb_root);
+			root->Unlock (root);
 		}	
 	}
 
@@ -139,8 +140,8 @@ dfb_draw_line(osd_surface_t *surface, int x1, int y1, int x2, int y2,
 	surface->data.primary->DrawLine(surface->data.primary,x1,y1,x2,y2);
 
 	if (surface == visible ) {
-		dfb_root->SetColor(dfb_root,r,g,b,a);
-		dfb_root->DrawLine(dfb_root,x1,y1,x2,y2);
+		root->SetColor(root,r,g,b,a);
+		root->DrawLine(root,x1,y1,x2,y2);
 	}
 
 	return 0;
@@ -201,8 +202,8 @@ dfb_fill_rect(osd_surface_t *surface, int x, int y, int w, int h,
 						       x,y,w,h));
 
 	if (surface == visible ) {
-		DFBCHECK (dfb_root->SetColor(dfb_root,r,g,b,a));
-		DFBCHECK (dfb_root->FillRectangle (dfb_root,x,y,w,h));
+		DFBCHECK (root->SetColor(root,r,g,b,a));
+		DFBCHECK (root->FillRectangle (root,x,y,w,h));
 	}
 
 	return 0;
@@ -225,7 +226,7 @@ dfb_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	dst->Blit(dst, src, &rect, dstx, dsty);
 
 	if (dstsfc == visible) {
-		dfb_root->Blit(dfb_root, src, &rect, dstx, dsty);
+		root->Blit(root, src, &rect, dstx, dsty);
 	}
 
 	return 0;
@@ -238,12 +239,12 @@ dfb_display_surface(osd_surface_t *surface)
 
 	if (visible != surface) {
 		visible = surface;
-		DFBCHECK (dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+		DFBCHECK (root->Clear (root, 0x0, 0x0, 0x0, 0xFF));
 		rect.x = 0;
 		rect.y = 0;
 		rect.w = surface->width;
 		rect.h = surface->height;
-		dfb_root->Blit(dfb_root, surface->data.primary,&rect, 0, 0);
+		root->Blit(root, surface->data.primary,&rect, 0, 0);
 	}
 
 	return 0;
@@ -253,7 +254,7 @@ static int
 dfb_undisplay_surface(osd_surface_t *surface)
 {
 	if (visible) {
-		DFBCHECK (dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+		DFBCHECK (root->Clear (root, 0x0, 0x0, 0x0, 0xFF));
 	}
 
 	visible = NULL;
@@ -279,22 +280,27 @@ dfb_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 {
 	IDirectFBSurface *s = surface->data.primary;
 	unsigned char r,g,b,a;
-	int h;
-
-	c2rgba(fg,&r,&g,&b,&a);
+	int h, w;
 
 	DFBCHECK(font->GetHeight(font, &h));
-	y += h;
 
+	if (background) {
+		c2rgba(bg,&r,&g,&b,&a);
+		s->SetColor(s,r,g,b,a);
+		DFBCHECK(font->GetStringWidth(font, text, -1, &w));
+		osd_fill_rect(surface, x, y, w, h, bg);
+	}
+
+	y += h;
+	c2rgba(fg,&r,&g,&b,&a);
 	s->SetColor(s,r,g,b,a);
 	DFBCHECK (s->SetFont (s, font));
 	DFBCHECK(s->DrawString(s, text, -1, x, y, DSTF_LEFT));
 
 	if (surface == visible) {
-		dfb_root->SetColor(dfb_root,r,g,b,a);
-		DFBCHECK (dfb_root->SetFont (dfb_root, font));
-		DFBCHECK (dfb_root->DrawString(dfb_root, text, -1, x, y,
-					       DSTF_LEFT));
+		root->SetColor(root,r,g,b,a);
+		DFBCHECK (root->SetFont (root, font));
+		DFBCHECK (root->DrawString(root, text, -1, x, y, DSTF_LEFT));
 	}
 
 	return 0;
@@ -320,6 +326,9 @@ dfb_create(int w, int h, unsigned long color)
 	int i;
 	osd_surface_t *surface;
 	unsigned char r,g,b,a;
+
+	if (dfb == NULL)
+		return NULL;
 
 	if ((surface=malloc(sizeof(*surface))) == NULL)
 		return NULL;
@@ -363,11 +372,10 @@ dfb_init(void)
 
 #if defined(USE_LIBDL)
 	if (handle == NULL) {
-		if ((handle=dlopen("libdirectfb-1.0.so.0",
-				   RTLD_LAZY)) == NULL) {
+		if ((handle=pi_register("libdirectfb-1.0.so.0")) == NULL) {
 			return -1;
 		}
-		
+
 		dl_DirectFBCreate = dlsym(handle, "DirectFBCreate");
 		dl_DirectFBInit = dlsym(handle, "DirectFBInit");
 		dl_DirectFBSetOption = dlsym(handle, "DirectFBSetOption");
@@ -386,9 +394,9 @@ dfb_init(void)
 	DFBCHECK(dfb->GetDisplayLayer( dfb, DLID_PRIMARY, &osd_layer ));
 	osd_layer->SetCooperativeLevel(osd_layer, DLSCL_EXCLUSIVE);
 	osd_layer->GetConfiguration (osd_layer, &layer_config);
-	DFBCHECK(osd_layer->GetSurface(osd_layer, &dfb_root ));
+	DFBCHECK(osd_layer->GetSurface(osd_layer, &root ));
 	
-	DFBCHECK(dfb_root->Clear (dfb_root, 0x0, 0x0, 0x0, 0xFF));
+	DFBCHECK(root->Clear (root, 0x0, 0x0, 0x0, 0xFF));
 
 
 	DFBCHECK(dfb->GetInputDevice(dfb, DIDID_REMOTE, &remote ));
@@ -410,8 +418,8 @@ dfb_deinit()
 		input_buffer->Release(input_buffer);
 	if (remote)
 		remote->Release( remote );
-	if (dfb_root)
-		dfb_root->Release( dfb_root );
+	if (root)
+		root->Release( root );
 	if (osd_layer)
 		osd_layer->Release( osd_layer );
 	if (dfb)
@@ -421,11 +429,31 @@ dfb_deinit()
 	input_buffer = NULL;
 	remote = NULL;
 	osd_layer = NULL;
-	dfb_root = NULL;
+	root = NULL;
 	dfb = NULL;
 
 #if defined(USE_LIBDL)
-	dlclose(handle);
+	pi_deregister(handle);
 	handle = NULL;
 #endif /* USE_LIBDL */
+}
+
+int
+font_height(osd_font_t *osd_font)
+{
+	int h;
+
+	DFBCHECK(font->GetHeight(font, &h));
+
+	return h;
+}
+
+int
+font_width(osd_font_t *osd_font, char *text)
+{
+	int w;
+
+	DFBCHECK(font->GetStringWidth(font, text, -1, &w));
+
+	return w;
 }

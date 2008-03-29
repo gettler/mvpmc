@@ -172,6 +172,8 @@ gw_menu_input(gw_t *widget, int c)
 		break;
 	case INPUT_CMD_SELECT:
 		return menu_select(widget);
+	case INPUT_CMD_ERROR:
+		return -1;
 	default:
 		if (focus_input) {
 			focus_input(widget, c);

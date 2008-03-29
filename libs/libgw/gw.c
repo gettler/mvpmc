@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "gw_local.h"
+#include "input.h"
 
 static mvp_atomic_t events;
 
@@ -223,6 +224,10 @@ input(int c)
 
 	if (focus == NULL)
 		return;
+
+	if (c == INPUT_CMD_ERROR) {
+		return;
+	}
 
 	switch (focus->type) {
 	case GW_TYPE_MENU:

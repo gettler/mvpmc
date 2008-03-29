@@ -6,6 +6,8 @@ Import('env')
 target = env['TARG']
 dir = env['BUILD_DIR']
 
+piutil = env.SConscript('libpiutil/SConscript',
+                        build_dir='libpiutil/'+dir, duplicate=0)
 input = env.SConscript('libinput/SConscript',
 		       build_dir='libinput/'+dir, duplicate=0)
 gw = env.SConscript('libgw/SConscript',
@@ -36,7 +38,7 @@ if target == 'mg35':
                         build_dir='libpthread_nommu/'+dir, duplicate=0)
     libs = [ osd, input, gw, refmem, av, pt ]
 else:
-    libs = [ osd, input, gw, refmem, av ]
+    libs = [ osd, input, gw, refmem, av, piutil ]
 
 #if target == 'mvp':
 #	tiwlan = SConscript('libtiwlan/SConscript',

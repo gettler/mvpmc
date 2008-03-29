@@ -854,3 +854,15 @@ osd_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 		return font_draw_text(surface, x, y, text, fg, bg,
 				      background, font);
 }
+
+int
+osd_font_height(osd_font_t *font)
+{
+	return font_height(font);
+}
+
+int
+osd_font_width(osd_font_t *font, char *text)
+{
+	return font_width(font, text);
+}

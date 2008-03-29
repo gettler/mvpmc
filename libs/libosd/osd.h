@@ -44,6 +44,8 @@ typedef struct osd_func_s osd_func_t;
 #define visible		__osd_visible
 #define clip_visible	__osd_clip_visible
 #define font_draw_text	__osd_font_draw_text
+#define font_height	__osd_font_height
+#define font_width	__osd_font_width
 
 struct osd_func_s {
 	int (*destroy)(osd_surface_t*);
@@ -159,4 +161,8 @@ extern osd_surface_t *visible;
 extern int font_draw_text(osd_surface_t *surface, int x, int y,
 			  const char *text, unsigned int fg, unsigned int bg,
 			  int background, osd_font_t *font);
+
+extern int font_height(osd_font_t *font);
+extern int font_width(osd_font_t *font, char *text);
+
 #endif /* OSD_H */

@@ -270,7 +270,10 @@ mvpmc_main(int argc, char **argv)
 	/*
 	 * setup the plug-in loader
 	 */
-	plugin_setup();
+	if (plugin_setup() < 0) {
+		fprintf(stderr, "failed to perform plug-in setup!\n");
+		exit(1);
+	}
 
 	if (gw_init(GW_DEV_OSD|GW_DEV_HTML) < 0) {
 		fprintf(stderr, "failed to initialize libgw!\n");

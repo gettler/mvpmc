@@ -398,6 +398,7 @@ font_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	return 0;
 }
 
+#if !defined(MVPMC_NMT)
 static int
 calculate_height(osd_font_t *font)
 {
@@ -556,7 +557,7 @@ calculate_width(osd_font_t *font, char *text)
 }
 
 int
-osd_font_height(osd_font_t *font)
+font_height(osd_font_t *font)
 {
 	if (font == NULL) {
 		if ((font=get_default_font()) == NULL)
@@ -579,7 +580,7 @@ osd_font_height(osd_font_t *font)
 }
 
 int
-osd_font_width(osd_font_t *font, char *text)
+font_width(osd_font_t *font, char *text)
 {
 	if (text == NULL)
 		return -1;
@@ -595,3 +596,4 @@ osd_font_width(osd_font_t *font, char *text)
 
 	return calculate_width(font, text);
 }
+#endif /* !MVPMC_NMT */

@@ -206,7 +206,8 @@ osd_close(void)
 
 	osd_destroy_all_surfaces();
 
-	close(stbgfx);
+	if (stbgfx >= 0)
+		close(stbgfx);
 	stbgfx = -1;
 
 #if defined(MVPMC_NMT)

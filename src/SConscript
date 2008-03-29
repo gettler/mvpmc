@@ -67,7 +67,7 @@ if linkmode == 'static':
 	linkflags = '-static'
 else:
 	plugins = [ ]
-	libs = [ 'dl', 'gw', 'refmem', pt ]
+	libs = [ 'dl', 'gw', 'refmem', 'piutil', pt ]
 	linkflags = ''
 
 mvpmc = env.Program('mvpmc', src,

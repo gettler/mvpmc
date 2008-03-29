@@ -1,0 +1,19 @@
+#!/usr/bin/python
+#
+# plug-in library
+#
+
+Import ('env')
+
+dir = env['BUILD_DIR']
+target = env['TARG']
+libdir = env['INSTLIBDIR']
+bindir = env['INSTBINDIR']
+
+src = [ 'piutil.c' ]
+
+static = env.StaticLibrary('piutil', src, CPPPATH = [ env['INCDIR'], '.' ])
+
+inst = env.Install(libdir, static)
+
+Return('inst')

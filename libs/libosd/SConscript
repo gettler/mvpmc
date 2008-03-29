@@ -18,7 +18,7 @@ linkmode = env['LINKMODE']
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
 # XXX: using libdl works, but it is horribly slow for some reason...
-nmt_dl = 'no'
+nmt_dl = 'yes'
 
 if target == 'mg35':
 	src = [ common, 'mg35.c' ]
@@ -46,6 +46,8 @@ else:
 env.Append(CCFLAGS = ' ' + gtkcflags)
 
 static = env.StaticLibrary('osd', src,
+			   LIBS = 'piutil',
+			   LIBPATH = [ libdir ],
 			   CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
 				       freetype, '.' ])
 
@@ -58,6 +60,8 @@ osdtest = env.Program('osdtest',
 
 if linkmode == 'dynamic':
 	shared = env.SharedLibrary('osd', src,
+				   LIBS = 'piutil',
+				   LIBPATH = [ libdir ],
 				   CPPPATH = [ env['INCDIR'],
 					       env['INSTINCDIR'],
 					       freetype, '.' ])

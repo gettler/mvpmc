@@ -15,7 +15,7 @@ incdir = toplevel + '/dongle/install/' + target + '/include'
 
 headers = [ 'cmyth.h', 'mvp_av.h', 'mvp_demux.h', 'mvp_osd.h', 'mvp_widget.h',
             'mvp_refmem.h', 'mvp_debug.h', 'mvp_atomic.h', 'rfbproto.h',
-            'plugin.h', 'input.h', 'gw.h',
+            'plugin.h', 'piutil.h', 'input.h', 'gw.h',
             'vncviewer.h', 'tiwlan.h' ]
 
 plugin_headers = [ 'plugin_gw.h', 'plugin_html.h', 'plugin_osd.h' ]

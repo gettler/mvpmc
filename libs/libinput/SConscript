@@ -18,28 +18,36 @@ common = [ 'input.c' ]
 
 if target == 'mvp':
     src = [ common, 'ir.c' ]
+    dl = 'dl'
 elif target == 'mg35':
     src = [ common, 'fip.c' ]
+    dl = ''
 elif target == 'nmt':
     src = [ common, 'nmt.c' ]
+    dl = 'dl'
 else:
     src = [ common, 'gtk.c']
+    dl = 'dl'
 
 env.Append(CCFLAGS = ' ' + gtkcflags)
 
 inputtest = env.Program('inputtest',
                         [ 'inputtest.c' ],
                         CPPPATH = [ env['INCDIR'], env['INSTINCDIR'], ],
-                        LIBS = [ 'input' ],
+                        LIBS = [ 'input', dl ],
                         LIBPATH = [ libdir ],
                         LINKFLAGS = ldflags + ' ' + gtkldflags )
 
 static = env.StaticLibrary('input', src,
+			   LIBS = 'piutil',
+			   LIBPATH = [ libdir ],
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                            LINKFLAGS = ldflags)
 
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('input', src,
+                               LIBS = 'piutil',
+                               LIBPATH = [ libdir ],
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                                LINKFLAGS = ldflags)
     inst = env.Install(libdir, [ static, shared ])

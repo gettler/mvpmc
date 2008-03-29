@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include "plugin.h"
+#include "piutil.h"
 #include "mvp_atomic.h"
 
 #if defined(PLUGIN_SUPPORT)
@@ -37,8 +41,6 @@ static int enabled = 1;
 static int enabled = 0;
 #endif
 
-#define MAX_LOAD	128
-
 typedef struct {
 	char *name;
 	void *handle;
@@ -49,7 +51,7 @@ typedef struct {
 	void *reloc;
 } plugin_data_t;
 
-static plugin_data_t loaded[MAX_LOAD];
+static plugin_data_t loaded[PLUGIN_MAX_LOAD];
 static int nload = 0;
 
 typedef struct {
@@ -193,7 +195,7 @@ plugin_load_file(char *name)
 	return NULL;
 
  found:
-	for (i=0; i<MAX_LOAD; i++) {
+	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
 		if (loaded[i].name == NULL) {
 			void *handle;
 			void *(*dl_init)(void);
@@ -252,7 +254,7 @@ plugin_load_builtin(int n)
 	void *rc = NULL;
 	int i;
 
-	for (i=0; i<MAX_LOAD; i++) {
+	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
 		if (loaded[i].name == NULL) {
 			loaded[i].name = strdup(builtins[n].name);
 			loaded[i].init = builtins[n].init;
@@ -281,7 +283,7 @@ plugin_load(char *name)
 		return NULL;
 	}
 
-	for (i=0; i<MAX_LOAD; i++) {
+	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
 		if (loaded[i].name && (strcmp(loaded[i].name, name) == 0)) {
 			reloc = loaded[i].reloc;
 			mvp_atomic_inc(&(loaded[i].refcnt));
@@ -301,7 +303,7 @@ plugin_load(char *name)
 	}
 
 #if defined(PLUGIN_SUPPORT)
-	if ((reloc == NULL) && (nload < MAX_LOAD)) {
+	if ((reloc == NULL) && (nload < PLUGIN_MAX_LOAD)) {
 		reloc = plugin_load_file(name);
 	}
 #endif /* PLUGIN_SUPPORT */
@@ -321,7 +323,7 @@ plugin_unload(char *name)
 		return -1;
 	}
 
-	for (i=0; i<MAX_LOAD; i++) {
+	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
 		if (loaded[i].name && (strcmp(loaded[i].name, name) == 0)) {
 			int unload;
 			unload = mvp_atomic_dec_and_test(&(loaded[i].refcnt));
@@ -347,7 +349,14 @@ plugin_setup(void)
 
 	if (!enabled) {
 		printf("Loadable plug-in support disabled\n");
+		return 0;
 	}
+
+#if defined(PLUGIN_SUPPORT)
+	if (pi_init() < 0) {
+		return -1;
+	}
+#endif /* PLUGIN_SUPPORT */
 
 	return 0;
 }
