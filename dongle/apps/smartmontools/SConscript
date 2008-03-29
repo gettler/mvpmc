@@ -1,0 +1,31 @@
+#!/usr/bin/python
+#
+# build smartmontools
+#
+
+import os
+import mvpmc
+
+Import('env')
+
+build_target = env['TARG']
+topdir = env['TOPDIR']
+sbindir = '%s/dongle/install/%s/sbin/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
+
+e = Environment()
+
+if build_target == 'nmt':
+    config = '--host=mipsel-linux-uclibc'
+
+url = [ 'http://www.mvpmc.org/dl/smartmontools-5.38.tar.gz' ]
+
+target = [ sbindir + 'smartctl' ]
+cmd = [ './configure --prefix=%s %s' % (prefix,config),
+        'make',
+        'make install' ]
+patches = []
+
+build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
+
+Return('build')

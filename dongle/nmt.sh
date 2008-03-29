@@ -13,6 +13,7 @@ TOP=`pwd`
 DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot usr/share/mvpmc/plugins"
 
 BIN="busybox mvpmc osdtest strace"
+SBIN="smartctl"
 TBIN="gdb gdbserver"
 PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin"
 LIB="libinput.so libgw.so librefmem.so libosd.so"
@@ -32,6 +33,10 @@ done
 
 for i in $BIN ; do
     cp -d install/nmt/bin/$i $FS/install/bin
+done
+
+for i in $SBIN ; do
+    cp -d install/nmt/sbin/$i $FS/install/sbin
 done
 
 for i in $TBIN ; do

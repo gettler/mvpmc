@@ -12,7 +12,8 @@ target = env['TARG']
 if target == 'nmt' or target == 'mvp':
     busybox = env.SConscript(['busybox/SConscript'])
     strace = env.SConscript(['strace/SConscript'])
-    apps = [ busybox, strace ]
+    smart = env.SConscript(['smartmontools/SConscript'])
+    apps = [ busybox, strace, smart ]
 
 if target == 'mvp':
     ntp = env.SConscript(['ntpclient/SConscript'])
