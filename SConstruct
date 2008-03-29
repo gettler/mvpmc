@@ -213,6 +213,9 @@ elif target == 'nmt':
 	env.Depends(mvpmc, plugins)
 	env.Depends(mvpmc, mvplibs)
 	env.Depends(mvpmc, libs)
+	dongle = env.SConscript('dongle/SConscript')
+	env.Depends(dongle, mvpmc)
+	env.Depends(dongle, apps)
 else:
 	#
 	# do the application build

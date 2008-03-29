@@ -1,5 +1,6 @@
 .sconsign*
 *.pyc
+diff*
 doc/html
 doc/latex
 dongle.bin.mvpmc
@@ -8,6 +9,8 @@ dongle/apps/*/mvp
 dongle/apps/*/nmt
 dongle/filesystem/install
 dongle/filesystem/install_wrapper
+dongle/filesystem/mvp
+dongle/filesystem/nmt
 dongle/install
 dongle/libs/*/host
 dongle/libs/*/mvp
@@ -19,6 +22,7 @@ dongle/kernel/linux-2.4.31/unionfs-1.0.14
 dongle/kernel/linux-2.4.31/ac3
 dongle/kernel/filesystem
 libs/*/obj
+nmtfs.tar.gz
 plugins/*/obj
 src/obj
 src/version*.c

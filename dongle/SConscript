@@ -1,17 +1,24 @@
 #!/usr/bin/python
 #
-# $Id: SConscript 20 2006-03-14 05:26:56Z gettler $
+# build the target filesystem
 #
 
 import os
 
 Import('env')
 
+target = env['TARG']
 cross = env['CROSS']
 
 pwd = os.getcwd()
 
-dongle = env.Command('../dongle.bin.mvpmc', 0,
-                     'cd ' + pwd + ' && CROSS=' + cross + ' ./dongle.sh')
+if target == 'mvp':
+    dongle = env.Command('../dongle.bin.mvpmc', 0,
+                         'cd ' + pwd + ' && CROSS=' + cross + ' ./dongle.sh')
+    env.Depends(dongle, 'dongle.sh')
+elif target == 'nmt':
+    dongle = env.Command('../nmtfs.tar.gz', 0,
+                         'cd ' + pwd + ' && CROSS=' + cross + ' ./nmt.sh')
+    env.Depends(dongle, 'nmt.sh')
 
 Return('dongle')

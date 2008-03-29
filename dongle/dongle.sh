@@ -7,6 +7,7 @@ set -e
 
 STRIP=${CROSS}strip
 TOOLLIB=`dirname ${CROSS}`/../lib
+FS=filesystem/mvp
 
 echo STRIP $STRIP
 
@@ -33,14 +34,14 @@ LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 WRAPPERLIB="libav.so libosd.so"
 TWRAPPERLIB="libc.so.0 libcrypt.so.0 libdl-0.9.28.so libdl.so.0"
 
-rm -rf filesystem/install
-rm -rf filesystem/install_wrapper
+rm -rf $FS/install
+rm -rf $FS/install_wrapper
 
 for i in $DIRS ; do
-    mkdir -p filesystem/install/$i
+    mkdir -p $FS/install/$i
 done
 for i in $WRAPPER_DIRS ; do
-    mkdir -p filesystem/install_wrapper/$i
+    mkdir -p $FS/install_wrapper/$i
 done
 
 cd filesystem/tree
@@ -51,16 +52,16 @@ tar -cf - * | tar -xf - -C ../install_wrapper
 cd ../..
 
 for i in $LIB ; do
-    cp -d install/mvp/lib/$i filesystem/install/lib
-    $STRIP filesystem/install/lib/$i
+    cp -d install/mvp/lib/$i $FS/install/lib
+    $STRIP $FS/install/lib/$i
 done
 for i in $PLUGINS ; do
-    cp -d install/mvp/lib/$i filesystem/install/usr/share/mvpmc/plugins
-    $STRIP filesystem/install/usr/share/mvpmc/plugins/$i
+    cp -d install/mvp/lib/$i $FS/install/usr/share/mvpmc/plugins
+    $STRIP $FS/install/usr/share/mvpmc/plugins/$i
 done
 for i in $TLIB ; do
-    cp $TOOLLIB/$i filesystem/install/lib
-    $STRIP filesystem/install/lib/$i
+    cp $TOOLLIB/$i $FS/install/lib
+    $STRIP $FS/install/lib/$i
 done
 for i in $GCCLIB ; do
     if [ -a $TOOLLIB/nof/$i ] ; then
@@ -70,68 +71,68 @@ for i in $GCCLIB ; do
 	TARGET=$TOOLLIB/$i
     fi
     if [ "$TARGET" != "" ] ; then
-	cp $TARGET filesystem/install/lib
-	cp $TARGET filesystem/install_wrapper/lib
-	$STRIP filesystem/install/lib/$i
-	$STRIP filesystem/install_wrapper/lib/$i
+	cp $TARGET $FS/install/lib
+	cp $TARGET $FS/install_wrapper/lib
+	$STRIP $FS/install/lib/$i
+	$STRIP $FS/install_wrapper/lib/$i
     fi
 done
 for i in $LDLIB ; do
-    cp -d $TOOLLIB/$i filesystem/install/lib
-    cp -d $TOOLLIB/$i filesystem/install_wrapper/lib
+    cp -d $TOOLLIB/$i $FS/install/lib
+    cp -d $TOOLLIB/$i $FS/install_wrapper/lib
 done
 for i in $TWRAPPERLIB ; do
-    cp $TOOLLIB/$i filesystem/install_wrapper/lib
-    $STRIP filesystem/install_wrapper/lib/$i
+    cp $TOOLLIB/$i $FS/install_wrapper/lib
+    $STRIP $FS/install_wrapper/lib/$i
 done
 for i in $WRAPPERLIB ; do
-    cp -d install/mvp/lib/$i filesystem/install_wrapper/lib
-    $STRIP filesystem/install_wrapper/lib/$i
+    cp -d install/mvp/lib/$i $FS/install_wrapper/lib
+    $STRIP $FS/install_wrapper/lib/$i
 done
 
 for i in $SBIN ; do
-    cp -d install/mvp/sbin/$i filesystem/install/sbin
-    $STRIP filesystem/install/sbin/$i
+    cp -d install/mvp/sbin/$i $FS/install/sbin
+    $STRIP $FS/install/sbin/$i
 done
 
 for i in $BIN ; do
-    cp -d install/mvp/bin/$i filesystem/install/bin
-    $STRIP filesystem/install/bin/$i
+    cp -d install/mvp/bin/$i $FS/install/bin
+    $STRIP $FS/install/bin/$i
 done
 for i in $WRAPPER_BIN ; do
-    cp -d install/mvp/bin/$i filesystem/install_wrapper/bin
-    $STRIP filesystem/install_wrapper/bin/$i
+    cp -d install/mvp/bin/$i $FS/install_wrapper/bin
+    $STRIP $FS/install_wrapper/bin/$i
 done
 for i in $MVPMC_BIN ; do
-    ln -sf mvpmc filesystem/install/bin/$i
+    ln -sf mvpmc $FS/install/bin/$i
 done
 
 for i in $USRBIN ; do
-    cp -d install/mvp/usr/bin/$i filesystem/install/usr/bin
-    $STRIP filesystem/install/usr/bin/$i
+    cp -d install/mvp/usr/bin/$i $FS/install/usr/bin
+    $STRIP $FS/install/usr/bin/$i
 done
 
 for i in $USRSBIN ; do
-    cp -d install/mvp/usr/sbin/$i filesystem/install/usr/sbin
-    $STRIP filesystem/install/usr/sbin/$i
+    cp -d install/mvp/usr/sbin/$i $FS/install/usr/sbin
+    $STRIP $FS/install/usr/sbin/$i
 done
 
 if [ -a "$TOOLLIB/../powerpc-405-linux-uclibc" ] ; then
-    cp $TOOLLIB/../powerpc-405-linux-uclibc/target_utils/ldd filesystem/install/usr/bin
+    cp $TOOLLIB/../powerpc-405-linux-uclibc/target_utils/ldd $FS/install/usr/bin
 else
-    cp $TOOLLIB/../powerpc-linux-uclibc/target_utils/ldd filesystem/install/usr/bin
+    cp $TOOLLIB/../powerpc-linux-uclibc/target_utils/ldd $FS/install/usr/bin
 fi
 
-awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox filesystem/install" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox filesystem/install" $0) }}' apps/busybox/mvp/busybox-*/busybox.links
-awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox filesystem/install_wrapper" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox filesystem/install_wrapper" $0) }}' apps/busybox/mvp/busybox-*/busybox.links
+awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox '$FS'/install" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox '$FS'/install" $0) }}' apps/busybox/mvp/busybox-*/busybox.links
+awk -F/ '{if(/^\/bin\/[^\/]+$/) { system("ln -s busybox '$FS'/install_wrapper" $0 ) } else {rp=sprintf("%" NF-2 "s", ""); gsub(/./,"../",rp); system("ln -sf " rp "bin/busybox '$FS'/install_wrapper" $0) }}' apps/busybox/mvp/busybox-*/busybox.links
 
-cp -d install/mvp/usr/share/mvpmc/* filesystem/install/usr/share/mvpmc
-cp -d install/mvp/linuxrc filesystem/install
+cp -d install/mvp/usr/share/mvpmc/* $FS/install/usr/share/mvpmc
+cp -d install/mvp/linuxrc $FS/install
 
-cp -d install/mvp/linuxrc filesystem/install_wrapper
+cp -d install/mvp/linuxrc $FS/install_wrapper
 
-find filesystem/install -name .svn | xargs rm -rf
-find filesystem/install -name .gitmo | xargs rm -rf
+find $FS/install -name .svn | xargs rm -rf
+find $FS/install -name .gitmo | xargs rm -rf
 
 filesystem/dongle_build.sh -o ../dongle.bin.mvpmc -k filesystem/kernel_files
 
