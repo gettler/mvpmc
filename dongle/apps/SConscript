@@ -9,22 +9,25 @@ Import('env')
 
 target = env['TARG']
 
+apps = []
+
+if target == 'nmt':
+    smart = env.SConscript(['smartmontools/SConscript'])
+    apps = [ smart ]
+
 if target == 'nmt' or target == 'mvp':
     busybox = env.SConscript(['busybox/SConscript'])
     strace = env.SConscript(['strace/SConscript'])
-    smart = env.SConscript(['smartmontools/SConscript'])
-    apps = [ busybox, strace, smart ]
+    dropbear = env.SConscript(['dropbear/SConscript'])
+    apps = apps + [ busybox, strace, dropbear ]
 
 if target == 'mvp':
     ntp = env.SConscript(['ntpclient/SConscript'])
-    dropbear = env.SConscript(['dropbear/SConscript'])
     mtd = env.SConscript(['mtd/SConscript'])
     fuse = env.SConscript([ 'fuse/SConscript'])
     djmount = env.SConscript('djmount/SConscript')
     nbtscan = env.SConscript('nbtscan/SConscript')
-
-    apps = apps + [ ntp, dropbear, mtd, fuse, djmount, nbtscan ]
-
     env.Depends(djmount, fuse)
+    apps = apps + [ ntp, mtd, fuse, djmount, nbtscan ]
 
 Return('apps')
