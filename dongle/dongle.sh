@@ -45,10 +45,10 @@ for i in $WRAPPER_DIRS ; do
 done
 
 cd filesystem/tree
-tar -cf - * | tar -xf - -C ../install
+tar -cf - * | tar -xf - -C ../mvp/install
 cd ../..
 cd filesystem/wrapper
-tar -cf - * | tar -xf - -C ../install_wrapper
+tar -cf - * | tar -xf - -C ../mvp/install_wrapper
 cd ../..
 
 for i in $LIB ; do

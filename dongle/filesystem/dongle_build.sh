@@ -88,19 +88,19 @@ fi
 # Copy the kernel libraries into the fs dir
 #
 if [ "$KERNELVER" = "2.4.31" ] ; then
-    MODDIR=filesystem/install_wrapper/lib/modules
+    MODDIR=filesystem/mvp/install_wrapper/lib/modules
 else
-    MODDIR=filesystem/install/lib/modules
+    MODDIR=filesystem/mvp/install/lib/modules
 fi
 
-rm -rf filesystem/install/lib/modules
-rm -rf filesystem/install_wrapper/lib/modules
+rm -rf filesystem/mvp/install/lib/modules
+rm -rf filesystem/mvp/install_wrapper/lib/modules
 
 mkdir -p ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
 cp filesystem/tree/lib/modules/${KERNELVER}${EXTRAVER}/misc/*.o ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
 cp filesystem/hcw/linux-${KERNELVER}/*.o ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
-mkdir -p filesystem/install/memory
-mkdir -p filesystem/install/union
+mkdir -p filesystem/mvp/install/memory
+mkdir -p filesystem/mvp/install/union
 
 #
 # Create the ramdisk out of the fs directory
@@ -108,7 +108,7 @@ mkdir -p filesystem/install/union
 if [ -a $RAMDISK ] ; then
 	rm -rf $RAMDISK
 fi
-../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/install ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
+../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/mvp/install ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
 
 if [ "$KERNELVER" = "2.4.31" ] ; then
 	#
@@ -124,9 +124,9 @@ if [ "$KERNELVER" = "2.4.31" ] ; then
 fi
 
 if [ "$KERNELVER" = "2.4.31" ] ; then
-    cp ${RAMDISK} filesystem/install_wrapper/etc/rootfs.img
+    cp ${RAMDISK} filesystem/mvp/install_wrapper/etc/rootfs.img
     rm -f ${RAMDISK}
-    ../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/install_wrapper ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
+    ../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/mvp/install_wrapper ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
 fi
 
 make_dongle filesystem/kernel_files/vmlinux.gz ${RAMDISK}
