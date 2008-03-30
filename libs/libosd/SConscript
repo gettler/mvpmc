@@ -17,8 +17,6 @@ linkmode = env['LINKMODE']
 
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
-nmt_dl = 'yes'
-
 if target == 'mg35':
 	src = [ common, 'mg35.c' ]
 	dl = ''
@@ -29,14 +27,9 @@ elif target == 'mvp':
 	libs = [ 'freetype' ]
 elif target == 'nmt':
 	src = [ common, 'dfb.c' ]
-	if nmt_dl == 'no':
-		dl = ''
-		libs = [ 'directfb', 'fusion', 'direct', 'freetype',
-			 'pthread' ]
-	else:
-		dl = 'dl'
-		libs = [ 'pthread' ]
-		env.Append(CCFLAGS = ' -DUSE_LIBDL')
+	dl = 'dl'
+	libs = [ 'pthread' ]
+	env.Append(CCFLAGS = ' -DUSE_LIBDL')
 else:
 	src = [ common, 'gtk.c' ]
 	dl = ''

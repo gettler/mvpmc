@@ -21,12 +21,7 @@ config = '--host=mips-linux --enable-x11=no --enable-png=no --with-gfxdrivers=no
 e = Environment()
 
 target = [ incdir + 'directfb.h' ]
-cmd = [ './configure --prefix=%s %s' % (prefix,config),
-        'make || true',
-        'cp lib/direct/.libs/libdirect* %s' % libdir,
-        'cp src/.libs/libdirect* %s' % libdir,
-        'cp lib/fusion/.libs/libfusion* %s' % libdir,
-        'cp include/*.h %s' % incdir ]
+cmd = [ 'cp include/*.h %s' % incdir ]
 
 build = mvpmc.OSSBuild(target, url, env, e, cmd)
 
