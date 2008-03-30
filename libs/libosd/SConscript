@@ -17,7 +17,6 @@ linkmode = env['LINKMODE']
 
 common = [ 'font.c', 'init.c', 'osd.c' ]
 
-# XXX: using libdl works, but it is horribly slow for some reason...
 nmt_dl = 'yes'
 
 if target == 'mg35':
@@ -36,7 +35,7 @@ elif target == 'nmt':
 			 'pthread' ]
 	else:
 		dl = 'dl'
-		libs = []
+		libs = [ 'pthread' ]
 		env.Append(CCFLAGS = ' -DUSE_LIBDL')
 else:
 	src = [ common, 'gtk.c' ]
