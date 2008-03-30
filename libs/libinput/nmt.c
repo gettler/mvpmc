@@ -57,18 +57,9 @@ static DFBResult (*dl_DirectFBErrorFatal)(const char*, DFBResult) = NULL;
 int
 input_init_local(void)
 {
-	return 0;
-}
-
-input_t*
-input_open_kbd(int flags)
-{
-	input_t *input;
-	int fd;
-
 	if (handle == NULL) {
 		if ((handle=pi_register("libdirectfb-1.0.so.0")) == NULL) {
-			return NULL;
+			return -1;
 		}
 
 		dl_DirectFBCreate = dlsym(handle, "DirectFBCreate");
@@ -80,6 +71,38 @@ input_open_kbd(int flags)
 	DFBCHECK(dl_DirectFBCreate( &dfb ));
 	DFBCHECK(dfb->GetInputDevice(dfb, DIDID_REMOTE, &remote ));
 	DFBCHECK(dfb->CreateInputEventBuffer(dfb, DICAPS_ALL, DFB_FALSE, &input_buffer));
+
+	return 0;
+}
+
+int
+input_release_local(void)
+{
+	if (input_buffer)
+		input_buffer->Release(input_buffer);
+	if (remote)
+		remote->Release( remote );
+	if (dfb)
+		dfb->Release( dfb ); 
+
+	input_buffer = NULL;
+	remote = NULL;
+	dfb = NULL;
+
+	if (handle)
+		pi_deregister(handle);
+
+	handle = NULL;
+
+	return 0;
+}
+
+input_t*
+input_open_kbd(int flags)
+{
+	input_t *input;
+	int fd;
+
 	DFBCHECK(input_buffer->CreateFileDescriptor(input_buffer, &fd));
 
 	if ((input=(input_t*)malloc(sizeof(*input))) == NULL) {
@@ -114,6 +137,7 @@ input_read_kbd(input_t *handle, int raw)
 			cmd = INPUT_CMD_DOWN;
 			break;
 		case DIKI_LEFT:
+		case DIKI_ENTER:
 			cmd = INPUT_CMD_LEFT;
 			break;
 		case DIKI_RIGHT:

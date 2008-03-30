@@ -40,6 +40,12 @@ input_init_local(void)
 	return 0;
 }
 
+int
+input_release_local(void)
+{
+	return 0;
+}
+
 static gint
 snoop(GtkWidget *grab_widget, GdkEventKey *event, gpointer func_data)
 {

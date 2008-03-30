@@ -277,6 +277,8 @@ release_osd(void)
 
 	fd = -1;
 
+	printf("OSD plug-in deregistered!\n");
+
 	return 0;
 }
 

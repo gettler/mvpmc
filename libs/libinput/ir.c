@@ -120,6 +120,12 @@ input_init_local(void)
 	return 0;
 }
 
+int
+input_release_local(void)
+{
+	return 0;
+}
+
 input_t*
 input_open_kbd(int flags)
 {

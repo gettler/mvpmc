@@ -353,7 +353,7 @@ plugin_setup(void)
 	}
 
 #if defined(PLUGIN_SUPPORT)
-	if (pi_init() < 0) {
+	if (pi_init(1) < 0) {
 		return -1;
 	}
 #endif /* PLUGIN_SUPPORT */

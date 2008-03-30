@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-extern int pi_init(void);
+extern int pi_init(int reset);
 extern int pi_deinit(void);
 extern void* pi_register(char *name);
 extern int pi_deregister(void *handle);

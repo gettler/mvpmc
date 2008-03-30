@@ -433,7 +433,8 @@ dfb_deinit()
 	dfb = NULL;
 
 #if defined(USE_LIBDL)
-	pi_deregister(handle);
+	if (handle)
+		pi_deregister(handle);
 	handle = NULL;
 #endif /* USE_LIBDL */
 }

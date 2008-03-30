@@ -157,7 +157,7 @@ gw_menu_input(gw_t *widget, int c)
 
 	data = widget->data.menu;
 
-	if (data->n <= 1) {
+	if (data->n < 0) {
 		return -1;
 	}
 

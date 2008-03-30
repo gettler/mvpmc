@@ -98,6 +98,11 @@ select_file(gw_t *widget, char *text, void *key)
 {
 	printf("Select file: '%s'\n", text);
 
+#if defined(MVPMC_NMT)
+	extern int play_file(char*, char*);
+	play_file(cwd, text);
+#endif
+
 	return 0;
 }
 
@@ -237,6 +242,14 @@ fb_display(void)
 	gw_focus_cb_set(do_key);
 
 	gw_output();
+}
+
+void
+fb_redisplay(void)
+{
+	gw_unmap(fb);
+	gw_menu_clear(fb);
+	fb_display();
 }
 
 static void

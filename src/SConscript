@@ -57,6 +57,9 @@ common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version_%s.c' % target ]
 if target == 'mg35':
 	src = [ common ]
 	pt = 'pthread_nommu'
+elif target == 'nmt':
+	src = [ common, 'nmt_play.c' ]
+	pt = 'pthread'
 else:
 	src = [ common ]
 	pt = 'pthread'

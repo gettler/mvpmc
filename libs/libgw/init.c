@@ -74,10 +74,29 @@ gw_load_plugins(unsigned int dev)
 	return -1;
 }
 
+static int
+gw_unload_plugins(unsigned int dev)
+{
+	if (dev & GW_DEV_OSD) {
+		plugin_unload("osd");
+		osd = NULL;
+	}
+	if (dev & GW_DEV_HTML) {
+		plugin_unload("html");
+		html = NULL;
+	}
+
+	return 0;
+}
+
 int
 gw_device_add(unsigned int dev)
 {
 	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+		return -1;
+	}
+
+	if (gw_load_plugins(dev) < 0) {
 		return -1;
 	}
 
@@ -90,6 +109,10 @@ int
 gw_device_remove(unsigned int dev)
 {
 	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+		return -1;
+	}
+
+	if (gw_unload_plugins(dev) < 0) {
 		return -1;
 	}
 
@@ -106,10 +129,6 @@ gw_init(unsigned int dev)
 	}
 
 	if (dev == 0) {
-		return -1;
-	}
-
-	if (gw_load_plugins(dev) < 0) {
 		return -1;
 	}
 

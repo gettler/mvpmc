@@ -37,7 +37,7 @@ input_init(void)
 int
 input_release(void)
 {
-	return 0;
+	return input_release_local();
 }
 
 input_t*
