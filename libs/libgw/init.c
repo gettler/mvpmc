@@ -97,6 +97,7 @@ gw_device_add(unsigned int dev)
 	}
 
 	if (gw_load_plugins(dev) < 0) {
+		fprintf(stderr, "failed to load OSD plugin!\n");
 		return -1;
 	}
 
@@ -122,13 +123,9 @@ gw_device_remove(unsigned int dev)
 }
 
 int
-gw_init(unsigned int dev)
+gw_init(void)
 {
 	if (root != NULL) {
-		return -1;
-	}
-
-	if (dev == 0) {
 		return -1;
 	}
 

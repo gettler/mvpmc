@@ -275,12 +275,15 @@ mvpmc_main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (gw_init(GW_DEV_OSD|GW_DEV_HTML) < 0) {
+	if (gw_init() < 0) {
 		fprintf(stderr, "failed to initialize libgw!\n");
 		exit(1);
 	}
 
-	gw_device_add(GW_DEV_OSD);
+	if (gw_device_add(GW_DEV_OSD) < 0) {
+		fprintf(stderr, "failed to initialize OSD!\n");
+		exit(1);
+	}
 
 	printf("gw initialized\n");
 
