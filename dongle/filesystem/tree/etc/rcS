@@ -161,6 +161,12 @@ mkdir /tmp/themes
 mkdir /uPnP
 
 #
+# XXX: Skip all the fancy setup until the plug-in code requires it...
+#
+mvpmc
+exit 0
+
+#
 # Download the users config and theme files, if they exist.
 #
 if [ -n "$DONGLE" ] ; then
@@ -238,5 +244,3 @@ if [ -z "`pidof mvpmc`" ] ; then
         fi
     fi    
 fi    
-
-
