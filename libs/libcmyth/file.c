@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <mvp_refmem.h>
+#include <sys/socket.h>
 #include <cmyth.h>
 #include <cmyth_local.h>
 
@@ -295,14 +296,15 @@ cmyth_file_get_block(cmyth_file_t file, char *buf, unsigned long len)
 	} else {
 		file->file_data->conn_hang = 0;
 	}
-	return read(file->file_data->conn_fd, buf, len);
+	return recv(file->file_data->conn_fd, buf, len, 0);
 }
 
 int
 cmyth_file_select(cmyth_file_t file, struct timeval *timeout)
 {
 	fd_set fds;
-	int fd, ret;
+	int ret;
+	cmyth_socket_t fd;
 
 	if (file == NULL || file->file_data == NULL)
 		return -EINVAL;

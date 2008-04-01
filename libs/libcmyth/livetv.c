@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/socket.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -622,14 +623,15 @@ cmyth_livetv_chain_get_block(cmyth_recorder_t rec, char *buf,
 	}
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) }\n",
 				__FUNCTION__, __FILE__, __LINE__);
-	return read(rec->rec_livetv_file->file_data->conn_fd, buf, len);
+	return recv(rec->rec_livetv_file->file_data->conn_fd, buf, len, 0);
 }
 
 static int
 cmyth_livetv_chain_select(cmyth_recorder_t rec, struct timeval *timeout)
 {
 	fd_set fds;
-	int fd, ret;
+	int ret;
+	cmyth_socket_t fd;
 
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) {\n", __FUNCTION__,
 				__FILE__, __LINE__);
