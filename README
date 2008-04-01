@@ -2,7 +2,8 @@ MediaMVP Media Center
 =====================
 
 The MediaMVP Media Center (mvpmc) is an audio/video player for
-the Hauppauge MediaMVP.
+the Hauppauge MediaMVP, the Mediagate MG-35, and the Syabas
+Networked Media Tank.
 
 
 Licensing
@@ -22,6 +23,10 @@ In order to build mvpmc, you will need to make sure you have the
 following installed on your system:
 
 	- scons (http://www.scons.org/)
+	- make
+	- gcc
+	- flex
+	- bison
 
 
 If you do not currently have the cross-compilers installed on your
@@ -31,9 +36,10 @@ system, they will be built as needed.
 Source Repository
 -----------------
 
-You can check the source code out with git from the following URL:
+You can check the source code out with git by following the instructions
+at the following URL:
 
-	http://git.mvpmc.org/repos/mvpmc.git
+	http://git.mvpmc.org/
 
 
 Building
@@ -45,20 +51,26 @@ MediaMVP via DHCP, use the following command:
 	$ make mvp
 
 
+To build a filesystem image for a Networked Media Tank (such as the
+Popcorn Hour A-100), use the following command:
+
+	$ make nmt
+
+
+To build mvpmc for the Mediagate MG-35, use the following command:
+
+	$ make mg35
+
+
 To build a new mvpmc binary which you can run on your host system,
 use the following command:
 
 	$ make host
 
 
-To build a new linux kernel, use the following command:
+To build a new linux kernel (MediaMVP only), use the following command:
 
 	$ make kernel
-
-
-To build a linux 2.4.31, use the following command:
-
-	$ make kernel_31
 
 
 To build source code HTML or PDF documentation with doxygen, use the
