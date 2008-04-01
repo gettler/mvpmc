@@ -203,6 +203,7 @@ int
 osd_close(void)
 {
 	extern void dfb_deinit();
+	extern void overlay_clear();
 
 	osd_destroy_all_surfaces();
 
@@ -212,6 +213,8 @@ osd_close(void)
 
 #if defined(MVPMC_NMT)
 	dfb_deinit();
+#elif defined(MVPMC_NMT)
+	overlay_clear();
 #endif
 
 	return 0;

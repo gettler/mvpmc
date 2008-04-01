@@ -47,7 +47,13 @@
 
 static gw_t *fb;
 
+#if defined(MVPMC_MG35)
+static char cwd[1024] = "/cdrom/";
+#elif defined(MVPMC_NMT)
+static char cwd[1024] = "/opt/sybhttpd/localhost.drives/";
+#else
 static char cwd[1024] = "/";
+#endif
 
 static long dir_count = 0;
 static int file_count = 0;
@@ -101,6 +107,9 @@ select_file(gw_t *widget, char *text, void *key)
 #if defined(MVPMC_NMT)
 	extern int play_file(char*, char*);
 	play_file(cwd, text);
+#elif defined(MVPMC_MG35)
+	extern int play_file(char*, char*);
+	play_file(cwd, text);
 #endif
 
 	return 0;
@@ -110,7 +119,7 @@ static void
 add_dirs(void)
 {
 	glob_t gb;
-	char pattern[1024], buf[1024], *ptr;
+	char pattern[256], buf[256], *ptr;
 	int i;
 	struct STAT sb;
 

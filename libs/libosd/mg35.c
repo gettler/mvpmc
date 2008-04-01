@@ -348,3 +348,10 @@ overlay_init(void)
 
 	return -1;
 }
+
+void
+overlay_clear(void)
+{
+	close(fd);
+	fd = -1;
+}
