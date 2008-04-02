@@ -58,7 +58,7 @@ typedef int (*gw_cmd_t)(gw_t*, int);
 typedef int (*gw_select_t)(gw_t*, char*, void*);
 typedef int (*gw_hilite_t)(gw_t*, char*, void*, bool);
 
-extern int gw_init(unsigned int dev);
+extern int gw_init(void);
 extern int gw_shutdown(void);
 extern gw_t *gw_root(void);
 extern int gw_device_add(unsigned int dev);
