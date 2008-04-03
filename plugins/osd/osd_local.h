@@ -21,7 +21,7 @@
 #define OSD_LOCAL_H
 
 #include <mvp_osd.h>
-#include <plugin_gw.h>
+#include <plugin/gw.h>
 
 #define CSS_DEFAULT	"/usr/share/mvpmc/osd.css"
 

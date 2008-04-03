@@ -23,8 +23,8 @@
 #include <string.h>
 #include <errno.h>
 
-#include "plugin_gw.h"
-#include "plugin_html.h"
+#include <plugin/gw.h>
+#include <plugin/html.h>
 
 #if defined(PLUGIN_SUPPORT)
 unsigned long plugin_version = CURRENT_PLUGIN_VERSION;

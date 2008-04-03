@@ -1,0 +1,20 @@
+#!/usr/bin/python
+#
+# SConscript
+#
+
+import os
+
+Import ('env')
+
+mvp = env.Copy()
+target = mvp['TARG']
+toplevel = mvp['TOPLEVEL']
+
+incdir = toplevel + '/dongle/install/' + target + '/include/plugin'
+
+headers = [ 'gw.h', 'html.h', 'osd.h' ]
+
+inst = env.Install(incdir, headers)
+
+Return('inst')

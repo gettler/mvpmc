@@ -20,8 +20,8 @@
 #ifndef PLUGIN_OSD_H
 #define PLUGIN_OSD_H
 
-#include "plugin.h"
-#include "plugin_gw.h"
+#include <plugin.h>
+#include <plugin/gw.h>
 
 typedef struct {
 	int (*input_fd)(void);

@@ -20,9 +20,9 @@
 #ifndef GW_LOCAL_H
 #define GW_LOCAL_H
 
-#include "plugin_gw.h"
-#include "plugin_osd.h"
-#include "plugin_html.h"
+#include <plugin/gw.h>
+#include <plugin/osd.h>
+#include <plugin/html.h>
 
 #define root		__gw_root
 #define commands	__gw_commands

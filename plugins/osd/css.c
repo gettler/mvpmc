@@ -24,8 +24,8 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "plugin.h"
-#include "plugin_osd.h"
+#include <plugin.h>
+#include <plugin/osd.h>
 
 #include "osd_local.h"
 #include "css.h"

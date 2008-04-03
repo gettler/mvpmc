@@ -23,11 +23,11 @@
 #include <string.h>
 #include <sys/select.h>
 
-#include "plugin.h"
+#include <plugin.h>
 #include "gw_local.h"
 
-#include "plugin_html.h"
-#include "plugin_osd.h"
+#include <plugin/html.h>
+#include <plugin/osd.h>
 
 gw_t *root = NULL;
 gw_t *commands = NULL;

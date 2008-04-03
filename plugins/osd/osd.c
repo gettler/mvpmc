@@ -27,8 +27,8 @@
 #include "mvp_refmem.h"
 #include "mvp_osd.h"
 
-#include "plugin.h"
-#include "plugin_osd.h"
+#include <plugin.h>
+#include <plugin/osd.h>
 
 #include "input.h"
 

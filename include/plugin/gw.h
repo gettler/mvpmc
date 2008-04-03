@@ -20,9 +20,9 @@
 #ifndef PLUGIN_GW_H
 #define PLUGIN_GW_H
 
-#include "plugin.h"
-#include "mvp_refmem.h"
-#include "gw.h"
+#include <plugin.h>
+#include <mvp_refmem.h>
+#include <gw.h>
 
 typedef enum {
 	GW_EVENT_EXPOSE =	0x01,

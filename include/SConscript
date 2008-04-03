@@ -18,9 +18,10 @@ headers = [ 'cmyth.h', 'mvp_av.h', 'mvp_demux.h', 'mvp_osd.h', 'mvp_widget.h',
             'plugin.h', 'piutil.h', 'input.h', 'gw.h',
             'vncviewer.h', 'tiwlan.h' ]
 
-plugin_headers = [ 'plugin_gw.h', 'plugin_html.h', 'plugin_osd.h' ]
-inst = []
+inst = env.Install(incdir, headers)
 
-inst = env.Install(incdir, [ headers, plugin_headers ])
+inc = env.SConscript('plugin/SConscript')
 
-Return('inst')
+ret = [ inst, inc ]
+
+Return('ret')
