@@ -67,7 +67,7 @@ else:
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
 		    'mvpmc_osd.plugin' ]
-	libs = [ 'gw', 'refmem', pt ]
+	libs = [ 'gw', 'refmem', pt, 'osd', 'input', 'freetype' ]
 	linkflags = '-static'
 else:
 	plugins = [ ]

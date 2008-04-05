@@ -64,4 +64,6 @@ csstest = env.Program('csstest',
                         LIBPATH = [ libdir ],
                         LINKFLAGS = ldflags + ' -static' )
 
+env.Depends(csstest, inst)
+
 Return('inst')
