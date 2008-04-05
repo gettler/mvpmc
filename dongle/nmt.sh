@@ -13,7 +13,7 @@ TOP=`pwd`
 DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot usr/share/mvpmc/plugins"
 
 BIN="busybox mvpmc osdtest strace"
-SBIN="smartctl dropbearmulti dropbear dropbearkey"
+SBIN="smartctl dropbearmulti dropbear dropbearkey fusermount"
 TBIN="gdb gdbserver"
 PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin libmvpmc_http.plugin"
 LIB="libinput.so libgw.so librefmem.so libosd.so"

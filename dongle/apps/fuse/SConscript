@@ -15,10 +15,15 @@ prefix = '%s/dongle/install/%s' % (topdir,build_target)
 
 e = Environment()
 
-url = [ 'http://www.mvpmc.org/dl/fuse-2.5.3.tar.gz' ]
+if build_target == 'nmt':
+    url = [ 'http://www.mvpmc.org/dl/fuse-2.7.2.tar.gz' ]
+    config = '--host=mipsel-linux-uclibc'
+else:
+    url = [ 'http://www.mvpmc.org/dl/fuse-2.5.3.tar.gz' ]
+    config = '--host=powerpc-linux '
 
 target = [ sbindir + 'fusermount' ]
-cmd = [ './configure --host=powerpc-linux -with-gnu-ld --disable-debug  --enable-lib --enable-util --enable-example=no --disable-kernel-module --disable-shared',
+cmd = [ './configure %s -with-gnu-ld --disable-debug  --enable-lib --enable-util --enable-example=no --disable-kernel-module --disable-shared' % config,
         'make',
         'cp util/fusermount %s/sbin/fusermount' % prefix,
         'cp lib/.libs/libfuse.a lib' ]

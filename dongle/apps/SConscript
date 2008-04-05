@@ -19,15 +19,15 @@ if target == 'nmt' or target == 'mvp':
     busybox = env.SConscript(['busybox/SConscript'])
     strace = env.SConscript(['strace/SConscript'])
     dropbear = env.SConscript(['dropbear/SConscript'])
-    apps = apps + [ busybox, strace, dropbear ]
+    fuse = env.SConscript([ 'fuse/SConscript'])
+    apps = apps + [ busybox, strace, dropbear, fuse ]
 
 if target == 'mvp':
     ntp = env.SConscript(['ntpclient/SConscript'])
     mtd = env.SConscript(['mtd/SConscript'])
-    fuse = env.SConscript([ 'fuse/SConscript'])
     djmount = env.SConscript('djmount/SConscript')
     nbtscan = env.SConscript('nbtscan/SConscript')
     env.Depends(djmount, fuse)
-    apps = apps + [ ntp, mtd, fuse, djmount, nbtscan ]
+    apps = apps + [ ntp, mtd, djmount, nbtscan ]
 
 Return('apps')
