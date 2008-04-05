@@ -33,22 +33,31 @@ mvp_clean:
 	scons -c TARGET=mvp
 	rm -f dongle.bin.mvpmc.ver
 	rm -rf dongle/install/mvp
+	rm -rf `find dongle/apps -name mvp -type d`
+	rm -rf `find dongle/libs -name mvp -type d`
 
 host_clean:
 	scons -c TARGET=host
 	rm -rf dongle/install/host
+	rm -rf `find dongle/apps -name host -type d`
+	rm -rf `find dongle/libs -name host -type d`
 
 mg35_clean:
 	scons -c TARGET=mg35
 	rm -rf dongle/install/mg35
+	rm -rf `find dongle/apps -name mg35 -type d`
+	rm -rf `find dongle/libs -name mg35 -type d`
 
 nmt_clean:
 	scons -c TARGET=nmt
 	rm -rf dongle/install/nmt
+	rm -rf `find dongle/apps -name nmt -type d`
+	rm -rf `find dongle/libs -name nmt -type d`
 
 clean: mvp_clean host_clean mg35_clean nmt_clean
 	rm -rf `find libs -name obj -type d`
 	rm -rf `find src -name obj -type d`
+	rm -rf `find plugins -name obj -type d`
 
 distclean: clean
 	rm -rf dongle/install
@@ -66,9 +75,6 @@ distclean: clean
 	rm -rf tools/toolchains/uclibc/source
 	rm -rf tools/genext2fs/genext2fs-1.4rc1
 	rm -rf tools/squashfs/squashfs2.2-r2
-	rm -rf `find dongle -name mvp -type d`
-	rm -rf `find dongle -name host -type d`
-	rm -rf `find dongle -name mg35 -type d`
 	rm -rf `find . -name .sconsign -type f`
 	rm -rf home
 	rm -rf doc/html

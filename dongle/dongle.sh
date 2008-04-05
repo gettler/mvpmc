@@ -44,9 +44,9 @@ for i in $WRAPPER_DIRS ; do
     mkdir -p $FS/install_wrapper/$i
 done
 
-cd filesystem/tree
-tar -cf - * | tar -xf - -C ../mvp/install
-cd ../..
+cd filesystem/tree/mvp
+tar -cf - * | tar -xf - -C ../../mvp/install
+cd ../../..
 cd filesystem/wrapper
 tar -cf - * | tar -xf - -C ../mvp/install_wrapper
 cd ../..

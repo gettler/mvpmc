@@ -93,7 +93,7 @@ rm -rf filesystem/mvp/install/lib/modules
 rm -rf filesystem/mvp/install_wrapper/lib/modules
 
 mkdir -p ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
-cp filesystem/tree/lib/modules/${KERNELVER}${EXTRAVER}/misc/*.o ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
+cp filesystem/tree/mvp/lib/modules/${KERNELVER}${EXTRAVER}/misc/*.o ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
 cp filesystem/hcw/linux-${KERNELVER}/*.o ${MODDIR}/${KERNELVER}${EXTRAVER}/misc
 mkdir -p filesystem/mvp/install/memory
 mkdir -p filesystem/mvp/install/union
