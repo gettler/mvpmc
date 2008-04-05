@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2004-2006 Jon Gettler
+# Copyright (C) 2004-2008 Jon Gettler
 # http://www.mvpmc.org/
 #
 # This script will copy the IBM kernel modules from a Hauppauge dongle.bin
@@ -80,18 +80,14 @@ if [ "$KERNELVER" = "2.4.31" ] ; then
     SERIAL_STUB=filesystem/kernel_files/serial_stub.o
     EXTRAVER=-v1.1-hcwmvp
 else
-    SERIAL_STUB=
-    EXTRAVER=_mvl21-vdongle
+    echo "Unsupported kernel version"
+    exit 1
 fi
 
 #
 # Copy the kernel libraries into the fs dir
 #
-if [ "$KERNELVER" = "2.4.31" ] ; then
-    MODDIR=filesystem/mvp/install_wrapper/lib/modules
-else
-    MODDIR=filesystem/mvp/install/lib/modules
-fi
+MODDIR=filesystem/mvp/install_wrapper/lib/modules
 
 rm -rf filesystem/mvp/install/lib/modules
 rm -rf filesystem/mvp/install_wrapper/lib/modules
@@ -110,24 +106,20 @@ if [ -a $RAMDISK ] ; then
 fi
 ../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/mvp/install ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
 
-if [ "$KERNELVER" = "2.4.31" ] ; then
-	#
-	# The squashfs size is limited to the amount allocated by the linux
-	# kernel in sdram bank1 (0xa0d00000-0xa0f00000).
-	#
-	SIZE=`stat -c %s ${RAMDISK}`
-	echo "squashfs filesystem is $SIZE bytes"
-	if [ $SIZE -gt 2097152 ] ; then
-		echo "squashfs filesystem exceeds the limit of 2097152 bytes!"
-		exit 1
-	fi
+#
+# The squashfs size is limited to the amount allocated by the linux
+# kernel in sdram bank1 (0xa0d00000-0xa0f00000).
+#
+SIZE=`stat -c %s ${RAMDISK}`
+echo "squashfs filesystem is $SIZE bytes"
+if [ $SIZE -gt 2097152 ] ; then
+	echo "squashfs filesystem exceeds the limit of 2097152 bytes!"
+	exit 1
 fi
 
-if [ "$KERNELVER" = "2.4.31" ] ; then
-    cp ${RAMDISK} filesystem/mvp/install_wrapper/etc/rootfs.img
-    rm -f ${RAMDISK}
-    ../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/mvp/install_wrapper ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
-fi
+cp ${RAMDISK} filesystem/mvp/install_wrapper/etc/rootfs.img
+rm -f ${RAMDISK}
+../tools/squashfs/squashfs2.2-r2/squashfs-tools/mksquashfs filesystem/mvp/install_wrapper ${RAMDISK} -be -all-root -if filesystem/devtable || error "mksquashfs failed"
 
 make_dongle filesystem/kernel_files/vmlinux.gz ${RAMDISK}
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2004-2006, Jon Gettler
+# Copyright (C) 2004-2008, Jon Gettler
 # http://www.mvpmc.org/
 #
 # This script will copy the needed files out of a kernel build workarea
@@ -28,5 +28,6 @@ if [ -f $SERIAL ] ; then
     echo "KERNELVER=2.4.31" > ${TARGET}/version
     cp $SERIAL $TARGET
 else
-    echo "KERNELVER=2.4.17" > ${TARGET}/version
+    echo "Unsupported kernel version"
+    exit 1
 fi
