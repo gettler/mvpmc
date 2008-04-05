@@ -27,6 +27,10 @@ for i in $DIRS ; do
     mkdir -p $FS/install/$i
 done
 
+cd filesystem/tree/nmt
+tar -cf - * | tar -xf - -C ../../nmt/install
+cd $TOP
+
 for i in $PLUGINS ; do
     cp -d install/nmt/lib/$i $FS/install/usr/share/mvpmc/plugins
 done
