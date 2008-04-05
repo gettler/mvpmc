@@ -26,7 +26,7 @@ USRSBIN=""
 
 LIB="libinput.so libgw.so libav.so libcmyth.so libdemux.so librefmem.so libosd.so libts_demux.so libvnc.so libwidget.so libvorbisidec.so.1.0.2 libvorbisidec.so.1 libfreetype.so.6.3.10 libfreetype.so.6 libfreetype.so libpng12.so.0.0.0 libpng12.so.0 libpng12.so libid3.so.0.0.0 libid3.so libid3.so.0 libexpat.so.0.5.0 libexpat.so.0 libexpat.so libdvbpsi.so.4.0.0 libdvbpsi.so.4 libdvbpsi.so liba52.so.0.0.0 liba52.so.0 liba52.so libjpeg.so.62.0 libjpeg.so libtiwlan.so"
 LIB="libinput.so libgw.so libav.so librefmem.so libosd.so libfreetype.so.6.3.10 libfreetype.so.6 libfreetype.so"
-PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin"
+PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin libmvpmc_http.plugin"
 GCCLIB="libgcc_s_nof.so.1 libgcc_s.so.1"
 TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libpthread.so.0 libutil.so.0 libdl.so.0 libresolv.so.0"
 LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,16 +17,45 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef PLUGIN_HTML_H
-#define PLUGIN_HTML_H
+#ifndef HTTP_LOCAL_H
+#define HTTP_LOCAL_H
 
-#include <gw.h>
-#include <plugin.h>
+typedef enum {
+	HTTP_METHOD_GET = 1,
+	HTTP_METHOD_HEAD,
+	HTTP_METHOD_POST,
+	HTTP_METHOD_PUT,
+	HTTP_METHOD_DELETE,
+	HTTP_METHOD_TRACE,
+	HTTP_METHOD_CONNECT,
+} http_method_t;
 
 typedef struct {
-	int (*generate)(int);
-	int (*css)(int);
-	int (*update_widget)(gw_t*);
-} plugin_html_t;
+	char *name;
+	char *val;
+} http_field_t;
 
-#endif /* PLUGIN_HTML_H */
+typedef struct {
+	char *url;
+	char *data;
+	http_field_t **req;
+	http_field_t **resp;
+	int fd;
+	int error;
+	int done;
+	int code;
+} http_req_t;
+
+typedef struct {
+	http_method_t method;
+	char *path;
+	int major;
+	int minor;
+	http_field_t **header;
+} httpd_req_t;
+
+extern int http_get(http_req_t *req, int block);
+
+#define HTTP_PORT	8500
+
+#endif /* HTTP_LOCAL_H */

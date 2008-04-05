@@ -65,7 +65,8 @@ else:
 	pt = 'pthread'
 
 if linkmode == 'static':
-	plugins = [ 'mvpmc_html.plugin', 'mvpmc_osd.plugin' ]
+	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
+		    'mvpmc_osd.plugin' ]
 	libs = [ 'gw', 'refmem', pt ]
 	linkflags = '-static'
 else:
@@ -83,6 +84,7 @@ mvpmc = env.Program('mvpmc', src,
 # XXX: for static linking, the dependencies are not correct
 if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_html.plugin.a')
+	env.Depends(mvpmc, libdir + '/libmvpmc_http.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_osd.plugin.a')
 
 if target == 'mvp':

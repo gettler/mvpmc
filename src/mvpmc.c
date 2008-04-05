@@ -107,10 +107,34 @@ static struct option opts[] = {
 static gw_t *about;
 static gw_t *menu;
 
+#if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
+#include <sys/reboot.h>
+#include <linux/reboot.h>
+static int
+do_reboot(gw_t *widget, char *text, void *key)
+{
+	sync();
+
+	/*
+	 * Do an orderly shutdown, if possible.
+	 */
+	system("/sbin/reboot");
+
+	sleep(1);
+	reboot(LINUX_REBOOT_CMD_RESTART);
+
+	return 0;
+}
+#endif
+
 static int
 do_exit(gw_t *widget, char *text, void *key)
 {
-	printf("Bye!\n");
+	printf("Bye!  Pid %d exiting...\n", getpid());
+#if defined(MVPMC_MG35)
+	extern void pthread_deinit(void);
+	pthread_deinit();
+#endif
 	exit(0);
 
 	return 0;
@@ -189,6 +213,9 @@ gui_start(void *arg)
 	gw_menu_item_add(menu, "File Browser", (void*)0, do_fb, NULL);
 	gw_menu_item_add(menu, "About", (void*)1, do_about, NULL);
 	gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
+#if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
+	gw_menu_item_add(menu, "Reboot", (void*)3, do_reboot, NULL);
+#endif
 
 	gw_unmap(splash);
 	gw_map(menu);
@@ -287,6 +314,11 @@ mvpmc_main(int argc, char **argv)
 
 	printf("gw initialized\n");
 
+	if (plugin_load("http") == NULL) {
+		fprintf(stderr, "failed to load http plug-in\n");
+		exit(1);
+	}
+
 	gui_start(NULL);
 
 	gw_loop(NULL);
@@ -313,7 +345,7 @@ main(int argc, char **argv)
 {
 	char *prog;
 
-#ifdef MVPMC_MG35
+#if defined(MVPMC_MG35)
 	extern int pthread_init(char*);
 	printf("%s(): start pid %d...\n", __FUNCTION__, getpid());
 	pthread_init(argv[0]);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -26,6 +26,14 @@
 #include <sys/wait.h>
 
 #include "mvp_atomic.h"
+
+typedef struct {
+	int val;
+} pthread_mutex_t;
+
+typedef struct {
+	int val;
+} pthread_cond_t;
 
 #define PT_THREAD_MAX	128
 #define PT_MSG_MAX	16
@@ -67,6 +75,40 @@ static int initialized = 0;
 static void
 pthread_do_exit(void)
 {
+}
+
+static void
+pthread_manager_shutdown(void)
+{
+	int i;
+	int t = 0;
+
+	printf("%s(): pid %d\n", __FUNCTION__, getpid());
+
+	for (i=0; i<PT_THREAD_MAX; i++) {
+		if (pt_shared->list[i].running &&
+		    (pt_shared->list[i].pid != getpid())) {
+			kill(pt_shared->list[i].pid, SIGKILL);
+			t++;
+		}
+	}
+
+	printf("%s(): killed %d threads\n", __FUNCTION__, t);
+	sleep(1);
+}
+
+static void
+pthread_shutdown(void)
+{
+	printf("%s(): pid %d\n", __FUNCTION__, getpid());
+
+	if (pt_shared->manager != getpid()) {
+		kill(pt_shared->manager, SIGKILL);
+	}
+
+	pthread_manager_shutdown();
+
+	sleep(1);
 }
 
 static void
@@ -125,6 +167,8 @@ pthread_manager(void)
 
 	signal(SIGUSR2, sig_manager);
 	signal(SIGCHLD, sig_manager);
+
+	atexit(pthread_manager_shutdown);
 
 	while (1) {
 		int i = 0, n = 0;
@@ -265,7 +309,15 @@ pthread_init(char *app)
 
 	printf("shared is %p, '%s'\n", pt_shared, buf);
 
+	atexit(pthread_shutdown);
+
 	return 0;
+}
+
+void
+pthread_deinit(void)
+{
+	pthread_shutdown();
 }
 
 int
@@ -274,6 +326,7 @@ pthread_create(pthread_t *thread, pthread_attr_t *attr,
 {
 	if (pt_shared->manager == 0) {
 		pid_t child;
+		int status;
 
 		printf("no pthread manager found!\n");
 
@@ -285,6 +338,12 @@ pthread_create(pthread_t *thread, pthread_attr_t *attr,
 			pt_shared->manager = getpid();
 			execl(pt_shared->path, pt_shared->path, NULL);
 			exit(-1);
+		} else {
+			sleep(1);
+			if (waitpid(child, &status, WNOHANG) == child) {
+				printf("child thread creation failed...%d\n",
+				       status);
+			}
 		}
 	}
 
@@ -301,3 +360,39 @@ pthread_kill(pthread_t thread, int signo)
 {
 	return 0;
 }
+
+int pthread_join(pthread_t th, void **thread_return)
+{
+	return 0;
+}
+
+int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+	return 0;
+}
+
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+	return 0;
+}
+
+int pthread_cond_broadcast(pthread_cond_t *cond)
+{
+	return 0;
+}
+
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+{
+	return 0;
+}
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+	return 0;
+}
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, int bytes)
+{
+	return 0;
+}
+

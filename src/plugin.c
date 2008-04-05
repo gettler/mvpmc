@@ -63,6 +63,8 @@ typedef struct {
 #if !defined(PLUGIN_SUPPORT)
 extern void *plugin_init_html(void);
 extern int plugin_release_html(void);
+extern void *plugin_init_http(void);
+extern int plugin_release_http(void);
 extern void *plugin_init_osd(void);
 extern int plugin_release_osd(void);
 #endif /* !PLUGIN_SUPPORT */
@@ -70,6 +72,7 @@ extern int plugin_release_osd(void);
 static builtin_t builtins[] = {
 #if !defined(PLUGIN_SUPPORT)
 	{ "html", plugin_init_html, plugin_release_html },
+	{ "http", plugin_init_http, plugin_release_http },
 	{ "osd", plugin_init_osd, plugin_release_osd },
 #endif /* !PLUGIN_SUPPORT */
 	{ NULL, NULL, NULL }

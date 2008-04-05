@@ -95,10 +95,14 @@ add_child(gw_t *parent, gw_t *child)
 	cur = c->child;
 
 	if (cur) {
-		do {
+		while (1) {
 			child->above = cur;
+			if (cur->below == NULL) {
+				cur->below = child;
+				break;
+			}
 			cur = cur->below;
-		} while (cur);
+		}
 	} else {
 		child->above = NULL;
 		c->child = child;

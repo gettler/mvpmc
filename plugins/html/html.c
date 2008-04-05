@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -48,6 +48,13 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 	"</body>\n" \
 	"</html>\n"
 
+#define CSS_DEFAULT \
+	"body { background: black; color: white; }\n" \
+	"a { text-decoration: none; }\n" \
+	"a, a:link, a:visited, a:acted { color: white; }\n" \
+	"a:hover { background: green; color: white; }\n" \
+	".title { background: blue; color: white; }\n"
+
 #define WRITE(fd,buf,len) \
 	if (full_write(fd, buf, len) < 0) { \
 		goto err; \
@@ -76,6 +83,7 @@ static struct html_output_s {
 
 static char *header = HTML_HEADER;
 static char *footer = HTML_FOOTER;
+static char *css = CSS_DEFAULT;
 
 static int
 full_write(int fd, char *buf, int len)
@@ -146,9 +154,16 @@ static int
 html_li(int fd, char *label, char *text, int level)
 {
 	char *head1 = "<li><a class=\"";
-	char *head2 = "\" href=\"";
-	char *head3 = "\">";
+	char *head2 = "\" href=\"/osd.html?link=";
+	char *head3 = "&state=";
+	char *head4 = "\">";
 	char *foot = "</a></li>\n";
+	char state[16];
+
+	/*
+	 * XXX: need to maintain an interface state?
+	 */
+	snprintf(state, sizeof(state), "0x%.8x", 2545452);
 
 	LEVEL();
 	WRITE(fd, head1, strlen(head1));
@@ -156,6 +171,8 @@ html_li(int fd, char *label, char *text, int level)
 	WRITE(fd, head2, strlen(head2));
 	WRITE(fd, text, strlen(text));
 	WRITE(fd, head3, strlen(head3));
+	WRITE(fd, state, strlen(state));
+	WRITE(fd, head4, strlen(head4));
 	
 	if (text) {
 		WRITE(fd, text, strlen(text));
@@ -293,7 +310,7 @@ html_generate_text(int fd, gw_t *widget, int level)
 	return -1;
 }
 
-int
+static int
 html_generate(int fd)
 {
 	gw_t *root;
@@ -317,8 +334,19 @@ html_generate(int fd)
 	return 0;
 }
 
+static int
+html_default_css(int fd)
+{
+	if (full_write(fd, css, strlen(css)) < 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
 static plugin_html_t html = {
 	.generate = html_generate,
+	.css = html_default_css,
 };
 
 static void*

@@ -8,7 +8,8 @@ dir = env['BUILD_DIR']
 
 osd = env.SConscript('osd/SConscript', build_dir='osd/'+dir, duplicate=0)
 html = env.SConscript('html/SConscript', build_dir='html/'+dir, duplicate=0)
+http = env.SConscript('http/SConscript', build_dir='http/'+dir, duplicate=0)
 
-ret = [ osd, html ]
+ret = [ osd, html, http ]
 
 Return('ret')

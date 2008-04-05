@@ -1,0 +1,32 @@
+#!/usr/bin/python
+#
+# http plugin
+#
+
+Import ('env')
+
+dir = env['BUILD_DIR']
+target = env['TARG']
+libdir = env['INSTLIBDIR']
+ldflags = env['LDFLAGS']
+linkmode = env['LINKMODE']
+bindir = env['INSTBINDIR']
+
+if linkmode == 'dynamic':
+	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+	
+src = [ 'http.c' ]
+
+static = env.StaticLibrary('mvpmc_http.plugin.a', src,
+                           CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                           LINKFLAGS = ldflags)
+
+if linkmode == 'dynamic':
+    shared = env.SharedLibrary('mvpmc_http.plugin', src,
+                               CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                               LINKFLAGS = ldflags)
+    inst = env.Install(libdir, [ static, shared ])
+else:
+    inst = env.Install(libdir, [ static ])
+
+Return('inst')
