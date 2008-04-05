@@ -23,8 +23,62 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <gw.h>
+
+static int
+monitor(pid_t pid)
+{
+	int i;
+	char buf[128];
+	struct sockaddr_un addr;
+	int fd;
+
+	addr.sun_family = AF_UNIX;
+	strcpy(addr.sun_path, "/dev/lircd");
+
+	if ((fd=socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror("socket");
+		return -1;
+	}
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+		perror("connect");
+		close(fd);
+		return -1;
+	}
+
+	while (waitpid(pid, NULL, WNOHANG) == 0) {
+		fd_set fds;
+		struct timeval to;
+		int key;
+
+		FD_ZERO(&fds);
+		FD_SET(fd, &fds);
+		to.tv_sec = 0;
+		to.tv_usec = 20000;
+
+		if (select(fd+1, &fds, NULL, NULL, &to) > 0) {
+			i=read(fd, buf, sizeof(buf));
+			if (i==-1) {
+				perror("read");
+				break;
+			};
+			if (!i) {
+				break;
+			}
+			buf[i] = '\0';
+			key = atoi(buf);
+			printf("keypress: %d\n", key);
+		}
+	}
+
+	close(fd);
+
+	return 0;
+}
 
 static int
 is_audio(char *file)
@@ -63,6 +117,7 @@ play_audio_file(char *cwd, char *file)
 {
 	extern void fb_redisplay(void);
 	char cmd[1024];
+	pid_t child;
 
 	gw_device_remove(GW_DEV_OSD);
 
@@ -70,11 +125,11 @@ play_audio_file(char *cwd, char *file)
 		 "/bin/mono -audio -prebuf 100 -bgimg -single '%s/%s' -dram 1",
 		 cwd, file);
 
-	if (fork() == 0) {
+	if ((child=fork()) == 0) {
 		system(cmd);
 		_exit(0);
 	} else {
-		wait(NULL);
+		monitor(child);
 	}
 
 	gw_device_add(GW_DEV_OSD);
@@ -89,6 +144,7 @@ play_video_file(char *cwd, char *file)
 {
 	extern void fb_redisplay(void);
 	char cmd[1024];
+	pid_t child;
 
 	gw_device_remove(GW_DEV_OSD);
 
@@ -96,11 +152,11 @@ play_video_file(char *cwd, char *file)
 		 "/bin/mono -single -nogui '%s/%s' -dram 1",
 		 cwd, file);
 
-	if (fork() == 0) {
+	if ((child=fork()) == 0) {
 		system(cmd);
 		_exit(0);
 	} else {
-		wait(NULL);
+		monitor(child);
 	}
 
 	gw_device_add(GW_DEV_OSD);
