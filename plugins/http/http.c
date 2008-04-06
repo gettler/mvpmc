@@ -73,6 +73,12 @@ static int pipefds[2];
 
 static volatile int waiting;
 
+#if defined(MVPMC_MG35)
+static int http_generate(void);
+static volatile int cleanup;
+static pid_t httpd_pid;
+#endif
+
 static httpd_req_t*
 resp_header(int fd)
 {
@@ -501,6 +507,10 @@ httpd_thread(void *arg)
 	fd_set fds;
 	char *header;
 
+#if defined(MVPMC_MG35)
+	httpd_pid = getpid();
+#endif
+
 	header = HTTPD_SERVER;
 	if ((httpd_server=malloc(strlen(header)+128)) == NULL) {
 		goto err;
@@ -532,10 +542,24 @@ httpd_thread(void *arg)
 	while (1) {
 		socklen_t len;
 
+#if defined(MVPMC_MG35)
+		struct timeval tv;
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+#define TIMEOUT &tv
+
+		if (cleanup) {
+			cleanup = 0;
+			http_generate();
+		}
+#else
+#define TIMEOUT NULL
+#endif
+
 		FD_ZERO(&fds);
 		FD_SET(httpd_fd, &fds);
 
-		if (select(httpd_fd+1, &fds, NULL, NULL, NULL) > 0) {
+		if (select(httpd_fd+1, &fds, NULL, NULL, TIMEOUT) > 0) {
 			struct sockaddr_in in_addr;
 			int fd;
 			httpd_req_t *req;
@@ -613,6 +637,13 @@ httpd_thread(void *arg)
 static int
 http_generate(void)
 {
+#if defined(MVPMC_MG35)
+	if (httpd_pid != getpid()) {
+		cleanup = 1;
+		return 0;
+	}
+#endif
+
 	if (waiting) {
 		int fd = waiting;
 		waiting = 0;
