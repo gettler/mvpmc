@@ -26,14 +26,14 @@
 #include <plugin.h>
 #include "gw_local.h"
 
-#include <plugin/html.h>
+#include <plugin/http.h>
 #include <plugin/osd.h>
 
 gw_t *root = NULL;
 gw_t *commands = NULL;
 
 plugin_osd_t *osd = NULL;
-plugin_html_t *html = NULL;
+plugin_http_t *http = NULL;
 
 static unsigned int current = 0;
 
@@ -48,10 +48,10 @@ gw_load_plugins(unsigned int dev)
 {
 	unsigned int loaded = 0;
 
-	if ((dev & GW_DEV_HTML) && ((html=plugin_load("html")) == NULL)) {
+	if ((dev & GW_DEV_HTTP) && ((http=plugin_load("http")) == NULL)) {
 		goto err;
 	}
-	loaded |= GW_DEV_HTML;
+	loaded |= GW_DEV_HTTP;
 
 	if ((dev & GW_DEV_OSD) && ((osd=plugin_load("osd")) == NULL)) {
 		goto err;
@@ -66,9 +66,9 @@ gw_load_plugins(unsigned int dev)
 		osd = NULL;
 	}
 
-	if (loaded & GW_DEV_HTML) {
-		plugin_unload("html");
-		html = NULL;
+	if (loaded & GW_DEV_HTTP) {
+		plugin_unload("http");
+		http = NULL;
 	}
 
 	return -1;
@@ -81,9 +81,9 @@ gw_unload_plugins(unsigned int dev)
 		plugin_unload("osd");
 		osd = NULL;
 	}
-	if (dev & GW_DEV_HTML) {
-		plugin_unload("html");
-		html = NULL;
+	if (dev & GW_DEV_HTTP) {
+		plugin_unload("http");
+		http = NULL;
 	}
 
 	return 0;
@@ -92,7 +92,7 @@ gw_unload_plugins(unsigned int dev)
 int
 gw_device_add(unsigned int dev)
 {
-	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTTP)) != 0) {
 		return -1;
 	}
 
@@ -109,7 +109,7 @@ gw_device_add(unsigned int dev)
 int
 gw_device_remove(unsigned int dev)
 {
-	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTML)) != 0) {
+	if ((dev & ~(GW_DEV_OSD|GW_DEV_HTTP)) != 0) {
 		return -1;
 	}
 
@@ -167,8 +167,8 @@ gw_shutdown(void)
 int
 gw_output(void)
 {
-	if (current & GW_DEV_HTML)
-		html->generate(fileno(stdout));
+	if (current & GW_DEV_HTTP)
+		http->generate();
 
 	if (current & GW_DEV_OSD)
 		osd->generate(root);

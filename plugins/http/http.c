@@ -32,6 +32,7 @@
 #include <mvp_string.h>
 #include <plugin.h>
 #include <plugin/html.h>
+#include <plugin/http.h>
 
 #include "http_local.h"
 
@@ -67,6 +68,10 @@ static int httpd_fd = -1;
 static plugin_html_t *html;
 
 static char *httpd_server;
+
+static int pipefds[2];
+
+static volatile int waiting;
 
 static httpd_req_t*
 resp_header(int fd)
@@ -407,6 +412,87 @@ httpd_header(int fd, int code)
 	write(fd, "\r\n\r\n", 4);
 }
 
+static unsigned int
+get_state(char *url)
+{
+	char *p;
+	int ret = 0;
+
+	if ((p=strstr(url, "&state=")) != NULL) {
+		p += 7;
+		ret = strtoul(p, NULL, 0);
+	}
+
+	return ret;
+}
+
+static unsigned int
+get_menu(char *url)
+{
+	char *p;
+	int ret = 0;
+
+	if ((p=strstr(url, "?menu=")) != NULL) {
+		p += 6;
+		ret = strtoul(p, NULL, 0);
+	}
+
+	return ret;
+}
+
+static unsigned int
+get_key(char *url)
+{
+	char *p;
+	int ret = 0;
+
+	if ((p=strstr(url, "&key=")) != NULL) {
+		p += 5;
+		ret = strtoul(p, NULL, 0);
+	}
+
+	return ret;
+}
+
+static char*
+get_page(char *url)
+{
+	char *u, *p;
+
+	if ((u=strdup(url)) == NULL) {
+		return NULL;
+	}
+
+	if ((p=strchr(u, '?')) != NULL) {
+		*p = '\0';
+	}
+
+	return u;
+}
+
+static int
+send_command(int fd, unsigned int menu, unsigned int key, unsigned int state)
+{
+	plugin_http_cmd_t *cmd;
+	unsigned int addr;
+
+	if ((cmd=(plugin_http_cmd_t*)malloc(sizeof(*cmd))) == NULL) {
+		return -1;
+	}
+
+	cmd->menu = (gw_menu_t*)menu;
+	cmd->key = (void*)key;
+	cmd->fd = fd;
+
+	printf("COMMAND at 0x%.8x: 0x%.8x 0x%.8x %d\n", state, menu, key, fd);
+
+	addr = (unsigned int)cmd;
+
+	write(pipefds[1], &addr, sizeof(addr));
+
+	return 0;
+}
+
 static void*
 httpd_thread(void *arg)
 {
@@ -463,7 +549,42 @@ httpd_thread(void *arg)
 				}
 				printf("received connection...\n");
 				if ((req=resp_header(fd)) != NULL) {
-					if (strcmp(req->path, "/") == 0) {
+					unsigned int state;
+					unsigned int menu;
+					unsigned int key;
+					char *page;
+
+					state = get_state(req->path);
+					menu = get_menu(req->path);
+					key = get_key(req->path);
+					page = get_page(req->path);
+
+					if (page == NULL) {
+						httpd_header(fd, 404);
+						html->notfound(fd, req->path,
+							       HTTP_PORT);
+					} else if (state &&
+						   (state != html->get_state())) {
+						printf("=== REGENERATE ===\n");
+						httpd_header(fd, 200);
+						html->generate(fd);
+					} else if ((strcmp(page, "/osd.html") == 0) &&
+						   (state == html->get_state())) {
+						printf("== FOLLOW LINK ==\n");
+						if (send_command(fd, menu,
+								 key,
+								 state) == 0) {
+							waiting = fd;
+							fd = -1;
+						} else {
+							httpd_header(fd, 404);
+							html->notfound(fd,
+								       req->path,
+								       HTTP_PORT);
+						}
+					} else if ((strcmp(page, "/") == 0) ||
+						   (strcmp(page, "/osd.html") == 0)) {
+						printf("=== REGENERATE ===\n");
 						httpd_header(fd, 200);
 						html->generate(fd);
 					} else if (strcmp(req->path,
@@ -472,9 +593,13 @@ httpd_thread(void *arg)
 						html->css(fd);
 					} else {
 						httpd_header(fd, 404);
-						printf("PATH: %s\n", req->path);
+						html->notfound(fd, req->path,
+							       HTTP_PORT);
 
 					}
+
+					if (page)
+						free(page);
 				}
 				close(fd);
 			}
@@ -485,10 +610,46 @@ httpd_thread(void *arg)
 	return NULL;
 }
 
+static int
+http_generate(void)
+{
+	if (waiting) {
+		int fd = waiting;
+		waiting = 0;
+		httpd_header(fd, 200);
+		html->generate(fd);
+		close(fd);
+	}
+
+	return 0;
+}
+
+static int
+http_update_widget(gw_t *widget)
+{
+	html->update_widget(widget);
+
+	return 0;
+}
+
+static int
+http_input_fd(void)
+{
+	return pipefds[0];
+}
+
+static plugin_http_t http = {
+	.generate = http_generate,
+	.update_widget = http_update_widget,
+	.input_fd = http_input_fd,
+};
+
 static void*
 init_http(void)
 {
 	pthread_attr_t attr;
+
+	pipe(pipefds);
 
 	if ((html=plugin_load("html")) == NULL) {
 		return NULL;
@@ -502,7 +663,7 @@ init_http(void)
 
 	printf("HTTP plug-in registered!\n");
 
-	return (void*)1;
+	return (void*)&http;
 }
 
 static int
@@ -518,6 +679,9 @@ release_http(void)
 
 	close(httpd_fd);
 	httpd_fd = -1;
+
+	close(pipefds[0]);
+	close(pipefds[1]);
 
 	plugin_unload("html");
 

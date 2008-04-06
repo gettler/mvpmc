@@ -26,7 +26,9 @@
 typedef struct {
 	int (*generate)(int);
 	int (*css)(int);
+	int (*notfound)(int, char*, int);
 	int (*update_widget)(gw_t*);
+	unsigned int (*get_state)(void);
 } plugin_html_t;
 
 #endif /* PLUGIN_HTML_H */

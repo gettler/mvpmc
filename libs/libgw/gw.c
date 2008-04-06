@@ -236,6 +236,7 @@ input(int c)
 	switch (focus->type) {
 	case GW_TYPE_MENU:
 		printf("Add input to menu...\n");
+		http->update_widget(NULL);
 		ret = gw_menu_input(focus, c);
 		break;
 	case GW_TYPE_TEXT:
@@ -252,16 +253,50 @@ input(int c)
 	}
 }
 
+static void
+command(plugin_http_cmd_t *cmd)
+{
+	int ret = -1;
+	int i = 0;
+	gw_menu_t *data;
+
+	if (focus == NULL) {
+		printf("command: no widget focus!\n");
+		return;
+	}
+
+	data = cmd->menu;
+
+	while (i < data->n) {
+		if (data->items[i]->hilited) {
+			data->items[i]->hilited = false;
+		}
+		if (data->items[i]->key == cmd->key) {
+			data->items[i]->hilited = true;
+		}
+		i++;
+	}
+
+	http->update_widget(NULL);
+	ret = gw_menu_input(focus, INPUT_CMD_SELECT);
+
+	if (ret == 0) {
+		mvp_atomic_inc(&events);
+	}
+}
+
 int
 gw_loop(struct timeval *to)
 {
 	int c;
-	int fd;
+	unsigned int addr;
+	int fdo, fdh, fd;
 	fd_set fds;
 
-	fd = osd->input_fd();
+	fdo = osd->input_fd();
+	fdh = http->input_fd();
 
-	printf("input fd %d\n", fd);
+	fd = (fdo > fdh) ? fdo : fdh;
 
 	while (1) {
 		/*
@@ -277,12 +312,18 @@ gw_loop(struct timeval *to)
 		 * Block on all file descriptors for new events.
 		 */
 		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
+		FD_SET(fdo, &fds);
+		FD_SET(fdh, &fds);
 		if (select(fd+1, &fds, NULL, NULL, NULL) > 0) {
-			if (FD_ISSET(fd, &fds)) {
+			if (FD_ISSET(fdo, &fds)) {
 				c = osd->input_read();
 				printf("key pressed: 0x%x!\n", c);
 				input(c);
+			}
+			if (FD_ISSET(fdh, &fds)) {
+				printf("http input!\n");
+				read(fdh, &addr, sizeof(addr));
+				command((plugin_http_cmd_t*)addr);
 			}
 		}
 	}
@@ -332,8 +373,8 @@ update(gw_t *widget)
 	if (osd && osd->update_widget) {
 		osd->update_widget(widget);
 	}
-	if (html && html->update_widget) {
-		html->update_widget(widget);
+	if (http && http->update_widget) {
+		http->update_widget(widget);
 	}
 
 	return 0;

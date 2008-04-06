@@ -55,6 +55,33 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 	"a:hover { background: green; color: white; }\n" \
 	".title { background: blue; color: white; }\n"
 
+#define NOT_FOUND_HEADER \
+	"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">" \
+	"<html><head>" \
+	"<title>404 Not Found</title>" \
+	"</head><body>" \
+	"<h1>Not Found</h1>"
+
+#define NOT_FOUND_PATH \
+	"<p>The requested URL %s was not found on this server.</p>" \
+	"<hr>"
+
+#define NOT_FOUND_TAIL \
+	"<address>mvpmc (%s) Server at %s Port %d</address>" \
+	"</body></html>"
+
+#if defined(MVPMC_MEDIAMVP)
+#define PLATFORM	"MediaMVP"
+#elif defined(MVPMC_NMT)
+#define PLATFORM	"Networked Media Tank"
+#elif defined(MVPMC_MG35)
+#define PLATFORM	"Mediagate MG-35"
+#elif defined(MVPMC_HOST)
+#define PLATFORM	"host"
+#else
+#error unknown platform
+#endif
+
 #define WRITE(fd,buf,len) \
 	if (full_write(fd, buf, len) < 0) { \
 		goto err; \
@@ -84,6 +111,9 @@ static struct html_output_s {
 static char *header = HTML_HEADER;
 static char *footer = HTML_FOOTER;
 static char *css = CSS_DEFAULT;
+static char *nf_header = NOT_FOUND_HEADER;
+
+static unsigned int state;
 
 static int
 full_write(int fd, char *buf, int len)
@@ -151,28 +181,31 @@ html_paragraph(int fd, char *label, char *text, int level)
 }
 
 static int
-html_li(int fd, char *label, char *text, int level)
+html_li(int fd, char *label, char *text, int level, gw_menu_t *gw, void *key)
 {
 	char *head1 = "<li><a class=\"";
-	char *head2 = "\" href=\"/osd.html?link=";
-	char *head3 = "&state=";
-	char *head4 = "\">";
+	char *head2 = "\" href=\"/osd.html?";
+	char *head3 = "menu=";
+	char *head4 = "&key=";
+	char *head5 = "&state=";
+	char *head6 = "\">";
 	char *foot = "</a></li>\n";
-	char state[16];
-
-	/*
-	 * XXX: need to maintain an interface state?
-	 */
-	snprintf(state, sizeof(state), "0x%.8x", 2545452);
+	char str[16];
 
 	LEVEL();
 	WRITE(fd, head1, strlen(head1));
 	WRITE(fd, label, strlen(label));
 	WRITE(fd, head2, strlen(head2));
-	WRITE(fd, text, strlen(text));
 	WRITE(fd, head3, strlen(head3));
-	WRITE(fd, state, strlen(state));
+	snprintf(str, sizeof(str), "0x%.8x", (unsigned int)gw);
+	WRITE(fd, str, strlen(str));
 	WRITE(fd, head4, strlen(head4));
+	snprintf(str, sizeof(str), "0x%.8x", (unsigned int)key);
+	WRITE(fd, str, strlen(str));
+	WRITE(fd, head5, strlen(head5));
+	snprintf(str, sizeof(str), "0x%.8x", state);
+	WRITE(fd, str, strlen(str));
+	WRITE(fd, head6, strlen(head6));
 	
 	if (text) {
 		WRITE(fd, text, strlen(text));
@@ -257,8 +290,9 @@ html_generate_menu(int fd, gw_t *widget, int level)
 		WRITE(fd, head, strlen(head));
 
 		for (i=0; i<data->n; i++) {
-			if (html_li(fd, "link",
-				    data->items[i]->text, level+1) < 0) {
+			void *key = data->items[i]->key;
+			if (html_li(fd, "link", data->items[i]->text,
+				    level+1, data, key) < 0) {
 				goto err;
 			}
 		}
@@ -344,15 +378,78 @@ html_default_css(int fd)
 	return 0;
 }
 
+static int
+html_notfound(int fd, char *path, int port)
+{
+	char *str = NULL;
+	int ret = -1;
+	int len = 8 * 1024;
+	char host[32];
+
+	gethostname(host, sizeof(host));
+
+	if ((str=malloc(len)) == NULL) {
+		goto err;
+	}
+
+	if (full_write(fd, nf_header, strlen(nf_header)) < 0) {
+		goto err;
+	}
+
+	snprintf(str, len, NOT_FOUND_PATH, path);
+	if (full_write(fd, str, strlen(str)) < 0) {
+		goto err;
+	}
+
+	snprintf(str, len, NOT_FOUND_TAIL, PLATFORM, host, port);
+	if (full_write(fd, str, strlen(str)) < 0) {
+		goto err;
+	}
+
+	ret = 0;
+
+ err:
+	if (str)
+		free(str);
+
+	return ret;
+}
+
+static int
+html_update_widget(gw_t *widget)
+{
+	state++;
+
+	if (state == 0)
+		state++;
+
+	printf("STATE: 0x%.8x\n", state);
+
+	return 0;
+}
+
+static unsigned int
+html_get_state(void)
+{
+	printf("CURRENT STATE: 0x%.8x\n", state);
+
+	return state;
+}
+
 static plugin_html_t html = {
 	.generate = html_generate,
 	.css = html_default_css,
+	.notfound = html_notfound,
+	.update_widget = html_update_widget,
+	.get_state = html_get_state,
 };
 
 static void*
 init_html(void)
 {
 	printf("HTML plug-in registered!\n");
+
+	state = rand();
 
 	return (void*)&html;
 }

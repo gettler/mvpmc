@@ -41,6 +41,7 @@ start_mvpmc() {
     sleep 2
     export LD_LIBRARY_PATH=$ROOT/lib
     export PLUGIN_PATH=$ROOT/usr/share/mvpmc/plugins
+    export EXIT_TO_GAYA=1
     mvpmc > $ROOT/mvpmc.out 2>&1
     exit 0
 }

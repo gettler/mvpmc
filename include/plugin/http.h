@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,25 +17,22 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef GW_LOCAL_H
-#define GW_LOCAL_H
+#ifndef PLUGIN_HTTP_H
+#define PLUGIN_HTTP_H
 
+#include <gw.h>
 #include <plugin/gw.h>
-#include <plugin/osd.h>
-#include <plugin/http.h>
 
-#define root		__gw_root
-#define commands	__gw_commands
-#define osd		__gw_osd
-#define http		__gw_http
-#define update		__gw_update
-#define focus_input	__gw_focus_input
+typedef struct {
+	int (*generate)(void);
+	int (*update_widget)(gw_t*);
+	int (*input_fd)(void);
+} plugin_http_t;
 
-extern gw_t *root;
-extern plugin_osd_t *osd;
-extern plugin_http_t *http;
-extern gw_cmd_t focus_input;
+typedef struct {
+	gw_menu_t *menu;
+	void *key;
+	int fd;
+} plugin_http_cmd_t;
 
-extern int update(gw_t *widget);
-
-#endif /* GW_LOCAL_H */
+#endif /* PLUGIN_HTTP_H */

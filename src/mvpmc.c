@@ -125,7 +125,7 @@ do_reboot(gw_t *widget, char *text, void *key)
 
 	return 0;
 }
-#endif
+#endif /* MVPMC_MEDIAMVP || MVPMC_NMT */
 
 #if defined(MVPMC_NMT)
 static int
@@ -134,11 +134,15 @@ do_gaya(gw_t *widget, char *text, void *key)
 	char path[] = "/bin/gaya";
 	pid_t parent = getpid();
 
+	sync();
+
 	switch (fork()) {
 	case 0:
 		while (kill(parent, 0) != -1) {
 			usleep(1000);
 		}
+		unsetenv("LD_LIBRARY_PATH");
+		unsetenv("PATH");
 		execl(path, path, NULL);
 		exit(-1);
 		break;
@@ -152,7 +156,7 @@ do_gaya(gw_t *widget, char *text, void *key)
 
 	return -1;
 }
-#endif
+#endif /* MVPMC_NMT */
 
 static int
 do_exit(gw_t *widget, char *text, void *key)
@@ -208,6 +212,9 @@ gui_start(void *arg)
 	gw_t *splash;
 	gw_t *text;
 	gw_t *root;
+#if defined(MVPMC_NMT)
+	char *gaya = getenv("EXIT_TO_GAYA");
+#endif
 
 	root = gw_root();
 
@@ -239,12 +246,19 @@ gui_start(void *arg)
 	gw_menu_title_set(menu, "mvpmc");
 	gw_menu_item_add(menu, "File Browser", (void*)0, do_fb, NULL);
 	gw_menu_item_add(menu, "About", (void*)1, do_about, NULL);
+#if defined(MVPMC_NMT)
+	if (gaya) {
+		gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
+		gw_menu_item_add(menu, "Exit to Gaya", (void*)4, do_gaya, NULL);
+	} else {
+		gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
+		gw_menu_item_add(menu, "Start Gaya", (void*)4, do_gaya, NULL);
+	}
+#else
 	gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
+#endif
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 	gw_menu_item_add(menu, "Reboot", (void*)3, do_reboot, NULL);
-#endif
-#if defined(MVPMC_NMT)
-	gw_menu_item_add(menu, "Gaya", (void*)4, do_gaya, NULL);
 #endif
 
 	gw_unmap(splash);
@@ -342,12 +356,12 @@ mvpmc_main(int argc, char **argv)
 		exit(1);
 	}
 
-	printf("gw initialized\n");
-
-	if (plugin_load("http") == NULL) {
-		fprintf(stderr, "failed to load http plug-in\n");
+	if (gw_device_add(GW_DEV_HTTP) < 0) {
+		fprintf(stderr, "failed to initialize HTTP!\n");
 		exit(1);
 	}
+
+	printf("gw initialized\n");
 
 	gui_start(NULL);
 

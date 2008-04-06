@@ -34,7 +34,7 @@ typedef enum {
 typedef struct gw_s gw_t;
 
 #define GW_DEV_OSD	0x0001
-#define GW_DEV_HTML	0x0002
+#define GW_DEV_HTTP	0x0002
 #define GW_DEV_VFD	0x0004
 
 typedef enum {
