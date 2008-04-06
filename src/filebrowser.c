@@ -81,6 +81,29 @@ select_dir(gw_t *widget, char *text, void *key)
 
 	printf("Select dir: '%s'\n", text);
 
+#if defined(MVPMC_NMT)
+	char *dvd_path;
+	extern int play_dvd(char*, char*);
+
+	if ((dvd_path=malloc(strlen(cwd)+strlen(text)+32)) != NULL) {
+		sprintf(dvd_path, "%s/%s/VIDEO_TS/VIDEO_TS.IFO", cwd, text);
+		if (access(dvd_path, R_OK) == 0) {
+			free(dvd_path);
+			printf("playing dvd...\n");
+			play_dvd(cwd, text);
+			return 0;
+		}
+		sprintf(dvd_path, "%s/%s/video_ts/video_ts.ifo", cwd, text);
+		if (access(dvd_path, R_OK) == 0) {
+			free(dvd_path);
+			printf("playing dvd...\n");
+			play_dvd(cwd, text);
+			return 0;
+		}
+		free(dvd_path);
+	}
+#endif /* MVPMC_NMT */
+
 	gw_menu_clear(fb);
 
 	buf = alloca(strlen(cwd) + strlen(text) + 1);

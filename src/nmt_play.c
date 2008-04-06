@@ -179,3 +179,30 @@ play_file(char *cwd, char *file)
 
 	return 0;
 }
+
+int
+play_dvd(char *cwd, char *file)
+{
+	extern void fb_redisplay(void);
+	char cmd[1024];
+	pid_t child;
+
+	gw_device_remove(GW_DEV_OSD);
+
+	snprintf(cmd,sizeof(cmd),
+		 "/bin/amp_test %s/%s/ --dfb:quiet -osd32 -bgnd:/bin/logo.jpg",
+		 cwd, file);
+
+	if ((child=fork()) == 0) {
+		system(cmd);
+		_exit(0);
+	} else {
+		waitpid(child, NULL, 0);
+	}
+
+	gw_device_add(GW_DEV_OSD);
+
+	fb_redisplay();
+
+	return 0;
+}
