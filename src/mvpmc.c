@@ -127,6 +127,33 @@ do_reboot(gw_t *widget, char *text, void *key)
 }
 #endif
 
+#if defined(MVPMC_NMT)
+static int
+do_gaya(gw_t *widget, char *text, void *key)
+{
+	char path[] = "/bin/gaya";
+	pid_t parent = getpid();
+
+	switch (fork()) {
+	case 0:
+		while (kill(parent, 0) != -1) {
+			usleep(1000);
+		}
+		execl(path, path, NULL);
+		exit(-1);
+		break;
+	case -1:
+		perror("fork()");
+		break;
+	default:
+		exit(0);
+		break;
+	}
+
+	return -1;
+}
+#endif
+
 static int
 do_exit(gw_t *widget, char *text, void *key)
 {
@@ -215,6 +242,9 @@ gui_start(void *arg)
 	gw_menu_item_add(menu, "Exit", (void*)2, do_exit, NULL);
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 	gw_menu_item_add(menu, "Reboot", (void*)3, do_reboot, NULL);
+#endif
+#if defined(MVPMC_NMT)
+	gw_menu_item_add(menu, "Gaya", (void*)4, do_gaya, NULL);
 #endif
 
 	gw_unmap(splash);
