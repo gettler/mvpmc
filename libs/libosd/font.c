@@ -332,7 +332,7 @@ get_default_font(void)
 #elif defined(MVPMC_MG35)
 			default_font = osd_load_font("/cdrom/init/helvB18.pcf");
 #elif defined(MVPMC_HOST)
-			default_font = osd_load_font("dongle/filesystem/tree/etc/helvB18.pcf");
+			default_font = osd_load_font("dongle/filesystem/tree/mvp/etc/helvB18.pcf");
 #endif
 		} else {
 			default_font = osd_load_font(font);
