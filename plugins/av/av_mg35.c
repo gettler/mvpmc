@@ -36,16 +36,102 @@
 
 #include "av_local.h"
 
+static int
+is_audio(char *file)
+{
+	char *wc[] = { ".mp3", NULL };
+	int i = 0;
+
+	while (wc[i] != NULL) {
+		if ((strlen(file) >= strlen(wc[i])) &&
+		    (strcasecmp(file+strlen(file)-strlen(wc[i]), wc[i]) == 0))
+			return 1;
+		i++;
+	}
+
+	return 0;
+}
+
+static int
+is_video(char *file)
+{
+	char *wc[] = { ".mpg", ".mpeg", NULL };
+	int i = 0;
+
+	while (wc[i] != NULL) {
+		if ((strlen(file) >= strlen(wc[i])) &&
+		    (strcasecmp(file+strlen(file)-strlen(wc[i]), wc[i]) == 0))
+			return 1;
+		i++;
+	}
+
+	return 0;
+}
+
 int
 arch_init(void)
 {
 	return 0;
 }
 
+static int
+play_audio_file(char *path)
+{
+	extern void fb_redisplay(void);
+	char cmd[256];
+
+	snprintf(cmd,sizeof(cmd), "/fileplayer.bin MP3 '%s'", path);
+
+	printf("play MP3: '%s'\n", cmd);
+
+	if (vfork() == 0) {
+		system(cmd);
+		_exit(0);
+	} else {
+		wait(NULL);
+	}
+
+	fb_redisplay();
+
+	return 0;
+}
+
+static int
+play_video_file(char *path)
+{
+	extern void fb_redisplay(void);
+	char cmd[256];
+
+	snprintf(cmd,sizeof(cmd), "/mpegplayer.bin '%s'", path);
+
+	printf("play MPEG: '%s'\n", cmd);
+
+	if (vfork() == 0) {
+		system(cmd);
+		_exit(0);
+	} else {
+		wait(NULL);
+	}
+
+	fb_redisplay();
+
+	return 0;
+}
+
 int
 do_play_file(char *path)
 {
-	return -1;
+	printf("play file...\n");
+
+	if (is_audio(path)) {
+		play_audio_file(path);
+	} else if (is_video(path)) {
+		play_video_file(path);
+	} else {
+		return -1;
+	}
+
+	return 0;
 }
 
 int

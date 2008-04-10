@@ -66,7 +66,7 @@ else:
 
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
-		    'mvpmc_osd.plugin' ]
+		    'mvpmc_osd.plugin', 'mvpmc_av.plugin' ]
 	libs = [ 'gw', 'refmem', pt, 'osd', 'input', 'freetype' ]
 	linkflags = '-static'
 else:
@@ -86,6 +86,7 @@ if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_html.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_http.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_osd.plugin.a')
+	env.Depends(mvpmc, libdir + '/libmvpmc_av.plugin.a')
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])

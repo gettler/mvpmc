@@ -67,6 +67,8 @@ extern void *plugin_init_http(void);
 extern int plugin_release_http(void);
 extern void *plugin_init_osd(void);
 extern int plugin_release_osd(void);
+extern void *plugin_init_av(void);
+extern int plugin_release_av(void);
 #endif /* !PLUGIN_SUPPORT */
 
 static builtin_t builtins[] = {
@@ -74,6 +76,7 @@ static builtin_t builtins[] = {
 	{ "html", plugin_init_html, plugin_release_html },
 	{ "http", plugin_init_http, plugin_release_http },
 	{ "osd", plugin_init_osd, plugin_release_osd },
+	{ "av", plugin_init_av, plugin_release_av },
 #endif /* !PLUGIN_SUPPORT */
 	{ NULL, NULL, NULL }
 };
