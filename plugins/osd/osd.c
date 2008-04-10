@@ -76,7 +76,11 @@ widget_draw(gw_t *widget)
 		list = cur->child;
 		while (list) {
 			widget_draw(list->gw);
+#if 0
 			list = list->next;
+#else
+			list = NULL;
+#endif
 		}
 
 		cur = cur->next;
@@ -164,10 +168,11 @@ update_list(gw_t *widget, bool map, osd_widget_t **list)
 {
 	osd_widget_t *w;
 
-	if (widget == NULL)
+	if ((widget == NULL) || (widget->updating))
 		return;
 
 	ref_hold(widget);
+	widget->updating = true;
 
 	w = lookup(widget);
 	w->visible = map;
@@ -182,12 +187,17 @@ update_list(gw_t *widget, bool map, osd_widget_t **list)
 			       __FUNCTION__, child, child->name);
 			list_add(&w->child, child, NULL);
 			update_list(child, map, &w->child);
+#if 0
 			child = child->next;
+#else
+			child = NULL;
+#endif
 		}
 	}
 
 	list_add(list, widget, w);
 
+	widget->updating = false;
 	ref_release(widget);
 }
 

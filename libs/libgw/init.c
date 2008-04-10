@@ -35,7 +35,7 @@ gw_t *commands = NULL;
 plugin_osd_t *osd = NULL;
 plugin_http_t *http = NULL;
 
-static unsigned int current = 0;
+static volatile unsigned int current = 0;
 
 gw_t*
 gw_root(void)
@@ -97,11 +97,21 @@ gw_device_add(unsigned int dev)
 	}
 
 	if (gw_load_plugins(dev) < 0) {
-		fprintf(stderr, "failed to load OSD plugin!\n");
 		return -1;
 	}
 
 	current |= dev;
+
+	if (dev & GW_DEV_OSD) {
+		gw_t *widget = root;
+
+		while (widget) {
+			if (widget->realized) {
+				osd->update_widget(widget);
+			}
+			widget = widget->next;
+		}
+	}
 
 	return 0;
 }

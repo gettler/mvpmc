@@ -147,6 +147,9 @@ gw_create(gw_type_t type, gw_t *parent)
 		gw->event_mask = 0;
 		gw->parent = parent;
 
+		gw->next = root->next;
+		root->next = gw;
+
 		if (add_child(parent, gw) < 0) {
 			ref_release(gw);
 			gw = NULL;
@@ -260,6 +263,8 @@ command(plugin_http_cmd_t *cmd)
 	int i = 0;
 	gw_menu_t *data;
 
+	printf("HTTP: command received\n");
+
 	if (focus == NULL) {
 		printf("command: no widget focus!\n");
 		return;
@@ -290,15 +295,12 @@ gw_loop(struct timeval *to)
 {
 	int c;
 	unsigned int addr;
-	int fdo, fdh, fd;
+	int fd;
 	fd_set fds;
 
-	fdo = osd->input_fd();
-	fdh = http->input_fd();
-
-	fd = (fdo > fdh) ? fdo : fdh;
-
 	while (1) {
+		int fdo = -1, fdh = -1;
+
 		/*
 		 * Handle outstanding events.
 		 */
@@ -308,23 +310,35 @@ gw_loop(struct timeval *to)
 			continue;
 		}
 
+		if (osd)
+			fdo = osd->input_fd();
+		if (http)
+			fdh = http->input_fd();
+		fd = (fdo > fdh) ? fdo : fdh;
+
 		/*
 		 * Block on all file descriptors for new events.
 		 */
 		FD_ZERO(&fds);
-		FD_SET(fdo, &fds);
-		FD_SET(fdh, &fds);
+		if (fdo >= 0)
+			FD_SET(fdo, &fds);
+		if (fdh >= 0)
+			FD_SET(fdh, &fds);
 		if (select(fd+1, &fds, NULL, NULL, NULL) > 0) {
-			if (FD_ISSET(fdo, &fds)) {
+			if (osd && (fdo >= 0) && FD_ISSET(fdo, &fds)) {
 				c = osd->input_read();
 				printf("key pressed: 0x%x!\n", c);
 				input(c);
 			}
-			if (FD_ISSET(fdh, &fds)) {
+			if (http && (fdh >= 0) && FD_ISSET(fdh, &fds)) {
 				printf("http input!\n");
 				read(fdh, &addr, sizeof(addr));
 				command((plugin_http_cmd_t*)addr);
 			}
+		}
+
+		if (fd == -1) {
+			sleep(1);
 		}
 	}
 

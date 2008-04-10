@@ -1,0 +1,41 @@
+#!/usr/bin/python
+#
+# audio/video plugin
+#
+
+Import ('env')
+
+dir = env['BUILD_DIR']
+target = env['TARG']
+libdir = env['INSTLIBDIR']
+ldflags = env['LDFLAGS']
+linkmode = env['LINKMODE']
+bindir = env['INSTBINDIR']
+
+if linkmode == 'dynamic':
+	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
+	
+common = [ 'av.c' ]
+
+if target == 'host':
+	src = [ common, 'av_host.c' ]
+elif target == 'mg35':
+	src = [ common, 'av_mg35.c' ]
+elif target == 'nmt':
+	src = [ common, 'av_nmt.c' ]
+elif target == 'mvp':
+	src = [ common, 'av_mvp.c' ]
+
+static = env.StaticLibrary('mvpmc_av.plugin.a', src,
+                           CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                           LINKFLAGS = ldflags)
+
+if linkmode == 'dynamic':
+    shared = env.SharedLibrary('mvpmc_av.plugin', src,
+                               CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
+                               LINKFLAGS = ldflags)
+    inst = env.Install(libdir, [ static, shared ])
+else:
+    inst = env.Install(libdir, [ static ])
+
+Return('inst')

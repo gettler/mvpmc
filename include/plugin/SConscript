@@ -13,7 +13,7 @@ toplevel = mvp['TOPLEVEL']
 
 incdir = toplevel + '/dongle/install/' + target + '/include/plugin'
 
-headers = [ 'gw.h', 'html.h', 'http.h', 'osd.h' ]
+headers = [ 'av.h', 'gw.h', 'html.h', 'http.h', 'osd.h' ]
 
 inst = env.Install(incdir, headers)
 

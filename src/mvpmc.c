@@ -66,6 +66,7 @@
 
 #include <plugin.h>
 #include <gw.h>
+#include <plugin/av.h>
 
 char *version = NULL;
 char build_info[256];
@@ -106,6 +107,8 @@ static struct option opts[] = {
 
 static gw_t *about;
 static gw_t *menu;
+
+plugin_av_t *av;
 
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 #include <sys/reboot.h>
@@ -364,6 +367,11 @@ mvpmc_main(int argc, char **argv)
 	printf("gw initialized\n");
 
 	gui_start(NULL);
+
+	if ((av=plugin_load("av")) == NULL) {
+		fprintf(stderr, "failed to initialize Audio/Video!\n");
+		exit(1);
+	}
 
 	gw_loop(NULL);
     

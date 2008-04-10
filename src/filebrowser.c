@@ -36,6 +36,7 @@
 #include <mvp_demux.h>
 #include <mvp_refmem.h>
 #include <gw.h>
+#include <plugin/av.h>
 
 #if defined(_LARGEFILE_SOURCE)
 #define STAT stat64
@@ -60,6 +61,8 @@ static int file_count = 0;
 
 static void fb_exit(void);
 
+extern plugin_av_t *av;
+
 int
 fb_init(gw_t *root)
 {
@@ -76,33 +79,20 @@ static int
 select_dir(gw_t *widget, char *text, void *key)
 {
 	char *buf;
+	char *dvd_path;
 	char *dir = ref_hold(text);
 	extern void fb_display(void);
 
 	printf("Select dir: '%s'\n", text);
 
-#if defined(MVPMC_NMT)
-	char *dvd_path;
-	extern int play_dvd(char*, char*);
-
 	if ((dvd_path=malloc(strlen(cwd)+strlen(text)+32)) != NULL) {
-		sprintf(dvd_path, "%s/%s/VIDEO_TS/VIDEO_TS.IFO", cwd, text);
-		if (access(dvd_path, R_OK) == 0) {
+		sprintf(dvd_path, "%s/%s", cwd, text);
+		if (av->play_dvd(dvd_path) == 0) {
 			free(dvd_path);
-			printf("playing dvd...\n");
-			play_dvd(cwd, text);
-			return 0;
-		}
-		sprintf(dvd_path, "%s/%s/video_ts/video_ts.ifo", cwd, text);
-		if (access(dvd_path, R_OK) == 0) {
-			free(dvd_path);
-			printf("playing dvd...\n");
-			play_dvd(cwd, text);
 			return 0;
 		}
 		free(dvd_path);
 	}
-#endif /* MVPMC_NMT */
 
 	gw_menu_clear(fb);
 
@@ -125,15 +115,12 @@ select_dir(gw_t *widget, char *text, void *key)
 static int
 select_file(gw_t *widget, char *text, void *key)
 {
+	char path[1024];
+
 	printf("Select file: '%s'\n", text);
 
-#if defined(MVPMC_NMT)
-	extern int play_file(char*, char*);
-	play_file(cwd, text);
-#elif defined(MVPMC_MG35)
-	extern int play_file(char*, char*);
-	play_file(cwd, text);
-#endif
+	snprintf(path, sizeof(path), "%s/%s", cwd, text);
+	av->play_file(path);
 
 	return 0;
 }

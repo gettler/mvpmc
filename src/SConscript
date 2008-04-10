@@ -55,10 +55,10 @@ if target == 'mvp':
 common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version_%s.c' % target ]
 
 if target == 'mg35':
-	src = [ common, 'mg35_play.c' ]
+	src = [ common, ]
 	pt = 'pthread_nommu'
 elif target == 'nmt':
-	src = [ common, 'nmt_play.c' ]
+	src = [ common, ]
 	pt = 'pthread'
 else:
 	src = [ common ]

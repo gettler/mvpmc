@@ -104,6 +104,7 @@ struct gw_s {
 	gw_type_t type;
 	char *name;
 	bool realized;
+	bool updating;
 	struct gw_s *next;
 	struct gw_s *prev;
 	struct gw_s *parent;
