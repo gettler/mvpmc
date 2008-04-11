@@ -19,12 +19,16 @@ common = [ 'av.c' ]
 
 if target == 'host':
 	src = [ common, 'av_host.c' ]
+	libs = ''
 elif target == 'mg35':
 	src = [ common, 'av_mg35.c' ]
+	libs = ''
 elif target == 'nmt':
 	src = [ common, 'av_nmt.c' ]
+	libs = ''
 elif target == 'mvp':
 	src = [ common, 'av_mvp.c' ]
+	libs = libdir + '/libav.so'
 
 static = env.StaticLibrary('mvpmc_av.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
@@ -33,7 +37,7 @@ static = env.StaticLibrary('mvpmc_av.plugin.a', src,
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_av.plugin', src,
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                               LINKFLAGS = ldflags)
+                               LINKFLAGS = ldflags + ' ' + libs)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])

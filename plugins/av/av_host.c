@@ -47,8 +47,6 @@ do_play_file(char *path)
 {
 	pid_t pid;
 
-	info.playing = 1;
-
 	if ((pid=fork()) == 0) {
 		int i, max = getdtablesize();
 

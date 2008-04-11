@@ -52,7 +52,14 @@ av_play_file(char *path)
 		do_stop();
 	}
 
-	return do_play_file(path);
+	info.playing = 1;
+
+	if (do_play_file(path) < 0) {
+		info.playing = 0;
+		return -1;
+	}
+
+	return 0;
 }
 
 static int
@@ -84,6 +91,8 @@ av_play_dvd(char *path)
 static int
 av_stop(void)
 {
+	info.playing = 0;
+
 	return do_stop();
 }
 
