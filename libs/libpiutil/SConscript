@@ -10,7 +10,7 @@ target = env['TARG']
 libdir = env['INSTLIBDIR']
 bindir = env['INSTBINDIR']
 
-src = [ 'piutil.c' ]
+src = [ 'piutil.c', 'plugin.c' ]
 
 static = env.StaticLibrary('piutil', src, CPPPATH = [ env['INCDIR'], '.' ])
 

@@ -36,7 +36,7 @@ refmem = SConscript('librefmem/SConscript',
 if target == 'mg35':
     pt = env.SConscript('libpthread_nommu/SConscript',
                         build_dir='libpthread_nommu/'+dir, duplicate=0)
-    libs = [ osd, input, gw, refmem, av, pt ]
+    libs = [ osd, input, gw, refmem, av, pt, piutil ]
 else:
     libs = [ osd, input, gw, refmem, av, piutil ]
 

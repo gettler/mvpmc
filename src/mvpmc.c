@@ -296,7 +296,7 @@ mvpmc_main(int argc, char **argv)
 {
 	extern char compile_time[], version_number[], build_user[];
 	extern char git_revision[], git_diffs[];
-	extern int plugin_setup(void);
+	extern int do_plugin_setup(void);
 	int c, i;
 	int opt_index;
 	char *saved_argv[32];
@@ -344,7 +344,7 @@ mvpmc_main(int argc, char **argv)
 	/*
 	 * setup the plug-in loader
 	 */
-	if (plugin_setup() < 0) {
+	if (do_plugin_setup() < 0) {
 		fprintf(stderr, "failed to perform plug-in setup!\n");
 		exit(1);
 	}

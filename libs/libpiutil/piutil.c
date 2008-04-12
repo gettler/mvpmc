@@ -25,11 +25,13 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <dlfcn.h>
+#include <pthread.h>
 
 #include "plugin.h"
 
 static plugin_dl_t *shmaddr = NULL;
 static int shmid;
+static pthread_t thread;
 
 static void
 plugin_teardown(void)
@@ -70,12 +72,29 @@ plugin_shmem(int reset)
 	return 0;
 }
 
+static void*
+load_thread(void *arg)
+{
+	while (1) {
+		pause();
+	}
+
+	return NULL;
+}
+
 int
 pi_init(int reset)
 {
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 1024*64);
+
 	if (plugin_shmem(reset) < 0) {
 		return -1;
 	}
+
+	pthread_create(&thread, &attr, load_thread, NULL);
 
 	return 0;
 }

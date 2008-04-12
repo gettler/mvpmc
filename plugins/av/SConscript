@@ -32,7 +32,7 @@ elif target == 'mvp':
 
 static = env.StaticLibrary('mvpmc_av.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                           LINKFLAGS = ldflags)
+                           LINKFLAGS = ldflags + ' ' + libs)
 
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_av.plugin', src,
@@ -41,5 +41,10 @@ if linkmode == 'dynamic':
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])
+
+if target == 'mvp':
+	env.Depends(shared, libs)
+	env.Depends(static, libs)
+
 
 Return('inst')

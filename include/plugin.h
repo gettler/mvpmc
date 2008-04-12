@@ -66,4 +66,10 @@ typedef struct {
 	void *handle;
 } plugin_dl_t;
 
+typedef struct {
+	char *name;
+	void *(*init)(void);
+	int (*release)(void);
+} builtin_t;
+
 #endif /* MVPMC_PLUGIN_H */

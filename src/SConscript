@@ -52,32 +52,35 @@ if target == 'mvp':
                              LIBPATH = [ libdir ],
                              LINKFLAGS = [ '' ])
 
-common = [ 'filebrowser.c', 'mvpmc.c', 'plugin.c', 'version_%s.c' % target ]
+common = [ 'builtin.c', 'filebrowser.c', 'mvpmc.c', 'version_%s.c' % target ]
 
 if target == 'mg35':
-	src = [ common, ]
-	pt = 'pthread_nommu'
+	src = [ common ]
+	plibs = [ 'pthread_nommu' ]
 elif target == 'nmt':
-	src = [ common, ]
-	pt = 'pthread'
+	src = [ common ]
+	plibs = [ 'pthread' ]
+elif target == 'mvp':
+	src = [ common ]
+	plibs = [ 'av', 'pthread' ]
 else:
 	src = [ common ]
-	pt = 'pthread'
+	plibs = [ 'pthread' ]
 
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
 		    'mvpmc_osd.plugin', 'mvpmc_av.plugin' ]
-	libs = [ 'gw', 'refmem', pt, 'osd', 'input', 'freetype' ]
+	libs = [ 'gw', 'refmem', 'osd', 'input', 'freetype', 'piutil' ] + plibs
 	linkflags = '-static'
 else:
 	plugins = [ ]
-	libs = [ 'dl', 'gw', 'refmem', 'piutil', pt ]
+	libs = [ 'dl', 'gw', 'refmem', 'piutil' ] + plibs
 	linkflags = ''
 
 mvpmc = env.Program('mvpmc', src,
                     CPPPATH = [ env['INCDIR'], env['INSTINCDIR'],
                                 '.', '../include' ],
-                    LIBS = plugins + libs ,
+                    LIBS = plugins + libs,
                     LIBPATH = [ libdir ],
                     LINKFLAGS = ldflags + ' ' + linkflags + ' ' + gtkldflags)
 
@@ -87,6 +90,8 @@ if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_http.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_osd.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_av.plugin.a')
+	env.Depends(mvpmc, libdir + '/libosd.a')
+	env.Depends(mvpmc, libdir + '/libinput.a')
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])

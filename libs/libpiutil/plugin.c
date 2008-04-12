@@ -41,6 +41,8 @@ static int enabled = 1;
 static int enabled = 0;
 #endif
 
+static builtin_t *builtins;
+
 typedef struct {
 	char *name;
 	void *handle;
@@ -53,33 +55,6 @@ typedef struct {
 
 static plugin_data_t loaded[PLUGIN_MAX_LOAD];
 static int nload = 0;
-
-typedef struct {
-	char *name;
-	void *(*init)(void);
-	int (*release)(void);
-} builtin_t;
-
-#if !defined(PLUGIN_SUPPORT)
-extern void *plugin_init_html(void);
-extern int plugin_release_html(void);
-extern void *plugin_init_http(void);
-extern int plugin_release_http(void);
-extern void *plugin_init_osd(void);
-extern int plugin_release_osd(void);
-extern void *plugin_init_av(void);
-extern int plugin_release_av(void);
-#endif /* !PLUGIN_SUPPORT */
-
-static builtin_t builtins[] = {
-#if !defined(PLUGIN_SUPPORT)
-	{ "html", plugin_init_html, plugin_release_html },
-	{ "http", plugin_init_http, plugin_release_http },
-	{ "osd", plugin_init_osd, plugin_release_osd },
-	{ "av", plugin_init_av, plugin_release_av },
-#endif /* !PLUGIN_SUPPORT */
-	{ NULL, NULL, NULL }
-};
 
 #if defined(PLUGIN_SUPPORT)
 static void*
@@ -347,11 +322,12 @@ plugin_unload(char *name)
 }
 
 int
-plugin_setup(void)
+plugin_setup(builtin_t *bi, int n)
 {
+	builtins = bi;
+
 	printf("Plug-in setup: version %lu.%lu, %d builtins\n",
-	       PLUGIN_MAJOR(version), PLUGIN_MINOR(version),
-	       (int)(sizeof(builtins)/sizeof(builtins[0]))-1);
+	       PLUGIN_MAJOR(version), PLUGIN_MINOR(version), n);
 
 	if (!enabled) {
 		printf("Loadable plug-in support disabled\n");
