@@ -2,19 +2,19 @@
  *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <stdio.h>
@@ -28,6 +28,7 @@
 #include "plugin.h"
 #include "piutil.h"
 #include "mvp_atomic.h"
+#include "pi_local.h"
 
 #if defined(PLUGIN_SUPPORT)
 #include <dlfcn.h>
@@ -43,21 +44,8 @@ static int enabled = 0;
 
 static builtin_t *builtins;
 
-typedef struct {
-	char *name;
-	void *handle;
-	unsigned long *version;
-	void *(*init)(void);
-	int (*release)(void);
-	mvp_atomic_t refcnt;
-	void *reloc;
-} plugin_data_t;
-
-static plugin_data_t loaded[PLUGIN_MAX_LOAD];
-static int nload = 0;
-
 #if defined(PLUGIN_SUPPORT)
-static void*
+void*
 plugin_start(int n)
 {
 	void *reloc;
@@ -73,8 +61,7 @@ plugin_start(int n)
 	if ((reloc=loaded[n].init()) == NULL) {
 		dlclose(loaded[n].handle);
 		free(loaded[n].name);
-		memset(loaded+n, 0, sizeof(loaded[0]));
-		nload--;
+		memset((void*)(loaded+n), 0, sizeof(loaded[0]));
 		return NULL;
 	}
 
@@ -89,8 +76,7 @@ plugin_stop(int n)
 	if ((rc=loaded[n].release()) == 0) {
 		dlclose(loaded[n].handle);
 		free(loaded[n].name);
-		memset(loaded+n, 0, sizeof(loaded[0]));
-		nload--;
+		memset((void*)(loaded+n), 0, sizeof(loaded[0]));
 	}
 
 	return rc;
@@ -177,36 +163,12 @@ plugin_load_file(char *name)
 
  found:
 	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
-		if (loaded[i].name == NULL) {
-			void *handle;
-			void *(*dl_init)(void);
-			int (*dl_release)(void);
-			unsigned long *dl_ver;
-
-			if ((handle=dlopen(path, RTLD_LAZY)) != NULL) {
-				dl_init = dlsym(handle, "plugin_init");
-				dl_release = dlsym(handle, "plugin_release");
-				dl_ver = dlsym(handle, "plugin_version");
-
-				if ((dl_init == NULL) ||
-				    (dl_release == NULL) ||
-				    (dl_ver == NULL)) {
-					break;
-				}
-
-				loaded[i].name = strdup(name);
-				loaded[i].handle = handle;
-				loaded[i].init = dl_init;
-				loaded[i].release = dl_release;
-				loaded[i].version = dl_ver;
-				mvp_atomic_set(&(loaded[i].refcnt), 1);
-
-				nload++;
-
-				reloc = plugin_start(i);
-
-				loaded[i].reloc = reloc;
-			}
+		if (loaded[i].state == PLUGIN_UNUSED) {
+			loaded[i].state = PLUGIN_LOADING;
+			loaded[i].type = PI_TYPE_PLUGIN;
+			loaded[i].name = strdup(name);
+			loaded[i].path = strdup(path);
+			reloc = plugin_request(i);
 			break;
 		}
 	}
@@ -216,7 +178,7 @@ plugin_load_file(char *name)
 	return reloc;
 }
 #else
-static void*
+void*
 plugin_start(int n)
 {
 	void *reloc;
@@ -237,6 +199,7 @@ plugin_load_builtin(int n)
 
 	for (i=0; i<PLUGIN_MAX_LOAD; i++) {
 		if (loaded[i].name == NULL) {
+			loaded[i].state = PLUGIN_LOADING;
 			loaded[i].name = strdup(builtins[n].name);
 			loaded[i].init = builtins[n].init;
 			loaded[i].release = builtins[n].release;
@@ -244,12 +207,12 @@ plugin_load_builtin(int n)
 			/* Set refcnt to 2 to prevent unloading */
 			mvp_atomic_set(&(loaded[i].refcnt), 2);
 
-			nload++;
-
 			rc = plugin_start(i);
 			break;
 		}
 	}
+
+	printf("%s(): %d\n", __FUNCTION__, __LINE__);
 
 	return rc;
 }
@@ -284,7 +247,7 @@ plugin_load(char *name)
 	}
 
 #if defined(PLUGIN_SUPPORT)
-	if ((reloc == NULL) && (nload < PLUGIN_MAX_LOAD)) {
+	if (reloc == NULL) {
 		reloc = plugin_load_file(name);
 	}
 #endif /* PLUGIN_SUPPORT */
@@ -329,16 +292,14 @@ plugin_setup(builtin_t *bi, int n)
 	printf("Plug-in setup: version %lu.%lu, %d builtins\n",
 	       PLUGIN_MAJOR(version), PLUGIN_MINOR(version), n);
 
+	if (pi_init(1) < 0) {
+		return -1;
+	}
+
 	if (!enabled) {
 		printf("Loadable plug-in support disabled\n");
 		return 0;
 	}
-
-#if defined(PLUGIN_SUPPORT)
-	if (pi_init(1) < 0) {
-		return -1;
-	}
-#endif /* PLUGIN_SUPPORT */
 
 	return 0;
 }

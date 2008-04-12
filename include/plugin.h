@@ -23,7 +23,7 @@
 #include "mvp_atomic.h"
 
 #define PLUGIN_MAJOR_VER	0
-#define PLUGIN_MINOR_VER	3
+#define PLUGIN_MINOR_VER	4
 
 #define PLUGIN_MAJOR(x)		((x >> 16) & 0xffff)
 #define PLUGIN_MINOR(x)		(x & 0xffff)
@@ -39,7 +39,7 @@
 #define PLUGIN_MAX_LOAD		128
 
 /*
- * Symbols from the mvpmc application
+ * Symbols in libpiutil
  */
 extern void *plugin_load(char *name);
 extern int plugin_unload(char *name);
@@ -59,12 +59,6 @@ extern int plugin_release(void);
 #define PLUGIN_INIT(x)		void *plugin_##x(void) { return x(); }
 #define PLUGIN_RELEASE(x)	int plugin_##x(void) { return x(); }
 #endif /* !PLUGIN_SUPPORT */
-
-typedef struct {
-	char name[PLUGIN_NAME_MAX+1];
-	mvp_atomic_t ref;
-	void *handle;
-} plugin_dl_t;
 
 typedef struct {
 	char *name;
