@@ -49,7 +49,9 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 	"</html>\n"
 
 #define CSS_DEFAULT \
-	"body { background: black; color: white; }\n" \
+	"body { background: green; color: white; }\n" \
+	"#root { background: black; color: white; }\n" \
+	"#commands { background: white; color: red; }\n" \
 	"a { text-decoration: none; }\n" \
 	"a, a:link, a:visited, a:acted { color: white; }\n" \
 	"a:hover { background: green; color: white; }\n" \
@@ -345,6 +347,37 @@ html_generate_text(int fd, gw_t *widget, int level)
 }
 
 static int
+html_generate_commands(int fd)
+{
+	int i;
+	char *head = "<div id=\"commands\"><ul>\n";
+	char *cmd1 = "<li><a href=\"cmd.html?cmd=";
+	char *cmd2 = "\">";
+	char *cmd3 = "</a></li>\n";
+	char *foot = "</ul></div>\n";
+	char *cmd[] = {
+		"return",
+	};
+
+	WRITE(fd, head, strlen(head));
+
+	for (i=0; i<sizeof(cmd)/sizeof(cmd[0]); i++) {
+		WRITE(fd, cmd1, strlen(cmd1));
+		WRITE(fd, cmd[i], strlen(cmd[i]));
+		WRITE(fd, cmd2, strlen(cmd2));
+		WRITE(fd, cmd[i], strlen(cmd[i]));
+		WRITE(fd, cmd3, strlen(cmd3));
+	}
+
+	WRITE(fd, foot, strlen(foot));
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
 html_generate(int fd)
 {
 	gw_t *root;
@@ -358,6 +391,10 @@ html_generate(int fd)
 	}
 
 	if (html_generate_container(fd, root, 1) < 0) {
+		return -1;
+	}
+
+	if (html_generate_commands(fd) < 0) {
 		return -1;
 	}
 

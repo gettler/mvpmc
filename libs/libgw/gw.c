@@ -272,18 +272,23 @@ command(plugin_http_cmd_t *cmd)
 
 	data = cmd->menu;
 
-	while (i < data->n) {
-		if (data->items[i]->hilited) {
-			data->items[i]->hilited = false;
+	if (data) {
+		while (i < data->n) {
+			if (data->items[i]->hilited) {
+				data->items[i]->hilited = false;
+			}
+			if (data->items[i]->key == cmd->key) {
+				data->items[i]->hilited = true;
+			}
+			i++;
 		}
-		if (data->items[i]->key == cmd->key) {
-			data->items[i]->hilited = true;
-		}
-		i++;
-	}
 
-	http->update_widget(NULL);
-	ret = gw_menu_input(focus, INPUT_CMD_SELECT);
+		http->update_widget(NULL);
+		ret = gw_menu_input(focus, INPUT_CMD_SELECT);
+	} else {
+		http->update_widget(NULL);
+		ret = gw_menu_input(focus, INPUT_CMD_LEFT);
+	}
 
 	if (ret == 0) {
 		mvp_atomic_inc(&events);
@@ -315,6 +320,7 @@ gw_loop(struct timeval *to)
 		if (http)
 			fdh = http->input_fd();
 		fd = (fdo > fdh) ? fdo : fdh;
+		fd = (fd > pipefds[0]) ? fd : pipefds[0];
 
 		/*
 		 * Block on all file descriptors for new events.
@@ -324,6 +330,7 @@ gw_loop(struct timeval *to)
 			FD_SET(fdo, &fds);
 		if (fdh >= 0)
 			FD_SET(fdh, &fds);
+		FD_SET(pipefds[0], &fds);
 		if (select(fd+1, &fds, NULL, NULL, NULL) > 0) {
 			if (osd && (fdo >= 0) && FD_ISSET(fdo, &fds)) {
 				c = osd->input_read();
@@ -335,10 +342,10 @@ gw_loop(struct timeval *to)
 				read(fdh, &addr, sizeof(addr));
 				command((plugin_http_cmd_t*)addr);
 			}
-		}
-
-		if (fd == -1) {
-			sleep(1);
+			if (FD_ISSET(pipefds[0], &fds)) {
+				char c;
+				read(pipefds[0], &c, 1);
+			}
 		}
 	}
 

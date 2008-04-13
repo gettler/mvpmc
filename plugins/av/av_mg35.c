@@ -36,6 +36,15 @@
 
 #include "av_local.h"
 
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static pid_t player;
+
+static pthread_t thread;
+
+static char *pathname;
+
 static int
 is_audio(char *file)
 {
@@ -68,30 +77,15 @@ is_video(char *file)
 	return 0;
 }
 
-int
-arch_init(void)
-{
-	return 0;
-}
-
 static int
 play_audio_file(char *path)
 {
-	extern void fb_redisplay(void);
-	char cmd[256];
+	printf("play MP3: '%s'\n", path);
 
-	snprintf(cmd,sizeof(cmd), "/fileplayer.bin MP3 '%s'", path);
-
-	printf("play MP3: '%s'\n", cmd);
-
-	if (vfork() == 0) {
-		system(cmd);
-		_exit(0);
-	} else {
-		wait(NULL);
+	if ((player=vfork()) == 0) {
+		execl("/fileplayer.bin", "/fileplayer.bin", "MP3", path, NULL);
+		_exit(-1);
 	}
-
-	fb_redisplay();
 
 	return 0;
 }
@@ -99,37 +93,62 @@ play_audio_file(char *path)
 static int
 play_video_file(char *path)
 {
-	extern void fb_redisplay(void);
-	char cmd[256];
+	printf("play MPEG: '%s'\n", path);
 
-	snprintf(cmd,sizeof(cmd), "/mpegplayer.bin '%s'", path);
-
-	printf("play MPEG: '%s'\n", cmd);
-
-	if (vfork() == 0) {
-		system(cmd);
-		_exit(0);
-	} else {
-		wait(NULL);
+	if ((player=vfork()) == 0) {
+		execl("/mpegplayer.bin", "/mpegplayer.bin", path, NULL);
+		_exit(-1);
 	}
 
-	fb_redisplay();
-
 	return 0;
+}
+
+static void*
+av_player(void *arg)
+{
+	pid_t child = -1;
+
+	pthread_mutex_lock(&mutex);
+
+	while (1) {
+		pthread_cond_wait(&cond, &mutex);
+		if (child > 0)
+			waitpid(child, NULL, WNOHANG);
+		if (is_audio(pathname)) {
+			play_audio_file(pathname);
+		} else if (is_video(pathname)) {
+			play_video_file(pathname);
+		}
+		child = player;
+	}
+
+	return NULL;
 }
 
 int
 do_play_file(char *path)
 {
-	printf("play file...\n");
-
-	if (is_audio(path)) {
-		play_audio_file(path);
-	} else if (is_video(path)) {
-		play_video_file(path);
-	} else {
-		return -1;
+	if (pathname) {
+		free(pathname);
 	}
+	pathname = strdup(path);
+
+	pthread_cond_broadcast(&cond);
+
+	return 0;
+}
+
+int
+arch_init(void)
+{
+	pthread_attr_t attr;
+
+	player = 0;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 1024*64);
+
+	pthread_create(&thread, &attr, av_player, NULL);
 
 	return 0;
 }
@@ -143,5 +162,14 @@ do_play_dvd(char *path)
 int
 do_stop(void)
 {
+	if (player > 0) {
+		kill(player, SIGTERM);
+		player = -1;
+	}
+	if (pathname) {
+		free(pathname);
+		pathname = NULL;
+	}
+
 	return 0;
 }

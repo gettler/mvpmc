@@ -446,6 +446,23 @@ get_menu(char *url)
 	return ret;
 }
 
+static char*
+get_command(char *url)
+{
+	char *p;
+	char *c = NULL;
+
+	if ((p=strstr(url, "?cmd=")) != NULL) {
+		p += 5;
+		c = strdup(p);
+		if ((p=strchr(c, '&')) != NULL) {
+			*p = '\0';
+		}
+	}
+
+	return c;
+}
+
 static unsigned int
 get_key(char *url)
 {
@@ -576,7 +593,7 @@ httpd_thread(void *arg)
 					unsigned int state;
 					unsigned int menu;
 					unsigned int key;
-					char *page;
+					char *page, *cmd;
 
 					state = get_state(req->path);
 					menu = get_menu(req->path);
@@ -587,6 +604,13 @@ httpd_thread(void *arg)
 						httpd_header(fd, 404);
 						html->notfound(fd, req->path,
 							       HTTP_PORT);
+					} else if (strcmp(page, "/cmd.html") == 0) {
+						cmd = get_command(req->path);
+						printf("=== REMOTE '%s' ===\n", cmd);
+						send_command(fd, menu, key,
+							     state);
+						waiting = fd;
+						fd = -1;
 					} else if (state &&
 						   (state != html->get_state())) {
 						printf("=== REGENERATE ===\n");

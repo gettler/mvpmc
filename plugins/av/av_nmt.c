@@ -45,6 +45,8 @@ static pid_t player;
 
 static char *pathname;
 
+static volatile int pending;
+
 static int
 monitor(pid_t pid)
 {
@@ -185,6 +187,8 @@ av_monitor(void *arg)
 
 	while (1) {
 		pthread_cond_wait(&cond, &mutex);
+
+		pending = 0;
 		if ((child=fork()) == 0) {
 			_exit(start_player());
 		} else {
@@ -192,10 +196,16 @@ av_monitor(void *arg)
 			monitor(child);
 		}
 		player = 0;
-		free(pathname);
-		pathname = NULL;
+		if (!pending) {
+			free(pathname);
+			pathname = NULL;
 
-		do_stop();
+			do_stop();
+
+			gw_device_add(GW_DEV_OSD);
+			gw_output();
+		}
+
 	}
 }
 
@@ -217,6 +227,8 @@ arch_init(void)
 int
 do_play_file(char *path)
 {
+	pending = 1;
+
 	gw_device_remove(GW_DEV_OSD);
 
 	if (pathname) {
@@ -224,13 +236,6 @@ do_play_file(char *path)
 	}
 	pathname = strdup(path);
 	pthread_cond_broadcast(&cond);
-
-	while (pathname) {
-		sleep(1);
-	}
-
-	gw_device_add(GW_DEV_OSD);
-	gw_output();
 
 	return 0;
 }
@@ -244,5 +249,10 @@ do_play_dvd(char *path)
 int
 do_stop(void)
 {
+	if (player) {
+		system("echo 212 > /tmp/irkey");
+		player = 0;
+	}
+
 	return 0;
 }

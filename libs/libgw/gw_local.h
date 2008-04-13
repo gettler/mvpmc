@@ -30,6 +30,7 @@
 #define http		__gw_http
 #define update		__gw_update
 #define focus_input	__gw_focus_input
+#define pipefds		__gw_pipefds
 
 extern gw_t *root;
 extern plugin_osd_t *osd;
@@ -37,5 +38,7 @@ extern plugin_http_t *http;
 extern gw_cmd_t focus_input;
 
 extern int update(gw_t *widget);
+
+extern int pipefds[2];
 
 #endif /* GW_LOCAL_H */

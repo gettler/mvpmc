@@ -340,6 +340,7 @@ mvpmc_main(int argc, char **argv)
 	}
 
 	tzset();
+	srand(getpid());
 
 	/*
 	 * setup the plug-in loader

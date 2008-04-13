@@ -96,7 +96,7 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
 /**
  * Atomically decrement a reference count variable.
  * \param valp address of atomic variable
- * \return incremented reference count
+ * \return decremented reference count
  */
 static inline unsigned
 __mvp_atomic_decrement(mvp_atomic_t *valp)

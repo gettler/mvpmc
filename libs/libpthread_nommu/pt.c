@@ -24,16 +24,10 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <pthread.h>
+#include <sched.h>
 
 #include "mvp_atomic.h"
-
-typedef struct {
-	int val;
-} pthread_mutex_t;
-
-typedef struct {
-	int val;
-} pthread_cond_t;
 
 #define PT_THREAD_MAX	128
 #define PT_MSG_MAX	16
@@ -66,8 +60,29 @@ typedef struct {
 	char *path;
 } pt_shared_t;
 
-typedef pid_t pthread_t;
-typedef int pthread_attr_t;
+#define LOCK(x) { \
+		int v; \
+		while ((v=mvp_atomic_dec(x)) != -1) { \
+			mvp_atomic_inc(x); \
+			sched_yield(); \
+		} \
+	}
+
+#define UNLOCK(x) mvp_atomic_inc(x)
+
+#define WAITERS 16
+
+typedef struct {
+	mvp_atomic_t lck;
+	mvp_atomic_t val;
+	pid_t waiters[WAITERS];
+} pt_mutex_t;
+
+typedef struct {
+	mvp_atomic_t lck;
+	pthread_mutex_t *mutex;
+	pid_t waiters[WAITERS];
+} pt_cond_t;
 
 static volatile pt_shared_t *pt_shared;
 static int initialized = 0;
@@ -265,6 +280,8 @@ pthread_init(char *app)
 	char *child = getenv(PT_SHARED_ENV);
 	char *buf;
 
+	signal(SIGUSR2, sig_thread);
+
 	if (child) {
 		void *rc;
 
@@ -282,8 +299,6 @@ pthread_init(char *app)
 
 		exit((int)rc);
 	}
-
-	signal(SIGUSR2, sig_thread);
 
 	if (initialized) {
 		return -1;
@@ -321,7 +336,7 @@ pthread_deinit(void)
 }
 
 int
-pthread_create(pthread_t *thread, pthread_attr_t *attr,
+pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	       void *(*start_routine)(void*), void *arg)
 {
 	if (pt_shared->manager == 0) {
@@ -347,9 +362,6 @@ pthread_create(pthread_t *thread, pthread_attr_t *attr,
 		}
 	}
 
-#if 0
-	sleep(1);
-#endif
 	queue_create(thread, start_routine, arg);
 	
 	return 0;
@@ -368,21 +380,110 @@ int pthread_join(pthread_t th, void **thread_return)
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+	pt_mutex_t *m = (pt_mutex_t*)&(mutex->__m_lock.__status);
+	int r, i;
+
+	if (m == NULL) {
+		m = malloc(sizeof(*m));
+		memset(m, 0, sizeof(*m));
+		mutex->__m_lock.__status = (long int)m;
+	}
+
+	LOCK(&m->lck);
+
+	while ((r=mvp_atomic_dec(&m->val)) < -1) {
+		mvp_atomic_inc(&m->val);
+		for (i=0; i<WAITERS; i++) {
+			if (m->waiters[i] <= 0) {
+				m->waiters[i] = getpid();
+				break;
+			}
+		}
+		UNLOCK(&m->lck);
+		pause();
+		LOCK(&m->lck);
+	}
+
+	for (i=0; i<WAITERS; i++) {
+		if (m->waiters[i] == getpid()) {
+			m->waiters[i] = 0;
+		}
+	}
+
+	UNLOCK(&m->lck);
+
 	return 0;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
+	pt_mutex_t *m = (pt_mutex_t*)&(mutex->__m_lock.__status);
+	int i;
+
+	LOCK(&m->lck);
+
+	if (mvp_atomic_inc(&m->val) < 0) {
+		for (i=0; i<WAITERS; i++) {
+			if (m->waiters[i] > 0) {
+				kill(m->waiters[i], SIGUSR2);
+			}
+		}
+	}
+
+	UNLOCK(&m->lck);
+
 	return 0;
 }
 
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
+	pt_cond_t *c = (pt_cond_t*)&(cond->__c_lock.__status);
+	int i;
+
+	for (i=0; i<WAITERS; i++) {
+		if (c->waiters[i] > 0) {
+			kill(c->waiters[i], SIGUSR2);
+		}
+	}
+
 	return 0;
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
+	pt_cond_t *c = (pt_cond_t*)&(cond->__c_lock.__status);
+	int i, me = -1;
+
+	if (c == NULL) {
+		c = malloc(sizeof(*c));
+		memset(c, 0, sizeof(*c));
+		cond->__c_lock.__status = (long int)c;
+	}
+
+	LOCK(&c->lck);
+
+	for (i=0; i<WAITERS; i++) {
+		if (c->waiters[i] <= 0) {
+			c->waiters[i] = getpid();
+			i = me;
+			break;
+		}
+	}
+
+	pthread_mutex_unlock(mutex);
+
+	UNLOCK(&c->lck);
+
+	pause();
+
+	LOCK(&c->lck);
+
+	c->waiters[me] = 0;
+
+	UNLOCK(&c->lck);
+
+	pthread_mutex_lock(mutex);
+
 	return 0;
 }
 
@@ -391,8 +492,7 @@ int pthread_attr_init(pthread_attr_t *attr)
 	return 0;
 }
 
-int pthread_attr_setstacksize(pthread_attr_t *attr, int bytes)
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t bytes)
 {
 	return 0;
 }
-

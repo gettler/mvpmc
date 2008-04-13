@@ -37,6 +37,8 @@ plugin_http_t *http = NULL;
 
 static volatile unsigned int current = 0;
 
+int pipefds[2];
+
 gw_t*
 gw_root(void)
 {
@@ -96,6 +98,8 @@ gw_device_add(unsigned int dev)
 		return -1;
 	}
 
+	dev &= ~current;
+
 	if (gw_load_plugins(dev) < 0) {
 		return -1;
 	}
@@ -113,6 +117,8 @@ gw_device_add(unsigned int dev)
 		}
 	}
 
+	write(pipefds[1], " ", 1);
+
 	return 0;
 }
 
@@ -123,11 +129,15 @@ gw_device_remove(unsigned int dev)
 		return -1;
 	}
 
+	dev &= current;
+
 	if (gw_unload_plugins(dev) < 0) {
 		return -1;
 	}
 
 	current &= ~dev;
+
+	write(pipefds[1], " ", 1);
 
 	return 0;
 }
@@ -164,6 +174,8 @@ gw_init(void)
 	root->data.container->child = NULL;
 
 	gw_name_set(root, "root");
+
+	pipe(pipefds);
 
 	return 0;
 }
