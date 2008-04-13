@@ -299,7 +299,7 @@ int
 gw_loop(struct timeval *to)
 {
 	int c;
-	unsigned int addr;
+	void *addr;
 	int fd;
 	fd_set fds;
 
