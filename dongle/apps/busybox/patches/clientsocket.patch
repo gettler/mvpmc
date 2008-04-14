@@ -1,0 +1,10 @@
+--- busybox-1.10.0/networking/udhcp/clientsocket.c-orig	2008-04-13 14:19:38.000000000 -0500
++++ busybox-1.10.0/networking/udhcp/clientsocket.c	2008-04-13 14:20:00.000000000 -0500
+@@ -25,6 +25,7 @@
+ #if (defined(__GLIBC__) && __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1) || defined(_NEWLIB_VERSION)
+ #include <netpacket/packet.h>
+ #include <net/ethernet.h>
++#include <asm/types.h>
+ #else
+ #include <asm/types.h>
+ #include <linux/if_packet.h>

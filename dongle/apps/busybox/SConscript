@@ -15,21 +15,18 @@ instdir = '%s/dongle/install/%s/' % (topdir,build_target)
 
 e = Environment()
 
-if build_target == 'mvp':
-    url = [ 'http://www.mvpmc.org/dl/busybox-1.1.3.tar.bz2',
-            'http://busybox.net/downloads/busybox-1.1.3.tar.bz2' ]
-if build_target == 'nmt':
-    url = [ 'http://www.mvpmc.org/dl/busybox-1.10.0.tar.bz2',
-            'http://busybox.net/downloads/busybox-1.10.0.tar.bz2' ]
+url = [ 'http://www.mvpmc.org/dl/busybox-1.10.0.tar.bz2',
+        'http://busybox.net/downloads/busybox-1.10.0.tar.bz2' ]
 
 target = [ bindir + 'busybox' ]
 
 if build_target == 'mvp':
-    patches = [ 'patches/busybox_config.patch',
-                'patches/busybox-1.1.3.patch' ]
-    cmd = [ 'make oldconfig',
-            'make install' ]
-if build_target == 'nmt':
+    cmd = [ 'cp ../../patches/busybox_config.mvp .config',
+            'make oldconfig',
+            'make install',
+            'cp -a _install/* %s' % instdir ]
+    patches = [ 'patches/clientsocket.patch' ]
+elif build_target == 'nmt':
     cmd = [ 'cp ../../patches/busybox_config.nmt .config',
             'make oldconfig',
             'make install',
@@ -40,5 +37,7 @@ build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
 
 if build_target == 'nmt':
     env.Depends(build, 'patches/busybox_config.nmt')
+if build_target == 'mvp':
+    env.Depends(build, 'patches/busybox_config.mvp')
 
 Return('build')

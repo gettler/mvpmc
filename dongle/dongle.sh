@@ -32,7 +32,7 @@ TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libpthread.so.0 libutil.so.0 libdl.so.0 
 LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 
 WRAPPERLIB="libav.so libosd.so"
-TWRAPPERLIB="libc.so.0 libcrypt.so.0 libdl-0.9.28.so libdl.so.0"
+TWRAPPERLIB="libc.so.0 libcrypt.so.0 libdl-0.9.28.so libdl.so.0 libm.so.0"
 
 rm -rf $FS/install
 rm -rf $FS/install_wrapper
