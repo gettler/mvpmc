@@ -43,7 +43,7 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
 		: "r" (valp), "0" (0x1)
 		: "cc", "memory"
 		);
-#elif defined __i386__
+#elif defined __i386__ || defined __x86_64__
 	asm volatile (".byte 0xf0, 0x0f, 0xc1, 0x02" /*lock; xaddl %eax, (%edx) */
 		      : "=a" (__val)
 		      : "0" (1), "m" (*valp), "d" (valp)
@@ -77,11 +77,6 @@ __mvp_atomic_increment(mvp_atomic_t *valp)
 		: "cc", "memory");
 #elif defined __mips__
 	__val = atomic_increment_val(valp);
-#elif defined __x86_64__
-        __asm__ __volatile__(
-                "incl %0"
-                :"=m" (__val)
-                :"m" (__val));
 #else
 	/*
 	 * Don't know how to atomic increment for a generic architecture
@@ -110,7 +105,7 @@ __mvp_atomic_decrement(mvp_atomic_t *valp)
 		: "r" (valp), "0" (0x1)
 		: "cc", "memory"
 		);
-#elif defined __i386__
+#elif defined __i386__ || defined __x86_64__
 	asm volatile (".byte 0xf0, 0x0f, 0xc1, 0x02" /*lock; xaddl %eax, (%edx) */
 		      : "=a" (__val)
 		      : "0" (-1), "m" (*valp), "d" (valp)
@@ -144,11 +139,6 @@ __mvp_atomic_decrement(mvp_atomic_t *valp)
 		: "cc", "memory");
 #elif defined __mips__
 	__val = atomic_decrement_val(valp);
-#elif defined __x86_64__
-        __asm__ __volatile__(
-                "decl %0"
-                :"=m" (__val)
-                :"m" (__val));
 #elif defined __sparcv9__
 	mvp_atomic_t __newval, __oldval = (*valp);
 	do

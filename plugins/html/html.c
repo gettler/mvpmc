@@ -199,10 +199,10 @@ html_li(int fd, char *label, char *text, int level, gw_menu_t *gw, void *key)
 	WRITE(fd, label, strlen(label));
 	WRITE(fd, head2, strlen(head2));
 	WRITE(fd, head3, strlen(head3));
-	snprintf(str, sizeof(str), "0x%.8x", (unsigned int)gw);
+	snprintf(str, sizeof(str), "0x%.8lx", (unsigned long)gw);
 	WRITE(fd, str, strlen(str));
 	WRITE(fd, head4, strlen(head4));
-	snprintf(str, sizeof(str), "0x%.8x", (unsigned int)key);
+	snprintf(str, sizeof(str), "0x%.8lx", (unsigned long)key);
 	WRITE(fd, str, strlen(str));
 	WRITE(fd, head5, strlen(head5));
 	snprintf(str, sizeof(str), "0x%.8x", state);

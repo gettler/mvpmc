@@ -494,10 +494,10 @@ get_page(char *url)
 }
 
 static int
-send_command(int fd, unsigned int menu, unsigned int key, unsigned int state)
+send_command(int fd, unsigned long menu, unsigned long key, unsigned int state)
 {
 	plugin_http_cmd_t *cmd;
-	unsigned int addr;
+	unsigned long addr;
 
 	if ((cmd=(plugin_http_cmd_t*)malloc(sizeof(*cmd))) == NULL) {
 		return -1;
@@ -507,9 +507,10 @@ send_command(int fd, unsigned int menu, unsigned int key, unsigned int state)
 	cmd->key = (void*)key;
 	cmd->fd = fd;
 
-	printf("COMMAND at 0x%.8x: 0x%.8x 0x%.8x %d\n", state, menu, key, fd);
+	printf("COMMAND at 0x%.8x: 0x%.8lx 0x%.8lx %d\n",
+	       state, menu, key, fd);
 
-	addr = (unsigned int)cmd;
+	addr = (unsigned long)cmd;
 
 	write(pipefds[1], &addr, sizeof(addr));
 
