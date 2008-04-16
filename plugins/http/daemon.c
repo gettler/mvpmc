@@ -299,7 +299,7 @@ callback(void *cls, struct MHD_Connection *connection,
 int
 httpd_start(void)
 {
-#if defined(MVPMC_NMT) || defined(MVPMC_MG35)
+#if defined(MVPMC_MG35)
 	return 0;
 #endif
 

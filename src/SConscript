@@ -59,7 +59,7 @@ if target == 'mg35':
 	plibs = [ 'pthread_nommu' ]
 elif target == 'nmt':
 	src = [ common ]
-	plibs = [ 'pthread' ]
+	plibs = [ 'pthread', 'microhttpd' ]
 elif target == 'mvp':
 	src = [ common ]
 	plibs = [ 'av', 'pthread' ]
