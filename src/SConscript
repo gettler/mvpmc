@@ -56,7 +56,7 @@ common = [ 'builtin.c', 'filebrowser.c', 'mvpmc.c', 'version_%s.c' % target ]
 
 if target == 'mg35':
 	src = [ common ]
-	plibs = [ 'pthread_nommu' ]
+	plibs = [ 'av', 'pthread_nommu' ]
 elif target == 'nmt':
 	src = [ common ]
 	plibs = [ 'pthread' ]
