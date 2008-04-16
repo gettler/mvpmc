@@ -1,0 +1,20 @@
+--- libmicrohttpd-0.3.0/src/Makefile.in-orig	2008-04-15 14:00:34.000000000 -0500
++++ libmicrohttpd-0.3.0/src/Makefile.in	2008-04-15 14:00:53.000000000 -0500
+@@ -54,7 +54,7 @@
+   distclean-recursive maintainer-clean-recursive
+ ETAGS = etags
+ CTAGS = ctags
+-DIST_SUBDIRS = include daemon examples testcurl testzzuf .
++DIST_SUBDIRS = include daemon
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ ACLOCAL = @ACLOCAL@
+ AMTAR = @AMTAR@
+@@ -176,7 +176,7 @@
+ top_srcdir = @top_srcdir@
+ @HAVE_CURL_TRUE@curltests = testcurl
+ @HAVE_CURL_TRUE@@HAVE_SOCAT_TRUE@@HAVE_ZZUF_TRUE@zzuftests = testzzuf
+-SUBDIRS = include daemon examples $(curltests) $(zzuftests) . 
++SUBDIRS = include daemon
+ all: all-recursive
+ 
+ .SUFFIXES:

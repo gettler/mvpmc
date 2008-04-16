@@ -435,6 +435,22 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 	return 0;
 }
 
+int
+pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+	pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+	memcpy(mutex, &m, sizeof(*mutex));
+
+	return 0;
+}
+
+int
+pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+	return 0;
+}
+
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
 	pt_cond_t *c = (pt_cond_t*)&(cond->__c_lock.__status);

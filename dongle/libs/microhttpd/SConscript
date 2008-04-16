@@ -1,0 +1,55 @@
+#!/usr/bin/python
+#
+# build libmicrohttpd
+#
+
+import os
+import mvpmc
+
+Import('env')
+
+build_target = env['TARG']
+topdir = env['TOPDIR']
+libdir = '%s/dongle/install/%s/lib/' % (topdir,build_target)
+incdir = '%s/dongle/install/%s/include/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
+
+if build_target == 'mvp':
+  cross = env['CROSS']
+  config = '--host=powerpc-linux'
+  lib = 'libmicrohttpd.so'
+  patches = []
+  local = ''
+elif build_target == 'mg35':
+  cross = env['CROSS']
+  config = '--host=arm-linux --disable-shared'
+  lib = 'libmicrohttpd.a'
+  patches = [ 'patches/disable_bins.patch' ]
+  local = 'ac_cv_lib_pthread_pthread_create=yes'
+elif build_target == 'nmt':
+  cross = env['CROSS']
+  config = '--host=mips-linux --disable-shared'
+  lib = 'libmicrohttpd.a'
+  patches = []
+  local = ''
+else:
+  cross = ''
+  config = ''
+  lib = 'libmicrohttpd.so'
+  patches = []
+  local = ''
+
+url = [ 'http://www.mvpmc.org/dl/libmicrohttpd-0.3.0.tar.gz',
+        'http://gnunet.org/libmicrohttpd/download/libmicrohttpd-0.3.0.tar.gz' ]
+
+e = Environment()
+
+target = [ libdir + lib,
+           incdir + 'microhttpd.h' ]
+cmd = [ '%s ./configure --prefix=%s %s' % (local,prefix,config),
+        'make',
+        'make install' ]
+
+build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
+
+Return('build')

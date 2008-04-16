@@ -23,12 +23,21 @@
 #include <gw.h>
 #include <plugin.h>
 
+typedef struct plugin_html_data_s {
+	struct plugin_html_data_s *next;
+	int offset;
+	int len;
+	char *data;
+} plugin_html_resp_t;
+
 typedef struct {
-	int (*generate)(int);
+	plugin_html_resp_t *(*generate)(void);
 	int (*css)(int);
 	int (*notfound)(int, char*, int);
 	int (*update_widget)(gw_t*);
 	unsigned int (*get_state)(void);
 } plugin_html_t;
+
+typedef int (*plugin_html_cb_t)(void *handle, char *buf, int len);
 
 #endif /* PLUGIN_HTML_H */

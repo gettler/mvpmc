@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 
+#include <microhttpd.h>
 #include <mvp_string.h>
 #include <plugin.h>
 #include <plugin/html.h>
@@ -65,11 +66,9 @@ static volatile http_req_t *list[NLIST];
 
 static int httpd_fd = -1;
 
-static plugin_html_t *html;
+plugin_html_t *html;
 
-static char *httpd_server;
-
-static int pipefds[2];
+int pipefds[2];
 
 static volatile int waiting;
 
@@ -78,106 +77,6 @@ static int http_generate(void);
 static volatile int cleanup;
 static pid_t httpd_pid;
 #endif
-
-static httpd_req_t*
-resp_header(int fd)
-{
-	httpd_req_t *req = NULL;
-	char buf[2048];
-	char data[2048];
-	char *p;
-	int n, i;
-
-	while (1) {
-		char *p;
-
-		if ((n=recv(fd, buf, sizeof(buf)-1, MSG_PEEK)) == 0) {
-			usleep(1000);
-			continue;
-		}
-
-		if (n < 0) {
-			perror("recv()");
-			goto err;
-		}
-
-		if (n > 0)
-			buf[n] = '\0';
-
-		if ((p=strstr(buf, "\r\n\r\n")) != NULL) {
-			n = recv(fd, data, p-buf+4, 0);
-			data[n] = '\0';
-			break;
-		} else {
-			if (n == (sizeof(buf)-1)) {
-				printf("ERROR: %s():%d\n", __FUNCTION__, __LINE__);
-				goto err;
-			}
-			usleep(1000);
-		}
-
-		if (n < 0) {
-			perror("recv()");
-			printf("ERROR: %s():%d  n %d\n", __FUNCTION__, __LINE__, n);
-			goto err;
-		}
-
-	}
-
-	if ((req=(httpd_req_t*)malloc(sizeof(*req))) == NULL) {
-		printf("ERROR: %s():%d\n", __FUNCTION__, __LINE__);
-		goto err;
-	}
-	memset(req, 0, sizeof(*req));
-
-	i = 0;
-	p = data;
-
-	while (1) {
-		char *l, *s;
-
-		l = p;
-		if ((p=strchr(p, '\n')) == NULL)
-			break;
-		*(p++) = '\0';
-
-		if (i == 0) {
-			char method[16], path[128];
-			int major, minor;
-			if (sscanf(l, "%s %s HTTP/%d.%d", method, path,
-				   &major, &minor) == 4) {
-				if (strcmp(method, "GET") == 0) {
-					req->method = HTTP_METHOD_GET;
-				} else {
-					printf("ERROR: %s():%d\n", __FUNCTION__, __LINE__);
-					goto err;
-				}
-
-				req->path = strdup(path);
-				req->major = major;
-				req->minor = minor;
-
-				printf("%s\n", method);
-				printf("%s\n", path);
-			}
-		} else {
-			if ((s=strchr(l, ':')) != NULL) {
-				*(s++) = '\0';
-				printf("%s:%s\n", l, s);
-			}
-		}
-
-		i++;
-	}
-
-	return req;
-
- err:
-	if (req)
-		free(req);
-
-	return NULL;
-}
 
 static void
 build_field(http_req_t *req, char *buf, int n, char *name, char *val)
@@ -393,272 +292,6 @@ http_get(http_req_t *req, int block)
 	return rc;
 }
 
-static void
-httpd_header(int fd, int code)
-{
-	char line[128];
-	char *text;
-
-	switch (code) {
-	case 200:
-		text = "OK";
-		break;
-	case 404:
-		text = "Not Found";
-		break;
-	default:
-		return;
-	}
-
-	snprintf(line, sizeof(line), "HTTP/1.0 %d %s\r\n", code, text);
-	write(fd, line, strlen(line));
-
-	write(fd, httpd_server, strlen(httpd_server));
-
-	write(fd, "\r\n\r\n", 4);
-}
-
-static unsigned int
-get_state(char *url)
-{
-	char *p;
-	int ret = 0;
-
-	if ((p=strstr(url, "&state=")) != NULL) {
-		p += 7;
-		ret = strtoul(p, NULL, 0);
-	}
-
-	return ret;
-}
-
-static unsigned int
-get_menu(char *url)
-{
-	char *p;
-	int ret = 0;
-
-	if ((p=strstr(url, "?menu=")) != NULL) {
-		p += 6;
-		ret = strtoul(p, NULL, 0);
-	}
-
-	return ret;
-}
-
-static char*
-get_command(char *url)
-{
-	char *p;
-	char *c = NULL;
-
-	if ((p=strstr(url, "?cmd=")) != NULL) {
-		p += 5;
-		c = strdup(p);
-		if ((p=strchr(c, '&')) != NULL) {
-			*p = '\0';
-		}
-	}
-
-	return c;
-}
-
-static unsigned int
-get_key(char *url)
-{
-	char *p;
-	int ret = 0;
-
-	if ((p=strstr(url, "&key=")) != NULL) {
-		p += 5;
-		ret = strtoul(p, NULL, 0);
-	}
-
-	return ret;
-}
-
-static char*
-get_page(char *url)
-{
-	char *u, *p;
-
-	if ((u=strdup(url)) == NULL) {
-		return NULL;
-	}
-
-	if ((p=strchr(u, '?')) != NULL) {
-		*p = '\0';
-	}
-
-	return u;
-}
-
-static int
-send_command(int fd, unsigned long menu, unsigned long key, unsigned int state)
-{
-	plugin_http_cmd_t *cmd;
-	unsigned long addr;
-
-	if ((cmd=(plugin_http_cmd_t*)malloc(sizeof(*cmd))) == NULL) {
-		return -1;
-	}
-
-	cmd->menu = (gw_menu_t*)menu;
-	cmd->key = (void*)key;
-	cmd->fd = fd;
-
-	printf("COMMAND at 0x%.8x: 0x%.8lx 0x%.8lx %d\n",
-	       state, menu, key, fd);
-
-	addr = (unsigned long)cmd;
-
-	write(pipefds[1], &addr, sizeof(addr));
-
-	return 0;
-}
-
-static void*
-httpd_thread(void *arg)
-{
-	int reuse = 1;
-	struct sockaddr_in addr;
-	fd_set fds;
-	char *header;
-
-#if defined(MVPMC_MG35)
-	httpd_pid = getpid();
-#endif
-
-	header = HTTPD_SERVER;
-	if ((httpd_server=malloc(strlen(header)+128)) == NULL) {
-		goto err;
-	}
-	sprintf(httpd_server, header, PLATFORM);
-
-	if ((httpd_fd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket()");
-		goto err;
-	}
-	setsockopt(httpd_fd, SOL_SOCKET, SO_REUSEADDR,
-		   (const void *)&reuse , sizeof(int));
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = htons((unsigned short)HTTP_PORT);
-
-	if (bind(httpd_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		perror("bind()");
-		goto err;
-	}
-
-	if (listen(httpd_fd, 5) < 0) {
-		perror("listen()");
-		goto err;
-	}
-
-	while (1) {
-		socklen_t len;
-
-#if defined(MVPMC_MG35)
-		struct timeval tv;
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
-#define TIMEOUT &tv
-
-		if (cleanup) {
-			cleanup = 0;
-			http_generate();
-		}
-#else
-#define TIMEOUT NULL
-#endif
-
-		FD_ZERO(&fds);
-		FD_SET(httpd_fd, &fds);
-
-		if (select(httpd_fd+1, &fds, NULL, NULL, TIMEOUT) > 0) {
-			struct sockaddr_in in_addr;
-			int fd;
-			httpd_req_t *req;
-
-			if (FD_ISSET(httpd_fd, &fds)) {
-				if ((fd=accept(httpd_fd,
-					       (struct sockaddr *)&in_addr,
-					       &len)) < 0) {
-					perror("accept()");
-					continue;
-				}
-				printf("received connection...\n");
-				if ((req=resp_header(fd)) != NULL) {
-					unsigned int state;
-					unsigned int menu;
-					unsigned int key;
-					char *page, *cmd;
-
-					state = get_state(req->path);
-					menu = get_menu(req->path);
-					key = get_key(req->path);
-					page = get_page(req->path);
-
-					if (page == NULL) {
-						httpd_header(fd, 404);
-						html->notfound(fd, req->path,
-							       HTTP_PORT);
-					} else if (strcmp(page, "/cmd.html") == 0) {
-						cmd = get_command(req->path);
-						printf("=== REMOTE '%s' ===\n", cmd);
-						send_command(fd, menu, key,
-							     state);
-						waiting = fd;
-						fd = -1;
-					} else if (state &&
-						   (state != html->get_state())) {
-						printf("=== REGENERATE ===\n");
-						httpd_header(fd, 200);
-						html->generate(fd);
-					} else if ((strcmp(page, "/osd.html") == 0) &&
-						   (state == html->get_state())) {
-						printf("== FOLLOW LINK ==\n");
-						if (send_command(fd, menu,
-								 key,
-								 state) == 0) {
-							waiting = fd;
-							fd = -1;
-						} else {
-							httpd_header(fd, 404);
-							html->notfound(fd,
-								       req->path,
-								       HTTP_PORT);
-						}
-					} else if ((strcmp(page, "/") == 0) ||
-						   (strcmp(page, "/osd.html") == 0)) {
-						printf("=== REGENERATE ===\n");
-						httpd_header(fd, 200);
-						html->generate(fd);
-					} else if (strcmp(req->path,
-							  "/web.css") == 0) {
-						httpd_header(fd, 200);
-						html->css(fd);
-					} else {
-						httpd_header(fd, 404);
-						html->notfound(fd, req->path,
-							       HTTP_PORT);
-
-					}
-
-					if (page)
-						free(page);
-				}
-				close(fd);
-			}
-		}
-	}
-
- err:
-	return NULL;
-}
-
 static int
 http_generate(void)
 {
@@ -668,14 +301,6 @@ http_generate(void)
 		return 0;
 	}
 #endif
-
-	if (waiting) {
-		int fd = waiting;
-		waiting = 0;
-		httpd_header(fd, 200);
-		html->generate(fd);
-		close(fd);
-	}
 
 	return 0;
 }
@@ -715,7 +340,10 @@ init_http(void)
 	pthread_attr_setstacksize(&attr, 1024*64);
 
 	pthread_create(&thread, &attr, http_thread, NULL);
-	pthread_create(&threadd, &attr, httpd_thread, NULL);
+
+	if (httpd_start() < 0) {
+		return NULL;
+	}
 
 	printf("HTTP plug-in registered!\n");
 

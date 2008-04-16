@@ -20,6 +20,10 @@
 #ifndef HTTP_LOCAL_H
 #define HTTP_LOCAL_H
 
+#define httpd_start	__http_httpd_start
+#define html		__http_html
+#define pipefds		__http_pipefds
+
 typedef enum {
 	HTTP_METHOD_GET = 1,
 	HTTP_METHOD_HEAD,
@@ -55,6 +59,10 @@ typedef struct {
 } httpd_req_t;
 
 extern int http_get(http_req_t *req, int block);
+extern int httpd_start(void);
+
+extern plugin_html_t *html;
+extern int pipefds[];
 
 #define HTTP_PORT	8500
 
