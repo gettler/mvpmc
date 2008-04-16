@@ -63,6 +63,7 @@
 #include <net/if_arp.h>
 #include <netinet/in.h>
 #include <libgen.h>
+#include <microhttpd.h>
 
 #include <plugin.h>
 #include <gw.h>
@@ -397,6 +398,29 @@ mvpmc_main(int argc, char **argv)
 
 	gw_loop(NULL);
     
+#if defined(MVPMC_NMT)
+	/*
+	 * XXX: Here's the deal about this...
+	 *
+	 *    libmicrohttpd works on the NMT platform, but the shared library
+	 *    build fails with binutils 2.17 (ld seg faults).  It will build
+	 *    successfully with binutils 2.18, but mvpmc will fail to reload
+	 *    the OSD plugin after running mono if built with binutils 2.18.
+	 *
+	 *    So...  this is here to force libmicrohttpd into the mvpmc binary,
+	 *    so that the http plugin can run.
+	 *
+	 *    It will stay until I figure out a better solution...
+	 */
+	MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, 0,
+			 NULL, NULL, NULL, NULL, MHD_OPTION_END);
+	MHD_get_connection_values(NULL, MHD_GET_ARGUMENT_KIND, NULL, NULL);
+	MHD_create_response_from_data(0, NULL, 0, MHD_NO);
+	MHD_queue_response(NULL, MHD_HTTP_OK, NULL);
+	MHD_destroy_response(NULL);
+	MHD_create_response_from_callback(0, 0, NULL, NULL, NULL);
+#endif /* MVPMC_NMT */
+
 	return 0;
 }
 

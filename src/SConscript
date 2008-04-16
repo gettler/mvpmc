@@ -59,7 +59,7 @@ if target == 'mg35':
 	plibs = [ 'av', 'pthread_nommu' ]
 elif target == 'nmt':
 	src = [ common ]
-	plibs = [ 'pthread' ]
+	plibs = [ 'pthread', 'microhttpd' ]
 elif target == 'mvp':
 	src = [ common ]
 	plibs = [ 'av', 'pthread' ]
@@ -70,7 +70,8 @@ else:
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
 		    'mvpmc_osd.plugin', 'mvpmc_av.plugin' ]
-	libs = [ 'gw', 'refmem', 'osd', 'input', 'freetype', 'piutil' ] + plibs
+	libs = [ 'gw', 'refmem', 'osd', 'input', 'freetype', 'piutil',
+		 'microhttpd' ] + plibs
 	linkflags = '-static'
 else:
 	plugins = [ ]

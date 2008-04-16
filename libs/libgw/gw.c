@@ -239,7 +239,8 @@ input(int c)
 	switch (focus->type) {
 	case GW_TYPE_MENU:
 		printf("Add input to menu...\n");
-		http->update_widget(NULL);
+		if (http)
+			http->update_widget(NULL);
 		ret = gw_menu_input(focus, c);
 		break;
 	case GW_TYPE_TEXT:
@@ -283,15 +284,21 @@ command(plugin_http_cmd_t *cmd)
 			i++;
 		}
 
-		http->update_widget(NULL);
+		if (http)
+			http->update_widget(NULL);
 		ret = gw_menu_input(focus, INPUT_CMD_SELECT);
 	} else {
-		http->update_widget(NULL);
+		if (http)
+			http->update_widget(NULL);
 		ret = gw_menu_input(focus, INPUT_CMD_LEFT);
 	}
 
 	if (ret == 0) {
 		mvp_atomic_inc(&events);
+	}
+
+	if (cmd->callback) {
+		cmd->callback(cmd->data);
 	}
 }
 

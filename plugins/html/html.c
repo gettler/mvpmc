@@ -48,44 +48,8 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 	"</body>\n" \
 	"</html>\n"
 
-#define CSS_DEFAULT \
-	"body { background: green; color: white; }\n" \
-	"#root { background: black; color: white; }\n" \
-	"#commands { background: white; color: red; }\n" \
-	"a { text-decoration: none; }\n" \
-	"a, a:link, a:visited, a:acted { color: white; }\n" \
-	"a:hover { background: green; color: white; }\n" \
-	".title { background: blue; color: white; }\n"
-
-#define NOT_FOUND_HEADER \
-	"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">" \
-	"<html><head>" \
-	"<title>404 Not Found</title>" \
-	"</head><body>" \
-	"<h1>Not Found</h1>"
-
-#define NOT_FOUND_PATH \
-	"<p>The requested URL %s was not found on this server.</p>" \
-	"<hr>"
-
-#define NOT_FOUND_TAIL \
-	"<address>mvpmc (%s) Server at %s Port %d</address>" \
-	"</body></html>"
-
-#if defined(MVPMC_MEDIAMVP)
-#define PLATFORM	"MediaMVP"
-#elif defined(MVPMC_NMT)
-#define PLATFORM	"Networked Media Tank"
-#elif defined(MVPMC_MG35)
-#define PLATFORM	"Mediagate MG-35"
-#elif defined(MVPMC_HOST)
-#define PLATFORM	"host"
-#else
-#error unknown platform
-#endif
-
-#define WRITE(fd,buf,len) \
-	if (full_write(fd, buf, len) < 0) { \
+#define WRITE(resp,buf,len) \
+	if (write_resp(resp, buf, len) < 0) { \
 		goto err; \
 	}
 
@@ -93,16 +57,16 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 	{ \
 		int i; \
 		for (i=0; i<level; i++) \
-			WRITE(fd, " ", 1); \
+			WRITE(resp, " ", 1); \
 	}
 
-static int html_generate_container(int fd, gw_t *widget, int level);
-static int html_generate_menu(int fd, gw_t *widget, int level);
-static int html_generate_text(int fd, gw_t *widget, int level);
+static int html_generate_container(plugin_html_resp_t*, gw_t*, int);
+static int html_generate_menu(plugin_html_resp_t*, gw_t*, int);
+static int html_generate_text(plugin_html_resp_t*, gw_t*, int);
 
 static struct html_output_s {
 	gw_type_t type;
-	int (*output)(int, gw_t*, int);
+	int (*output)(plugin_html_resp_t*, gw_t*, int);
 } output[] = {
 	{ GW_TYPE_CONTAINER, html_generate_container },
 	{ GW_TYPE_MENU, html_generate_menu },
@@ -112,41 +76,48 @@ static struct html_output_s {
 
 static char *header = HTML_HEADER;
 static char *footer = HTML_FOOTER;
-static char *css = CSS_DEFAULT;
-static char *nf_header = NOT_FOUND_HEADER;
 
 static unsigned int state;
 
 static int
-full_write(int fd, char *buf, int len)
+write_resp(plugin_html_resp_t *resp, char *buf, int len)
 {
-	int n, tot = 0;
+	plugin_html_resp_t *new;
 
-	while (tot < len) {
-		n = write(fd, buf+tot, len-tot);
-		if ((n < 0) && (errno != EINTR))
-			break;
-		if (n == 0)
-			break;
-		tot += n;
-	}
-
-	if (tot == len) {
-		return 0;
+	if (resp->data == NULL) {
+		new = resp;
+		resp->data = strdup(buf);
+		resp->len = len;
 	} else {
-		return -1;
+		if ((new=malloc(sizeof(*new))) == NULL) {
+			return -1;
+		}
+		new->data = strdup(buf);
+		new->len = len;
+		new->next = NULL;
+
+		while (resp->next) {
+			resp = resp->next;
+		}
+		resp->next = new;
+		new->offset = resp->offset + resp->len;
 	}
+
+	printf("%s(): new %p data %p len %d\n", __FUNCTION__,
+	       new, new->data, new->len);
+
+	return 0;
 }
 
 static int
-output_widget(int fd, gw_t *widget, int level)
+output_widget(plugin_html_resp_t *resp, gw_t *widget, int level)
 {
 	int i = 0;
 
 	while (output[i].output) {
 		if (output[i].type == widget->type) {
 			if (widget->realized) {
-				return output[i].output(fd, widget, level+1);
+				return output[i].output(resp, widget, level+1);
 			} else {
 				return 0;
 			}
@@ -158,23 +129,23 @@ output_widget(int fd, gw_t *widget, int level)
 }
 
 static int
-html_paragraph(int fd, char *label, char *text, int level)
+html_paragraph(plugin_html_resp_t *resp, char *label, char *text, int level)
 {
 	char *head1 = "<p class=\"";
 	char *head2 = "\">\n";
 	char *foot = "</p>\n";
 
 	LEVEL();
-	WRITE(fd, head1, strlen(head1));
-	WRITE(fd, label, strlen(label));
-	WRITE(fd, head2, strlen(head2));
+	WRITE(resp, head1, strlen(head1));
+	WRITE(resp, label, strlen(label));
+	WRITE(resp, head2, strlen(head2));
 	
 	LEVEL();
-	WRITE(fd, text, strlen(text));
-	WRITE(fd, "\n", 1);
+	WRITE(resp, text, strlen(text));
+	WRITE(resp, "\n", 1);
 	
 	LEVEL();
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -183,7 +154,7 @@ html_paragraph(int fd, char *label, char *text, int level)
 }
 
 static int
-html_li(int fd, char *label, char *text, int level, gw_menu_t *gw, void *key)
+html_li(plugin_html_resp_t *resp, char *label, char *text, int level, gw_menu_t *gw, void *key)
 {
 	char *head1 = "<li><a class=\"";
 	char *head2 = "\" href=\"/osd.html?";
@@ -195,25 +166,25 @@ html_li(int fd, char *label, char *text, int level, gw_menu_t *gw, void *key)
 	char str[16];
 
 	LEVEL();
-	WRITE(fd, head1, strlen(head1));
-	WRITE(fd, label, strlen(label));
-	WRITE(fd, head2, strlen(head2));
-	WRITE(fd, head3, strlen(head3));
+	WRITE(resp, head1, strlen(head1));
+	WRITE(resp, label, strlen(label));
+	WRITE(resp, head2, strlen(head2));
+	WRITE(resp, head3, strlen(head3));
 	snprintf(str, sizeof(str), "0x%.8lx", (unsigned long)gw);
-	WRITE(fd, str, strlen(str));
-	WRITE(fd, head4, strlen(head4));
+	WRITE(resp, str, strlen(str));
+	WRITE(resp, head4, strlen(head4));
 	snprintf(str, sizeof(str), "0x%.8lx", (unsigned long)key);
-	WRITE(fd, str, strlen(str));
-	WRITE(fd, head5, strlen(head5));
+	WRITE(resp, str, strlen(str));
+	WRITE(resp, head5, strlen(head5));
 	snprintf(str, sizeof(str), "0x%.8x", state);
-	WRITE(fd, str, strlen(str));
-	WRITE(fd, head6, strlen(head6));
+	WRITE(resp, str, strlen(str));
+	WRITE(resp, head6, strlen(head6));
 	
 	if (text) {
-		WRITE(fd, text, strlen(text));
+		WRITE(resp, text, strlen(text));
 	}
 	
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -222,7 +193,7 @@ html_li(int fd, char *label, char *text, int level, gw_menu_t *gw, void *key)
 }
 
 static int
-html_generate_container(int fd, gw_t *widget, int level)
+html_generate_container(plugin_html_resp_t *resp, gw_t *widget, int level)
 {
 	char *head1 = "<div id=\"";
 	char *head2 = "\">\n";
@@ -230,25 +201,25 @@ html_generate_container(int fd, gw_t *widget, int level)
 	gw_t *next;
 
 	LEVEL();
-	WRITE(fd, head1, strlen(head1));
+	WRITE(resp, head1, strlen(head1));
 	if (widget->name) {
-		WRITE(fd, widget->name, strlen(widget->name));
+		WRITE(resp, widget->name, strlen(widget->name));
 	} else {
 		char *def = "container";
-		WRITE(fd, def, strlen(def));
+		WRITE(resp, def, strlen(def));
 	}
-	WRITE(fd, head2, strlen(head2));
+	WRITE(resp, head2, strlen(head2));
 	
 	next = widget->data.container->child;
 	while (next) {
-		if (output_widget(fd, next, level) < 0) {
+		if (output_widget(resp, next, level) < 0) {
 			goto err;
 		}
 		next = next->below;
 	}
 	
 	LEVEL();
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -257,7 +228,7 @@ html_generate_container(int fd, gw_t *widget, int level)
 }
 
 static int
-html_generate_menu(int fd, gw_t *widget, int level)
+html_generate_menu(plugin_html_resp_t *resp, gw_t *widget, int level)
 {
 	char *head1 = "<div id=\"";
 	char *head2 = "\">\n";
@@ -266,19 +237,19 @@ html_generate_menu(int fd, gw_t *widget, int level)
 	int i;
 
 	LEVEL();
-	WRITE(fd, head1, strlen(head1));
+	WRITE(resp, head1, strlen(head1));
 	if (widget->name) {
-		WRITE(fd, widget->name, strlen(widget->name));
+		WRITE(resp, widget->name, strlen(widget->name));
 	} else {
 		char *def = "menu";
-		WRITE(fd, def, strlen(def));
+		WRITE(resp, def, strlen(def));
 	}
-	WRITE(fd, head2, strlen(head2));
+	WRITE(resp, head2, strlen(head2));
 
 	data = widget->data.menu;
 
 	if (data->title) {
-		if (html_paragraph(fd, "title", data->title, level+1) < 0) {
+		if (html_paragraph(resp, "title", data->title, level+1) < 0) {
 			goto err;
 		}
 	}
@@ -289,23 +260,23 @@ html_generate_menu(int fd, gw_t *widget, int level)
 		char *foot = "</ul></p>\n";
 
 		LEVEL();
-		WRITE(fd, head, strlen(head));
+		WRITE(resp, head, strlen(head));
 
 		for (i=0; i<data->n; i++) {
 			void *key = data->items[i]->key;
-			if (html_li(fd, "link", data->items[i]->text,
+			if (html_li(resp, "link", data->items[i]->text,
 				    level+1, data, key) < 0) {
 				goto err;
 			}
 		}
 
 		LEVEL();
-		WRITE(fd, foot, strlen(foot));
+		WRITE(resp, foot, strlen(foot));
 	}
 	level--;
 	
 	LEVEL();
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -314,7 +285,7 @@ html_generate_menu(int fd, gw_t *widget, int level)
 }
 
 static int
-html_generate_text(int fd, gw_t *widget, int level)
+html_generate_text(plugin_html_resp_t *resp, gw_t *widget, int level)
 {
 	char *head1 = "<div id=\"";
 	char *head2 = "\"><p>\n";
@@ -322,23 +293,23 @@ html_generate_text(int fd, gw_t *widget, int level)
 	char *text = NULL;
 
 	LEVEL();
-	WRITE(fd, head1, strlen(head1));
+	WRITE(resp, head1, strlen(head1));
 	if (widget->name) {
-		WRITE(fd, widget->name, strlen(widget->name));
+		WRITE(resp, widget->name, strlen(widget->name));
 	} else {
 		char *def = "text";
-		WRITE(fd, def, strlen(def));
+		WRITE(resp, def, strlen(def));
 	}
 	
 	if (widget->data.text)
 		text = widget->data.text->text;
 
-	WRITE(fd, head2, strlen(head2));
+	WRITE(resp, head2, strlen(head2));
 	if (text)
-		WRITE(fd, text, strlen(text));
+		WRITE(resp, text, strlen(text));
 	
 	LEVEL();
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -346,8 +317,8 @@ html_generate_text(int fd, gw_t *widget, int level)
 	return -1;
 }
 
-static int
-html_generate_commands(int fd)
+int
+html_generate_commands(plugin_html_resp_t *resp)
 {
 	int i;
 	char *head = "<div id=\"commands\"><ul>\n";
@@ -359,17 +330,17 @@ html_generate_commands(int fd)
 		"return",
 	};
 
-	WRITE(fd, head, strlen(head));
+	WRITE(resp, head, strlen(head));
 
 	for (i=0; i<sizeof(cmd)/sizeof(cmd[0]); i++) {
-		WRITE(fd, cmd1, strlen(cmd1));
-		WRITE(fd, cmd[i], strlen(cmd[i]));
-		WRITE(fd, cmd2, strlen(cmd2));
-		WRITE(fd, cmd[i], strlen(cmd[i]));
-		WRITE(fd, cmd3, strlen(cmd3));
+		WRITE(resp, cmd1, strlen(cmd1));
+		WRITE(resp, cmd[i], strlen(cmd[i]));
+		WRITE(resp, cmd2, strlen(cmd2));
+		WRITE(resp, cmd[i], strlen(cmd[i]));
+		WRITE(resp, cmd3, strlen(cmd3));
 	}
 
-	WRITE(fd, foot, strlen(foot));
+	WRITE(resp, foot, strlen(foot));
 
 	return 0;
 
@@ -377,79 +348,44 @@ html_generate_commands(int fd)
 	return -1;
 }
 
-static int
-html_generate(int fd)
+static plugin_html_resp_t*
+html_generate(void)
 {
 	gw_t *root;
+	plugin_html_resp_t *resp;
+
+	if ((resp=malloc(sizeof(*resp))) == NULL) {
+		return NULL;
+	}
+	memset(resp, 0, sizeof(*resp));
 
 	if ((root=gw_root()) == NULL) {
-		return -1;
-	}
-
-	if (full_write(fd, header, strlen(header)) < 0) {
-		return -1;
-	}
-
-	if (html_generate_container(fd, root, 1) < 0) {
-		return -1;
-	}
-
-	if (html_generate_commands(fd) < 0) {
-		return -1;
-	}
-
-	if (full_write(fd, footer, strlen(footer)) < 0) {
-		return -1;
-	}
-
-	return 0;
-}
-
-static int
-html_default_css(int fd)
-{
-	if (full_write(fd, css, strlen(css)) < 0) {
-		return -1;
-	}
-
-	return 0;
-}
-
-static int
-html_notfound(int fd, char *path, int port)
-{
-	char *str = NULL;
-	int ret = -1;
-	int len = 8 * 1024;
-	char host[32];
-
-	gethostname(host, sizeof(host));
-
-	if ((str=malloc(len)) == NULL) {
 		goto err;
 	}
 
-	if (full_write(fd, nf_header, strlen(nf_header)) < 0) {
+	if (write_resp(resp, header, strlen(header)) < 0) {
 		goto err;
 	}
 
-	snprintf(str, len, NOT_FOUND_PATH, path);
-	if (full_write(fd, str, strlen(str)) < 0) {
+	if (html_generate_container(resp, root, 1) < 0) {
 		goto err;
 	}
 
-	snprintf(str, len, NOT_FOUND_TAIL, PLATFORM, host, port);
-	if (full_write(fd, str, strlen(str)) < 0) {
+	if (html_generate_commands(resp) < 0) {
 		goto err;
 	}
 
-	ret = 0;
+	if (write_resp(resp, footer, strlen(footer)) < 0) {
+		goto err;
+	}
+
+	return resp;
 
  err:
-	if (str)
-		free(str);
+	if (resp)
+		free(resp);
 
-	return ret;
+	return NULL;
 }
 
 static int
@@ -475,8 +411,6 @@ html_get_state(void)
 
 static plugin_html_t html = {
 	.generate = html_generate,
-	.css = html_default_css,
-	.notfound = html_notfound,
 	.update_widget = html_update_widget,
 	.get_state = html_get_state,
 };

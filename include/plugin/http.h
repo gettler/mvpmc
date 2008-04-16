@@ -32,7 +32,8 @@ typedef struct {
 typedef struct {
 	gw_menu_t *menu;
 	void *key;
-	int fd;
+	void *data;
+	void (*callback)(void*);
 } plugin_http_cmd_t;
 
 #endif /* PLUGIN_HTTP_H */
