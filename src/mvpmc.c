@@ -130,6 +130,24 @@ do_reboot(gw_t *widget, char *text, void *key)
 }
 #endif /* MVPMC_MEDIAMVP || MVPMC_NMT */
 
+#if defined(MVPMC_MG35)
+static int
+do_poweroff(gw_t *widget, char *text, void *key)
+{
+	extern int av_poweroff(void);
+
+	sync();
+
+	av_poweroff();
+
+	while (1) {
+		pause();
+	}
+
+	return 0;
+}
+#endif /* MVPMC_MG35 */
+
 #if defined(MVPMC_NMT)
 static int
 do_gaya(gw_t *widget, char *text, void *key)
@@ -262,6 +280,9 @@ gui_start(void *arg)
 #endif
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 	gw_menu_item_add(menu, "Reboot", (void*)3, do_reboot, NULL);
+#endif
+#if defined(MVPMC_MG35)
+	gw_menu_item_add(menu, "Power Off", (void*)3, do_poweroff, NULL);
 #endif
 
 	gw_unmap(splash);

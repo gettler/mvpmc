@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "mvp_av.h"
 
@@ -28,4 +29,20 @@ av_demux_mode_t
 av_init(void)
 {
 	return AV_DEMUX_OFF;
+}
+
+int
+av_poweroff(void)
+{
+	int fd;
+
+	if ((fd=open("/dev/fip", O_RDONLY)) < 0) {
+		return -1;
+	}
+
+	ioctl(fd, 0x00450006, 0);
+
+	close(fd);
+
+	return -1;
 }
