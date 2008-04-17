@@ -117,6 +117,7 @@ av_player(void *arg)
 		if (is_audio(pathname)) {
 			play_audio_file(pathname);
 		} else if (is_video(pathname)) {
+			system("/bin/cls");
 			play_video_file(pathname);
 		}
 		child = player;
