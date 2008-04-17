@@ -160,6 +160,12 @@ do_play_dvd(char *path)
 }
 
 int
+do_play_url(char *path)
+{
+	return -1;
+}
+
+int
 do_stop(void)
 {
 	if (player > 0) {
