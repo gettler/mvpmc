@@ -550,6 +550,18 @@ osd_display_surface(osd_surface_t *surface)
 }
 
 int
+osd_undisplay_surface(osd_surface_t *surface)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->undisplay)
+		return surface->fp->undisplay(surface);
+	else
+		return -1;
+}
+
+int
 osd_draw_indexed_image(osd_surface_t *surface,
 		       osd_indexed_image_t *image, int x, int y)
 {

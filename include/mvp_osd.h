@@ -104,7 +104,7 @@ extern void osd_destroy_all_surfaces(void);
  */
 extern int osd_display_surface(osd_surface_t *surface);
 
-extern void osd_undisplay_surface(osd_surface_t *surface);
+extern int osd_undisplay_surface(osd_surface_t *surface);
 
 /**
  * Return the size of the drawing surface

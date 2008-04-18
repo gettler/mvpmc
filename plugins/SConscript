@@ -12,7 +12,9 @@ av = env.SConscript('av/SConscript', build_dir='av/'+dir, duplicate=0)
 osd = env.SConscript('osd/SConscript', build_dir='osd/'+dir, duplicate=0)
 html = env.SConscript('html/SConscript', build_dir='html/'+dir, duplicate=0)
 http = env.SConscript('http/SConscript', build_dir='http/'+dir, duplicate=0)
+ss = env.SConscript('screensaver/SConscript',
+                    build_dir='screensaver/'+dir, duplicate=0)
 
-ret = [ av, osd, html, http ]
+ret = [ av, osd, html, http, ss ]
 
 Return('ret')

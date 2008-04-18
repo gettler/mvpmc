@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -17,33 +17,17 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef GW_LOCAL_H
-#define GW_LOCAL_H
+#ifndef PLUGIN_SCREENSAVER_H
+#define PLUGIN_SCREENSAVER_H
 
+#include <gw.h>
 #include <plugin/gw.h>
-#include <plugin/osd.h>
-#include <plugin/http.h>
-#include <plugin/screensaver.h>
 
-#define SS_TIMEOUT	(1*60)
+typedef struct {
+	int (*start)(void);
+	int (*stop)(void);
+	int (*feed)(int);
+	int (*is_running)(void);
+} plugin_screensaver_t;
 
-#define root		__gw_root
-#define commands	__gw_commands
-#define osd		__gw_osd
-#define http		__gw_http
-#define ss		__gw_ss
-#define update		__gw_update
-#define focus_input	__gw_focus_input
-#define pipefds		__gw_pipefds
-
-extern gw_t *root;
-extern plugin_osd_t *osd;
-extern plugin_http_t *http;
-extern plugin_screensaver_t *ss;
-extern gw_cmd_t focus_input;
-
-extern int update(gw_t *widget);
-
-extern int pipefds[2];
-
-#endif /* GW_LOCAL_H */
+#endif /* PLUGIN_SCREENSAVER_H */

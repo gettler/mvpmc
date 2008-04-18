@@ -28,12 +28,14 @@
 
 #include <plugin/http.h>
 #include <plugin/osd.h>
+#include <plugin/screensaver.h>
 
 gw_t *root = NULL;
 gw_t *commands = NULL;
 
 plugin_osd_t *osd = NULL;
 plugin_http_t *http = NULL;
+plugin_screensaver_t *ss = NULL;
 
 static volatile unsigned int current = 0;
 
@@ -58,14 +60,23 @@ gw_load_plugins(unsigned int dev)
 	if ((dev & GW_DEV_OSD) && ((osd=plugin_load("osd")) == NULL)) {
 		goto err;
 	}
+	if ((dev & GW_DEV_OSD) && ((ss=plugin_load("screensaver")) == NULL)) {
+		goto err;
+	}
 	loaded |= GW_DEV_OSD;
+
+	if (ss) {
+		ss->feed(SS_TIMEOUT);
+	}
 
 	return 0;
 
  err:
 	if (loaded & GW_DEV_OSD) {
 		plugin_unload("osd");
+		plugin_unload("screensaver");
 		osd = NULL;
+		ss = NULL;
 	}
 
 	if (loaded & GW_DEV_HTTP) {
@@ -82,6 +93,8 @@ gw_unload_plugins(unsigned int dev)
 	if (dev & GW_DEV_OSD) {
 		plugin_unload("osd");
 		osd = NULL;
+		plugin_unload("screensaver");
+		ss = NULL;
 	}
 	if (dev & GW_DEV_HTTP) {
 		plugin_unload("http");
