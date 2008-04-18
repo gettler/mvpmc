@@ -1,0 +1,46 @@
+#!/usr/bin/python
+#
+# build curl
+#
+
+import os
+import mvpmc
+
+Import('env')
+
+build_target = env['TARG']
+topdir = env['TOPDIR']
+libdir = '%s/dongle/install/%s/lib/' % (topdir,build_target)
+incdir = '%s/dongle/install/%s/include/' % (topdir,build_target)
+prefix = '%s/dongle/install/%s' % (topdir,build_target)
+
+if build_target == 'mvp':
+  cross = env['CROSS']
+  config = '--host=powerpc-linux'
+  patches = []
+  local = ''
+elif build_target == 'mg35':
+  cross = env['CROSS']
+  config = '--host=arm-linux --disable-shared'
+  patches = []
+elif build_target == 'nmt':
+  cross = env['CROSS']
+  config = '--host=mips-linux'
+  patches = []
+else:
+  cross = ''
+  config = ''
+  patches = []
+
+url = [ 'http://www.mvpmc.org/dl/curl-7.18.1.tar.bz2' ]
+
+e = Environment()
+
+target = [ libdir + 'libcurl.a' ]
+cmd = [ './configure --prefix=%s %s' % (prefix,config),
+        'make',
+        'make install' ]
+
+build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
+
+Return('build')

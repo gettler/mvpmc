@@ -11,6 +11,7 @@ target = env['TARG']
 
 freetype = env.SConscript('freetype/SConscript')
 microhttpd = env.SConscript('microhttpd/SConscript')
+curl = env.SConscript('curl/SConscript')
 #zlib = env.SConscript('zlib/SConscript')
 #png = env.SConscript('libpng/SConscript')
 #jpg = env.SConscript('jpeg/SConscript')
@@ -33,8 +34,8 @@ if target == 'nmt':
 #	libs.append(flac)
 
 if target == 'nmt':
-    libs = [ freetype, microhttpd, directfb ]
+    libs = [ curl, freetype, microhttpd, directfb ]
 else:
-    libs = [ freetype, microhttpd ]
+    libs = [ curl, freetype, microhttpd ]
 
 Return('libs')
