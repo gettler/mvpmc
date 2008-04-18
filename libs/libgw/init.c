@@ -91,9 +91,9 @@ static int
 gw_unload_plugins(unsigned int dev)
 {
 	if (dev & GW_DEV_OSD) {
+		plugin_unload("screensaver");
 		plugin_unload("osd");
 		osd = NULL;
-		plugin_unload("screensaver");
 		ss = NULL;
 	}
 	if (dev & GW_DEV_HTTP) {

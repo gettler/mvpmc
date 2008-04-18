@@ -106,6 +106,8 @@ draw(osd_surface_t *surface)
 			osd_fill_rect(surface, 0, 0, width, height, c[i]);
 			clear = time(NULL);
 		}
+
+		pthread_testcancel();
 	}
 }
 
@@ -152,6 +154,8 @@ ss_thread(void *arg)
 
 	while (1) {
 		time_t delta, to;
+
+		pthread_testcancel();
 
 		if ((to=timeout) == 0) {
 #if defined(MVPMC_MG35)
@@ -222,7 +226,11 @@ init_screensaver(void)
 static int
 release_screensaver(void)
 {
+	pthread_cancel(thread);
+
+#if 0
 	osd_close();
+#endif
 
 	printf("Screensaver plug-in deregistered!\n");
 
