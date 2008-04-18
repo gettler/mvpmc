@@ -342,7 +342,17 @@ gw_loop(struct timeval *to)
 			if (osd && (fdo >= 0) && FD_ISSET(fdo, &fds)) {
 				c = osd->input_read();
 				printf("key pressed: 0x%x!\n", c);
-				input(c);
+				if (ss) {
+					int r = ss->is_running();
+
+					ss->feed(SS_TIMEOUT);
+
+					if (!r) {
+						input(c);
+					}
+				} else {
+					input(c);
+				}
 			}
 			if (http && (fdh >= 0) && FD_ISSET(fdh, &fds)) {
 				printf("http input!\n");

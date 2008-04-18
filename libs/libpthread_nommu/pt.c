@@ -512,3 +512,12 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t bytes)
 {
 	return 0;
 }
+
+void pthread_testcancel(void)
+{
+}
+
+int pthread_cancel(pthread_t thread)
+{
+	return 0;
+}

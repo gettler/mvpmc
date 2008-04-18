@@ -202,6 +202,7 @@ av_monitor(void *arg)
 
 			do_stop();
 
+			gw_device_remove(GW_DEV_OSD);
 			gw_device_add(GW_DEV_OSD);
 			gw_output();
 		}
@@ -237,11 +238,20 @@ do_play_file(char *path)
 	pathname = strdup(path);
 	pthread_cond_broadcast(&cond);
 
+	sleep(15);
+	gw_device_add(GW_DEV_OSD);
+
 	return 0;
 }
 
 int
 do_play_dvd(char *path)
+{
+	return do_play_file(path);
+}
+
+int
+do_play_url(char *path)
 {
 	return do_play_file(path);
 }

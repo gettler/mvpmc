@@ -17,17 +17,17 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef PLUGIN_AV_H
-#define PLUGIN_AV_H
+#ifndef PLUGIN_SCREENSAVER_H
+#define PLUGIN_SCREENSAVER_H
 
 #include <gw.h>
 #include <plugin/gw.h>
 
 typedef struct {
-	int (*play_file)(char*);
-	int (*play_dvd)(char*);
-	int (*play_url)(char*);
+	int (*start)(void);
 	int (*stop)(void);
-} plugin_av_t;
+	int (*feed)(int);
+	int (*is_running)(void);
+} plugin_screensaver_t;
 
-#endif /* PLUGIN_AV_H */
+#endif /* PLUGIN_SCREENSAVER_H */
