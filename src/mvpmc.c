@@ -235,6 +235,16 @@ gui_start(void *arg)
 	char *gaya = getenv("EXIT_TO_GAYA");
 #endif
 
+#if defined(MVPMC_NMT)
+	/*
+	 * If mvpmc is started by gaya, set the hard drive spindown time
+	 * to 2 minutes, since gaya doesn't seem to be setting this.
+	 */
+	if (gaya) {
+		system("hdparm -S 24 /dev/hda");
+	}
+#endif
+
 	root = gw_root();
 
 	gw_focus_cb_set(do_key);
