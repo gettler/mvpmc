@@ -15,26 +15,32 @@ bindir = env['INSTBINDIR']
 if linkmode == 'dynamic':
 	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
 	
-if target == 'nmt' or target == 'mg35':
+if target == 'mg35':
 	mhlib = libdir + '/libmicrohttpd.a'
+	clib = libdir + '/libcurl.a'
+elif target == 'nmt':
+	mhlib = libdir + '/libmicrohttpd.a'
+	clib = libdir + '/libcurl.so'
 else:
 	mhlib = libdir + '/libmicrohttpd.so'
+	clib = libdir + '/libcurl.so'
 
-src = [ 'http.c', 'daemon.c' ]
+src = [ 'http.c', 'client.c', 'daemon.c' ]
 
 static = env.StaticLibrary('mvpmc_http.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
 			   LIBPATH = libdir,
-			   LINKFLAGS = ldflags + ' ' + mhlib)
+			   LINKFLAGS = ldflags + ' ' + mhlib + ' ' + clib)
 env.Depends(static, mhlib)
+env.Depends(static, clib)
 
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_http.plugin', src,
-			       CFLAGS = '-lmicrohttpd',
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
 			       LIBPATH = libdir,
-                               LINKFLAGS = ldflags + ' ' + mhlib)
+                               LINKFLAGS = ldflags + ' ' + mhlib + ' ' + clib)
     env.Depends(shared, mhlib)
+    env.Depends(shared, clib)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])

@@ -336,6 +336,8 @@ init_http(void)
 		return NULL;
 	}
 
+	client_init();
+
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 1024*64);
 

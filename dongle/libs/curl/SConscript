@@ -19,24 +19,29 @@ if build_target == 'mvp':
   config = '--host=powerpc-linux'
   patches = []
   local = ''
+  lib = 'libcurl.so'
 elif build_target == 'mg35':
   cross = env['CROSS']
   config = '--host=arm-linux --disable-shared'
   patches = []
+  lib = 'libcurl.a'
 elif build_target == 'nmt':
   cross = env['CROSS']
   config = '--host=mips-linux'
   patches = []
+  lib = 'libcurl.so'
 else:
   cross = ''
   config = ''
   patches = []
+  lib = 'libcurl.so'
 
 url = [ 'http://www.mvpmc.org/dl/curl-7.18.1.tar.bz2' ]
 
 e = Environment()
 
-target = [ libdir + 'libcurl.a' ]
+target = [ libdir + lib,
+           incdir + 'curl/curl.h' ]
 cmd = [ './configure --prefix=%s %s' % (prefix,config),
         'make',
         'make install' ]

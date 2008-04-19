@@ -37,18 +37,6 @@
 
 #include "http_local.h"
 
-#if defined(MVPMC_MEDIAMVP)
-#define PLATFORM	"MediaMVP"
-#elif defined(MVPMC_NMT)
-#define PLATFORM	"Networked Media Tank"
-#elif defined(MVPMC_MG35)
-#define PLATFORM	"Mediagate MG-35"
-#elif defined(MVPMC_HOST)
-#define PLATFORM	"host"
-#else
-#error unknown platform
-#endif
-
 #define NOT_FOUND \
 	"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">" \
 	"<html><head>" \
