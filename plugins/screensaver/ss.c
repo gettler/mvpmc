@@ -39,16 +39,7 @@
 
 #define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
 
-#define OSD_WHITE	OSD_COLOR(255,255,255,255)
-#define OSD_RED		OSD_COLOR(255,0,0,255)
-#define OSD_BLUE	OSD_COLOR(0,0,255,255)
-#define OSD_GREEN	OSD_COLOR(0,255,0,255)
 #define OSD_BLACK	OSD_COLOR(0,0,0,255)
-#define OSD_YELLOW	OSD_COLOR(255,255,0,255)
-#define OSD_ORANGE	OSD_COLOR(255,180,0,255)
-#define OSD_PURPLE	OSD_COLOR(255,0,234,255)
-#define OSD_BROWN	OSD_COLOR(118,92,0,255)
-#define OSD_CYAN	OSD_COLOR(0,255,234,255)
 
 #if defined(PLUGIN_SUPPORT)
 unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
@@ -108,15 +99,64 @@ draw_logo(osd_surface_t *surface)
 
 	if ((s=osd_create_surface(image.width, image.height,
 				  bg, OSD_GFX)) == NULL) {
-		printf("%s(): %d\n", __FUNCTION__, __LINE__);
 		goto err;
 	}
 
 	if (osd_draw_indexed_image(s, &image, 0, 0) < 0) {
-		printf("%s(): %d\n", __FUNCTION__, __LINE__);
 		goto err;
 	}
 
+#if defined(MVPMC_HOST) || defined(MVPMC_NMT) || defined(MVPMC_MEDIAMVP)
+	x = rand() % (width - image.width);
+	y = rand() % (height - image.height);
+	int oy = 1, ox = 1;
+	while (timeout && (timeout <= time(NULL))) {
+		if (x == 0)
+			ox = rand() % 2;
+		else
+			ox = (rand() % 2) - 1;
+		if (y == 0)
+			oy = rand() % 2;
+		else
+			oy = (rand() % 2) - 1;
+
+		x += ox;
+		y += oy;
+
+		osd_blit(surface, x, y, s, 0, 0, image.width, image.height);
+
+		while ((x > 0) && (x < width-image.width) &&
+		       (y > 0) && (y < height-image.height) &&
+		       (timeout && (timeout <= time(NULL)))) {
+			pthread_testcancel();
+			if (ox > 0) {
+				osd_fill_rect(surface, x, y,
+					      ox, image.height, bg);
+			}
+			if (ox < 0) {
+				osd_fill_rect(surface, x+image.width-ox, y,
+					      ox, image.height, bg);
+			}
+			if (oy > 0) {
+				osd_fill_rect(surface, x, y,
+					      image.width, oy, bg);
+			}
+			if (oy < 0) {
+				osd_fill_rect(surface, x, y+image.height-oy,
+					      image.width, oy, bg);
+			}
+
+			x += ox;
+			y += oy;
+
+			osd_blit(surface, x, y, s, 0, 0, image.width, image.height);
+			pthread_testcancel();
+			usleep(10000);
+		}
+
+		pthread_testcancel();
+	}
+#else
 	while (timeout && (timeout <= time(NULL))) {
 		x = rand() % (width - image.width);
 		y = rand() % (height - image.height);
@@ -129,6 +169,7 @@ draw_logo(osd_surface_t *surface)
 
 		pthread_testcancel();
 	}
+#endif
 
 	ret = 0;
 
