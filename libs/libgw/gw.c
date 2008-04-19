@@ -347,7 +347,9 @@ gw_loop(struct timeval *to)
 
 					ss->feed(SS_TIMEOUT);
 
-					if (!r) {
+					if (r) {
+						update(focus);
+					} else {
 						input(c);
 					}
 				} else {
