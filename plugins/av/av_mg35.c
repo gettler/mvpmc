@@ -117,6 +117,7 @@ av_player(void *arg)
 		if (is_audio(pathname)) {
 			play_audio_file(pathname);
 		} else if (is_video(pathname)) {
+			system("/bin/cls");
 			play_video_file(pathname);
 		}
 		child = player;
@@ -155,6 +156,12 @@ arch_init(void)
 
 int
 do_play_dvd(char *path)
+{
+	return -1;
+}
+
+int
+do_play_url(char *path)
 {
 	return -1;
 }

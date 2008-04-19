@@ -72,6 +72,8 @@
 char *version = NULL;
 char build_info[256];
 
+char *mclient_server = NULL;
+
 static struct option opts[] = {
 	{ "aspect", required_argument, 0, 'a' },
 	{ "config", required_argument, 0, 'F' },
@@ -130,6 +132,24 @@ do_reboot(gw_t *widget, char *text, void *key)
 	return 0;
 }
 #endif /* MVPMC_MEDIAMVP || MVPMC_NMT */
+
+#if defined(MVPMC_MG35)
+static int
+do_poweroff(gw_t *widget, char *text, void *key)
+{
+	extern int av_poweroff(void);
+
+	sync();
+
+	av_poweroff();
+
+	while (1) {
+		pause();
+	}
+
+	return 0;
+}
+#endif /* MVPMC_MG35 */
 
 #if defined(MVPMC_NMT)
 static int
@@ -197,6 +217,19 @@ do_fb(gw_t *widget, char *text, void *key)
 	return 0;
 }
 
+#if defined(MVPMC_NMT)
+static int
+do_ss(gw_t *widget, char *text, void *key)
+{
+	char url[1024];
+
+	snprintf(url, sizeof(url), "http://%s:9000/stream.mp3",
+		 mclient_server);
+
+	return av->play_url(url);
+}
+#endif
+
 static int
 do_key(gw_t *widget, int key)
 {
@@ -218,6 +251,16 @@ gui_start(void *arg)
 	gw_t *root;
 #if defined(MVPMC_NMT)
 	char *gaya = getenv("EXIT_TO_GAYA");
+#endif
+
+#if defined(MVPMC_NMT)
+	/*
+	 * If mvpmc is started by gaya, set the hard drive spindown time
+	 * to 2 minutes, since gaya doesn't seem to be setting this.
+	 */
+	if (gaya) {
+		system("hdparm -S 24 /dev/hda");
+	}
 #endif
 
 	root = gw_root();
@@ -249,6 +292,11 @@ gui_start(void *arg)
 
 	gw_menu_title_set(menu, "mvpmc");
 	gw_menu_item_add(menu, "File Browser", (void*)0, do_fb, NULL);
+#if defined(MVPMC_NMT)
+	if (mclient_server) {
+		gw_menu_item_add(menu, "SlimServer", (void*)5, do_ss, NULL);
+	}
+#endif
 	gw_menu_item_add(menu, "About", (void*)1, do_about, NULL);
 #if defined(MVPMC_NMT)
 	if (gaya) {
@@ -263,6 +311,9 @@ gui_start(void *arg)
 #endif
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 	gw_menu_item_add(menu, "Reboot", (void*)3, do_reboot, NULL);
+#endif
+#if defined(MVPMC_MG35)
+	gw_menu_item_add(menu, "Power Off", (void*)3, do_poweroff, NULL);
 #endif
 
 	gw_unmap(splash);
@@ -331,6 +382,9 @@ mvpmc_main(int argc, char **argv)
 			      "a:b:C:c:d:D:f:F:hHi:m:Mo:r:R:s:S:y:t:u:p:T:",
 			      opts, &opt_index)) != -1) {
 		switch (c) {
+		case 'c':
+			mclient_server = strdup(optarg);
+			break;
 		case 'h':
 			exit(0);
 			break;

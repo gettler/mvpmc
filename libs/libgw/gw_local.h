@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -23,11 +23,15 @@
 #include <plugin/gw.h>
 #include <plugin/osd.h>
 #include <plugin/http.h>
+#include <plugin/screensaver.h>
+
+#define SS_TIMEOUT	(1*60)
 
 #define root		__gw_root
 #define commands	__gw_commands
 #define osd		__gw_osd
 #define http		__gw_http
+#define ss		__gw_ss
 #define update		__gw_update
 #define focus_input	__gw_focus_input
 #define pipefds		__gw_pipefds
@@ -35,6 +39,7 @@
 extern gw_t *root;
 extern plugin_osd_t *osd;
 extern plugin_http_t *http;
+extern plugin_screensaver_t *ss;
 extern gw_cmd_t focus_input;
 
 extern int update(gw_t *widget);

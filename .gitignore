@@ -36,3 +36,5 @@ tools/toolchains/uclibc/source
 tools/toolchains/uclibc/build
 *~
 *.a
+core
+core.*

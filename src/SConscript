@@ -56,7 +56,7 @@ common = [ 'builtin.c', 'filebrowser.c', 'mvpmc.c', 'version_%s.c' % target ]
 
 if target == 'mg35':
 	src = [ common ]
-	plibs = [ 'pthread_nommu' ]
+	plibs = [ 'av', 'pthread_nommu' ]
 elif target == 'nmt':
 	src = [ common ]
 	plibs = [ 'pthread', 'microhttpd' ]
@@ -69,7 +69,8 @@ else:
 
 if linkmode == 'static':
 	plugins = [ 'mvpmc_html.plugin', 'mvpmc_http.plugin',
-		    'mvpmc_osd.plugin', 'mvpmc_av.plugin' ]
+		    'mvpmc_osd.plugin', 'mvpmc_av.plugin',
+		    'mvpmc_screensaver.plugin' ]
 	libs = [ 'gw', 'refmem', 'osd', 'input', 'freetype', 'piutil',
 		 'microhttpd', 'curl' ] + plibs
 	linkflags = '-static'
@@ -91,6 +92,7 @@ if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_http.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_osd.plugin.a')
 	env.Depends(mvpmc, libdir + '/libmvpmc_av.plugin.a')
+	env.Depends(mvpmc, libdir + '/libmvpmc_screensaver.plugin.a')
 	env.Depends(mvpmc, libdir + '/libosd.a')
 	env.Depends(mvpmc, libdir + '/libinput.a')
 	env.Depends(mvpmc, libdir + '/libcurl.a')

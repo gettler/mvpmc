@@ -284,17 +284,52 @@ callback(void *cls, struct MHD_Connection *connection,
 	return ret;
 }
 
+#if defined(MVPMC_MG35)
+static void*
+httpd_thread(void *arg)
+{
+	fd_set fdsr, fdsw, fdse;
+	int max;
+
+	mhd = MHD_start_daemon(0, HTTP_PORT,
+			       NULL, NULL, &callback, NULL, MHD_OPTION_END);
+
+	while (1) {
+		struct timeval tv;
+		unsigned long long ms = 0;
+
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+
+		if (MHD_get_timeout(mhd, &ms) == MHD_YES) {
+			tv.tv_sec = 0;
+			tv.tv_usec = ms * 1000;
+		}
+
+		max = 0;
+		FD_ZERO(&fdsr);
+		MHD_get_fdset(mhd, &fdsr, &fdsw, &fdse, &max);
+		select(max+1, &fdsr, NULL, NULL, &tv);
+		MHD_run(mhd);
+	}
+
+	return NULL;
+}
+#endif /* MVPMC_MG35 */
+
 int
 httpd_start(void)
 {
-#if defined(MVPMC_MG35)
-	return 0;
-#endif
 
 	printf("starting httpd daemon on port %d\n", HTTP_PORT);
 
+#if defined(MVPMC_MG35)
+	pthread_t th;
+	pthread_create(&th, NULL, httpd_thread, NULL);
+#else
 	mhd = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, HTTP_PORT,
 			       NULL, NULL, &callback, NULL, MHD_OPTION_END);
+#endif
 
 	return 0;
 }

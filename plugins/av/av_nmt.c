@@ -247,6 +247,12 @@ do_play_dvd(char *path)
 }
 
 int
+do_play_url(char *path)
+{
+	return do_play_file(path);
+}
+
+int
 do_stop(void)
 {
 	if (player) {

@@ -225,7 +225,7 @@ gtk_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 {
 	gdk_draw_drawable(dstsfc->data.drawable,
 			gc, srcsfc->data.drawable,
-			dstx, dsty, srcx, srcy, w, h);
+			srcx, srcy, dstx, dsty, w, h);
 
 	if (dstsfc->data.drawable == drawable) {
 		expose_callback(NULL, NULL);
@@ -314,6 +314,7 @@ gtk_get_visible_surface(void)
 
 static osd_func_t fp = {
 	.draw_pixel = gtk_draw_pixel,
+	.blit = gtk_blit,
 	.fill_rect = gtk_fill_rect,
 	.display = gtk_display_surface,
 	.undisplay = gtk_undisplay_surface,

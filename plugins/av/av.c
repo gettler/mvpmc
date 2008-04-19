@@ -63,6 +63,18 @@ av_play_file(char *path)
 }
 
 static int
+play_dvd(char *path)
+{
+	if (info.playing) {
+		do_stop();
+	}
+
+	info.playing = 1;
+
+	return do_play_dvd(path);
+}
+
+static int
 av_play_dvd(char *path)
 {
 	char *dvd_path;
@@ -72,20 +84,32 @@ av_play_dvd(char *path)
 		if (access(dvd_path, R_OK) == 0) {
 			free(dvd_path);
 			printf("playing dvd...\n");
-			do_play_dvd(path);
+			play_dvd(path);
 			return 0;
 		}
 		sprintf(dvd_path, "%s/video_ts/video_ts.ifo", path);
 		if (access(dvd_path, R_OK) == 0) {
 			free(dvd_path);
 			printf("playing dvd...\n");
-			do_play_dvd(path);
+			play_dvd(path);
 			return 0;
 		}
 		free(dvd_path);
 	}
 
 	return -1;
+}
+
+static int
+av_play_url(char *url)
+{
+	if (info.playing) {
+		do_stop();
+	}
+
+	info.playing = 1;
+
+	return do_play_url(url);
 }
 
 static int
@@ -99,6 +123,7 @@ av_stop(void)
 static plugin_av_t av = {
 	.play_file = av_play_file,
 	.play_dvd = av_play_dvd,
+	.play_url = av_play_url,
 	.stop = av_stop,
 };
 

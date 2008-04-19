@@ -214,7 +214,7 @@ overlay_display_surface(osd_surface_t *surface)
 	}
 
 	if (visible) {
-		return -1;
+		visible = NULL;
 	}
 
 	if (surface->data.overlay.palette) {
