@@ -120,6 +120,10 @@ draw_logo(osd_surface_t *surface)
 		else
 			oy = (rand() % 2) - 1;
 
+		if ((ox == 0) && (oy == 0)) {
+			continue;
+		}
+
 		x += ox;
 		y += oy;
 
