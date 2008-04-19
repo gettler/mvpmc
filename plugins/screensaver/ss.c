@@ -31,6 +31,25 @@
 #include <plugin.h>
 #include <plugin/screensaver.h>
 
+#define INCLUDE_LINUX_LOGO_DATA
+
+#undef __initdata
+#define __initdata
+#include "../../src/splash.h"
+
+#define OSD_COLOR(r,g,b,a)	((a<<24) | (r<<16) | (g<<8) | b)
+
+#define OSD_WHITE	OSD_COLOR(255,255,255,255)
+#define OSD_RED		OSD_COLOR(255,0,0,255)
+#define OSD_BLUE	OSD_COLOR(0,0,255,255)
+#define OSD_GREEN	OSD_COLOR(0,255,0,255)
+#define OSD_BLACK	OSD_COLOR(0,0,0,255)
+#define OSD_YELLOW	OSD_COLOR(255,255,0,255)
+#define OSD_ORANGE	OSD_COLOR(255,180,0,255)
+#define OSD_PURPLE	OSD_COLOR(255,0,234,255)
+#define OSD_BROWN	OSD_COLOR(118,92,0,255)
+#define OSD_CYAN	OSD_COLOR(0,255,234,255)
+
 #if defined(PLUGIN_SUPPORT)
 unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 #endif
@@ -70,51 +89,59 @@ feed(int seconds)
 	return 0;
 }
 
-static void
-draw(osd_surface_t *surface)
+static int
+draw_logo(osd_surface_t *surface)
 {
-	time_t clear = time(NULL);
-	unsigned long c[64];
-	int i;
+	osd_indexed_image_t image;
+	int x, y;
+	unsigned int bg = OSD_BLACK;
+	int ret = -1;
+	osd_surface_t *s;
 
-	for (i=0; i< 64; i++) {
-		unsigned char r, g, b, a;
+	image.colors = LINUX_LOGO_COLORS;
+	image.width = LOGO_W;
+	image.height = LOGO_H;
+	image.red = linux_logo_red;
+	image.green = linux_logo_green;
+	image.blue = linux_logo_blue;
+	image.image = linux_logo;
 
-		r = rand();
-		g = rand();
-		b = rand();
-		a = 0xff;
+	if ((s=osd_create_surface(image.width, image.height,
+				  bg, OSD_GFX)) == NULL) {
+		printf("%s(): %d\n", __FUNCTION__, __LINE__);
+		goto err;
+	}
 
-		c[i] = osd_rgba(r, g, b, a);
+	if (osd_draw_indexed_image(s, &image, 0, 0) < 0) {
+		printf("%s(): %d\n", __FUNCTION__, __LINE__);
+		goto err;
 	}
 
 	while (timeout && (timeout <= time(NULL))) {
-		int x, y, w, h;
+		x = rand() % (width - image.width);
+		y = rand() % (height - image.height);
 
-		x = rand() % width;
-		y = rand() % height;
-		w = rand() % (width - x);
-		h = rand() % (height - y);
-		i = rand() % 64;
+		osd_blit(surface, x, y, s, 0, 0, image.width, image.height);
 
-		osd_fill_rect(surface, x, y, w, h, c[i]);
+		sleep(2);
 
-		usleep(30000);
-
-		if ((time(NULL) - clear) > 30) {
-			i = rand() % 64;
-			osd_fill_rect(surface, 0, 0, width, height, c[i]);
-			clear = time(NULL);
-		}
+		osd_fill_rect(surface, x, y, image.width, image.height, bg);
 
 		pthread_testcancel();
 	}
+
+	ret = 0;
+
+ err:
+	osd_destroy_surface(s);
+
+	return ret;
 }
 
 static int
 ss(void)
 {
-	unsigned int bg = OSD_COLOR_GREEN;
+	unsigned int bg = OSD_COLOR_BLACK;
 	osd_surface_t *s, *v;
 
 	v = osd_get_visible_surface();
@@ -128,7 +155,7 @@ ss(void)
 		return -1;
 	}
 
-	draw(s);
+	draw_logo(s);
 
 	osd_undisplay_surface(s);
 

@@ -408,8 +408,9 @@ blit_copy(osd_surface_t *dstsfc, int dstx, int dsty,
 	int x, y;
 	unsigned int c;
 
-	if (srcsfc->fp->read_pixel == NULL)
+	if (srcsfc->fp->read_pixel == NULL) {
 		return -1;
+	}
 
 	for (x=0; x<w; x++) {
 		for (y=0; y<h; y++) {
@@ -435,8 +436,9 @@ int
 osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	 osd_surface_t *srcsfc, int srcx, int srcy, int w, int h)
 {
-	if ((dstsfc == NULL) || (srcsfc == NULL))
+	if ((dstsfc == NULL) || (srcsfc == NULL)) {
 		return -1;
+	}
 
 	/*
 	 * XXX: what about clipping in source or destination?
@@ -448,14 +450,16 @@ osd_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 				 srcsfc, srcx, srcy, w, h);
 	}
 
-	if (dstsfc == srcsfc)
+	if (dstsfc == srcsfc) {
 		return -1;
+	}
 
-	if (dstsfc->fp->blit)
+	if (dstsfc->fp->blit) {
 		return dstsfc->fp->blit(dstsfc, dstx, dsty,
 					srcsfc, srcx, srcy, w, h);
-	else
+	} else {
 		return -1;
+	}
 }
 
 osd_surface_t*

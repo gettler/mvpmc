@@ -117,6 +117,33 @@ gfx_draw_pixel(osd_surface_t *surface, int x, int y, unsigned int c)
 }
 
 static int
+gfx_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
+		   int x, int y)
+{
+	int i, p, X, Y;
+	unsigned char r, g, b;
+	unsigned int c;
+
+	i = 0;
+	for (X=0; X<image->width; X++) {
+		for (Y=0; Y<image->height; Y++) {
+			i = (Y*image->width) + X;
+			p = image->image[i] - 32;
+			if ((p < 0) || (p >= image->colors)) {
+				return -1;
+			}
+			r = image->red[p];
+			g = image->green[p];
+			b = image->blue[p];
+			c = rgba2c(r, g, b, 0xff);
+			gfx_draw_pixel(surface, x+X, y+Y, c);
+		}
+	}
+
+	return 0;
+}
+
+static int
 gfx_destroy_surface(osd_surface_t *surface)
 {
 	int i;
@@ -424,7 +451,7 @@ osd_func_t fp_gfx = {
 	.draw_vert_line = gfx_draw_vert_line,
 	.fill_rect = gfx_fill_rect,
 	.blit = gfx_blit,
-	.draw_indexed_image = NULL,
+	.draw_indexed_image = gfx_draw_image,
 	.blend = gfx_blend,
 	.afillblt = gfx_afillblt,
 	.clip = gfx_clip,
