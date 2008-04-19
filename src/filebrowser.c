@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <glob.h>
+#include <fnmatch.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -128,70 +129,72 @@ select_file(gw_t *widget, char *text, void *key)
 static void
 add_dirs(void)
 {
-	glob_t gb;
-	char pattern[256], buf[256], *ptr;
-	int i;
+	char buf[256];
 	struct STAT sb;
-
-	printf("%s(): cwd '%s'\n", __FUNCTION__, cwd);
-
-	memset(&gb, 0, sizeof(gb));
-	snprintf(pattern, sizeof(pattern), "%s/*", cwd);
+	struct dirent *d;
+	struct dirent **nl;
+	int n, i;
 
 	dir_count = 1;
-	if (glob(pattern, GLOB_ONLYDIR, NULL, &gb) == 0) {
-		i = 0;
-		while (gb.gl_pathv[i]) {
-			STAT(gb.gl_pathv[i], &sb);
-			if (S_ISDIR(sb.st_mode)) {
-				if ((ptr=strrchr(gb.gl_pathv[i], '/')) == NULL)
-					ptr = gb.gl_pathv[i];
-				else
-					ptr++;
-				sprintf(buf, ptr);
-				strcat(buf, "/");
-				printf("DIR: '%s'\n", buf);
-				gw_menu_item_add(fb, buf,
-						 (void*)dir_count++,
-						 select_dir, NULL);
-			}
-			i++;
+
+	n = scandir(cwd, &nl, NULL, alphasort);
+
+	for (i=0; i<n; i++) {
+		d = nl[i];
+		if (strcmp(d->d_name, ".") == 0) {
+			goto cont;
 		}
+		snprintf(buf, sizeof(buf), "%s%s", cwd, d->d_name);
+		STAT(buf, &sb);
+		if (S_ISDIR(sb.st_mode) && (access(buf, X_OK|R_OK) == 0)) {
+			sprintf(buf, d->d_name);
+			strcat(buf, "/");
+			gw_menu_item_add(fb, buf,
+					 (void*)dir_count++,
+					 select_dir, NULL);
+		}
+	cont:
+		free(d);
 	}
-	globfree(&gb);
 }
 
 static int
 do_glob(char *wc[])
 {
-	int w, i = 0;
+	char buf[256];
 	struct STAT sb;
-	glob_t gb;
-	char pattern[1024], *ptr;
+	int w, count = 0;
 
 	w = 0;
 	while (wc[w] != NULL) {
-		memset(&gb, 0, sizeof(gb));
-		snprintf(pattern, sizeof(pattern), "%s/%s", cwd, wc[w]);
-		if (glob(pattern, 0, NULL, &gb) == 0) {
-			i = 0;
-			while (gb.gl_pathv[i]) {
-				STAT(gb.gl_pathv[i], &sb);
-				if ((ptr=strrchr(gb.gl_pathv[i], '/')) == NULL)
-					ptr = gb.gl_pathv[i];
-				else
-					ptr++;
-				gw_menu_item_add(fb, ptr,
+		struct dirent *d;
+		struct dirent **nl;
+		int n, i;
+
+		n = scandir(cwd, &nl, NULL, alphasort);
+
+		for (i=0; i<n; i++) {
+			d = nl[i];
+			snprintf(buf, sizeof(buf), "%s%s", cwd, d->d_name);
+			STAT(buf, &sb);
+			if (!S_ISREG(sb.st_mode)) {
+				goto cont;
+			}
+			if ((fnmatch(wc[w], d->d_name, 0) == 0) &&
+			    (access(buf, R_OK) == 0)) {
+				gw_menu_item_add(fb, d->d_name,
 						 (void*)dir_count++,
 						 select_file, NULL);
-				i++;
+				count++;
 			}
+		cont:
+			free(d);
 		}
-		globfree(&gb);
+
 		w++;
 	}
 
-	return i;
+	return count;
 }
 
 static void
