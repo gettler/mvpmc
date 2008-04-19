@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <limits.h>
+#include <libgen.h>
 
 #include <mvp_av.h>
 #include <mvp_demux.h>
@@ -84,10 +85,10 @@ select_dir(gw_t *widget, char *text, void *key)
 	char *dir = ref_hold(text);
 	extern void fb_display(void);
 
-	printf("Select dir: '%s'\n", text);
+	printf("Select dir: '%s'\n", dir);
 
-	if ((dvd_path=malloc(strlen(cwd)+strlen(text)+32)) != NULL) {
-		sprintf(dvd_path, "%s/%s", cwd, text);
+	if ((dvd_path=malloc(strlen(cwd)+strlen(dir)+32)) != NULL) {
+		sprintf(dvd_path, "%s/%s", cwd, dir);
 		if (av->play_dvd(dvd_path) == 0) {
 			free(dvd_path);
 			return 0;
@@ -97,12 +98,21 @@ select_dir(gw_t *widget, char *text, void *key)
 
 	gw_menu_clear(fb);
 
-	buf = alloca(strlen(cwd) + strlen(text) + 1);
-	sprintf(buf, "%s%s", cwd, text);
+	if (strcmp(dir, "../") == 0) {
+		buf = strdup(dirname(cwd));
+		snprintf(cwd, sizeof(cwd), "%s/", buf);
+		free(buf);
+	} else {
+		buf = alloca(strlen(cwd) + strlen(dir) + 1);
+		sprintf(buf, "%s%s", cwd, dir);
 
-	strcpy(cwd, buf);
+		strcpy(cwd, buf);
+	}
 
-	printf("Menu title: '%s' '%s'\n", buf, cwd);
+	if (strcmp(cwd, "//") == 0)
+		cwd[1] = '\0';
+
+	printf("Menu title: '%s'\n", cwd);
 
 	gw_menu_title_set(fb, cwd);
 
@@ -142,6 +152,10 @@ add_dirs(void)
 	for (i=0; i<n; i++) {
 		d = nl[i];
 		if (strcmp(d->d_name, ".") == 0) {
+			goto cont;
+		}
+		if ((strcmp(cwd, "/") == 0) &&
+		    (strcmp(d->d_name, "..") == 0)) {
 			goto cont;
 		}
 		snprintf(buf, sizeof(buf), "%s%s", cwd, d->d_name);
