@@ -407,10 +407,84 @@ get_video_mode(void)
 	return mode;
 }
 
+static int
+get_tv_name(void)
+{
+	FILE *f;
+	char line[256];
+	int ret = 0;
+
+	/*
+	 * Values seen in /tmp/tvname
+	 *
+	 *    HDMI_1080p60
+	 *    Component NTSC
+	 */
+
+	if ((f=fopen("/tmp/tvname", "r")) == NULL) {
+		return 0;
+	}
+
+	do {
+		char *res, *mode;
+
+		if (fgets(line, sizeof(line), f) == NULL) {
+			break;
+		}
+
+		if ((res=strchr(line, '_')) != NULL) {
+			*(res++) = '\0';
+		}
+		if ((mode=strchr(line, ' ')) != NULL) {
+			*(mode++) = '\0';
+		}
+
+		if (mode && strcmp(mode, "NTSC") == 0) {
+			ret = 1;
+			break;
+		}
+		if (mode && strcmp(mode, "PAL") == 0) {
+			ret = 2;
+			break;
+		}
+
+		if (res && strcmp(res, "720p60") == 0) {
+			ret = 10;
+			break;
+		}
+		if (res && strcmp(res, "1080p60") == 0) {
+			ret = 11;
+			break;
+		}
+		if (res && strcmp(res, "1080i60") == 0) {
+			ret = 12;
+			break;
+		}
+		if (res && strcmp(res, "720p50") == 0) {
+			ret = 6;
+			break;
+		}
+		if (res && strcmp(res, "1080p50") == 0) {
+			ret = 7;
+			break;
+		}
+		if (res && strcmp(res, "1080i50") == 0) {
+			ret = 8;
+			break;
+		}
+	} while (0);
+
+	printf("DFB: tv name %d\n", ret);
+
+	fclose(f);
+
+	return ret;
+}
+
 int
 dfb_init(void)
 {
-	int mode;
+	int mode, name;
 	char dfb_mode[32];
 	char *dfb_signal = NULL;
 	char *dfb_tv = NULL;
@@ -434,6 +508,14 @@ dfb_init(void)
 #endif /* USE_LIBDL */
 
 	mode = get_video_mode();
+	name = get_tv_name();
+
+	/*
+	 * If mode is 0 (Auto TV Mode), then use the mode from get_tv_name()
+	 */
+	if (mode == 0) {
+		mode = name;
+	}
 
 	DFBCHECK(dl_DirectFBInit( NULL, NULL));
 
