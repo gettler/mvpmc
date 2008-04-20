@@ -189,6 +189,13 @@ ss(void)
 	unsigned int bg = OSD_COLOR_BLACK;
 	osd_surface_t *s, *v;
 
+#if defined(MVPMC_NMT)
+	system("hdparm -y /dev/hda");
+#endif
+#if defined(MVPMC_MG35)
+	system("hdparm -y /dev/discs/disc0/part1");
+#endif
+
 	v = osd_get_visible_surface();
 
 	if ((s=osd_create_surface(width, height, bg, OSD_GFX)) == NULL) {
