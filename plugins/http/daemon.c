@@ -254,7 +254,7 @@ callback(void *cls, struct MHD_Connection *connection,
 {
 	plugin_html_resp_t *resp = NULL;
 	get_data_t data;
-	int state = 0;
+	unsigned long state = 0;
 	int ret = MHD_NO;
 
 	printf("%s(): %d\n", __FUNCTION__, __LINE__);
@@ -268,7 +268,7 @@ callback(void *cls, struct MHD_Connection *connection,
 	printf("%s(): %d\n", __FUNCTION__, __LINE__);
 	if (data.state) {
 		printf("data.state %p\n", data.state);
-		state = (int)data.state;
+		state = (unsigned long)data.state;
 	}
 
 	printf("%s(): %d\n", __FUNCTION__, __LINE__);
