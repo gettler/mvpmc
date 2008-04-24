@@ -166,7 +166,7 @@ start_player(void)
 			 "/bin/mono -single -nogui '%s' -dram 1", pathname);
 	} else if (is_dvd(pathname)) {
 		snprintf(cmd,sizeof(cmd),
-			 "/bin/amp_test %s/ --dfb:quiet -osd32 -bgnd:/bin/logo.jpg",
+			 "/bin/amp_test '%s/' --dfb:quiet -osd32 -bgnd:/bin/logo.jpg",
 			 pathname);
 	} else {
 		return -1;
