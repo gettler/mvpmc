@@ -65,8 +65,11 @@ gw_load_plugins(unsigned int dev)
 	}
 	loaded |= GW_DEV_OSD;
 
-	if (ss) {
+	if ((dev & GW_DEV_OSD) && ss) {
 		ss->feed(SS_TIMEOUT);
+	}
+	if ((dev & GW_DEV_HTTP) && http) {
+		http->startd(0);
 	}
 
 	return 0;
@@ -80,6 +83,7 @@ gw_load_plugins(unsigned int dev)
 	}
 
 	if (loaded & GW_DEV_HTTP) {
+		http->stopd();
 		plugin_unload("http");
 		http = NULL;
 	}

@@ -21,6 +21,9 @@
 #define HTTP_LOCAL_H
 
 #define httpd_start	__http_httpd_start
+#define httpd_stop	__http_httpd_stop
+#define client_init	__http_client_init
+#define client_get	__http_client_get
 #define html		__http_html
 #define pipefds		__http_pipefds
 
@@ -59,11 +62,26 @@ typedef struct {
 } httpd_req_t;
 
 extern int http_get(http_req_t *req, int block);
-extern int httpd_start(void);
+extern int httpd_start(int port);
+extern int httpd_stop(void);
+extern int client_init(void);
+extern int client_get(char*, int (*)(void*, char*, int), void*);
 
 extern plugin_html_t *html;
 extern int pipefds[];
 
-#define HTTP_PORT	8500
+#define HTTPD_PORT	8500
+
+#if defined(MVPMC_MEDIAMVP)
+#define PLATFORM	"MediaMVP"
+#elif defined(MVPMC_NMT)
+#define PLATFORM	"Networked Media Tank"
+#elif defined(MVPMC_MG35)
+#define PLATFORM	"Mediagate MG-35"
+#elif defined(MVPMC_HOST)
+#define PLATFORM	"host"
+#else
+#error unknown platform
+#endif
 
 #endif /* HTTP_LOCAL_H */

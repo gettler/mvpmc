@@ -72,7 +72,7 @@ if linkmode == 'static':
 		    'mvpmc_osd.plugin', 'mvpmc_av.plugin',
 		    'mvpmc_screensaver.plugin' ]
 	libs = [ 'gw', 'refmem', 'osd', 'input', 'freetype', 'piutil',
-		 'microhttpd' ] + plibs
+		 'microhttpd', 'curl' ] + plibs
 	linkflags = '-static'
 else:
 	plugins = [ ]
@@ -95,6 +95,7 @@ if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_screensaver.plugin.a')
 	env.Depends(mvpmc, libdir + '/libosd.a')
 	env.Depends(mvpmc, libdir + '/libinput.a')
+	env.Depends(mvpmc, libdir + '/libcurl.a')
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])

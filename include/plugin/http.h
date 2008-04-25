@@ -27,6 +27,9 @@ typedef struct {
 	int (*generate)(void);
 	int (*update_widget)(gw_t*);
 	int (*input_fd)(void);
+	int (*get)(char*, int (*)(void*, char*, int), void*);
+	int (*startd)(int);
+	int (*stopd)(void);
 } plugin_http_t;
 
 typedef struct {
