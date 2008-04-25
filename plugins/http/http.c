@@ -323,6 +323,9 @@ static plugin_http_t http = {
 	.generate = http_generate,
 	.update_widget = http_update_widget,
 	.input_fd = http_input_fd,
+	.startd = httpd_start,
+	.stopd = httpd_stop,
+	.get = client_get,
 };
 
 static void*
@@ -342,10 +345,6 @@ init_http(void)
 	pthread_attr_setstacksize(&attr, 1024*64);
 
 	pthread_create(&thread, &attr, http_thread, NULL);
-
-	if (httpd_start() < 0) {
-		return NULL;
-	}
 
 	printf("HTTP plug-in registered!\n");
 

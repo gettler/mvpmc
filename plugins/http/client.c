@@ -43,6 +43,11 @@ typedef struct {
 	int len;
 } url_resp_t;
 
+typedef struct {
+	int (*callback)(void*, char*, int);
+	void *data;
+} url_cb_t;
+
 static char agent[64];
 
 static size_t
@@ -83,6 +88,40 @@ client_get_url(char *url, char **ret)
 	*ret = resp.data;
 
 	return resp.len;
+}
+
+static size_t
+get_cb(void *ptr, size_t size, size_t nmemb, void *data)
+{
+	url_cb_t *cb = (url_cb_t*)data;
+	int len = size * nmemb;
+
+	return cb->callback(cb->data, ptr, len);
+}
+
+int
+client_get(char *url, int (*callback)(void*, char*, int), void *data)
+{
+	CURL *handle;
+	url_cb_t cb;
+
+	if ((handle=curl_easy_init()) == NULL) {
+		return -1;
+	}
+
+	cb.callback = callback;
+	cb.data = data;
+
+	curl_easy_setopt(handle, CURLOPT_USERAGENT, agent);
+	curl_easy_setopt(handle, CURLOPT_URL, url);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void*)&cb);
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, get_cb);
+
+	curl_easy_perform(handle);
+
+	curl_easy_cleanup(handle);
+
+	return 0;
 }
 
 int

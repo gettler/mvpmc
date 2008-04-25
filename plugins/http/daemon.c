@@ -68,6 +68,12 @@ static struct MHD_Daemon *mhd;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static volatile int port;
+
+#if defined(MVPMC_MG35)
+static pthread_t thread;
+#endif
+
 static int
 get_args(void *cls, enum MHD_ValueKind kind,
 	 const char *key, const char *value)
@@ -119,7 +125,7 @@ notfound(struct MHD_Connection *connection, const char *url)
 	}
 
 	gethostname(host, sizeof(host));
-	len = snprintf(str, len, NOT_FOUND, url, PLATFORM, host, HTTP_PORT);
+	len = snprintf(str, len, NOT_FOUND, url, PLATFORM, host, port);
 
 	response = MHD_create_response_from_data(len, str, MHD_YES, MHD_NO);
 
@@ -291,7 +297,7 @@ httpd_thread(void *arg)
 	fd_set fdsr, fdsw, fdse;
 	int max;
 
-	mhd = MHD_start_daemon(0, HTTP_PORT,
+	mhd = MHD_start_daemon(0, port,
 			       NULL, NULL, &callback, NULL, MHD_OPTION_END);
 
 	while (1) {
@@ -318,18 +324,40 @@ httpd_thread(void *arg)
 #endif /* MVPMC_MG35 */
 
 int
-httpd_start(void)
+httpd_start(int p)
 {
+	if (port != 0) {
+		return -1;
+	}
 
-	printf("starting httpd daemon on port %d\n", HTTP_PORT);
+	if (p == 0) {
+		port = HTTPD_PORT;
+	} else {
+		port = p;
+	}
+
+	printf("starting httpd daemon on port %d\n", port);
 
 #if defined(MVPMC_MG35)
-	pthread_t th;
-	pthread_create(&th, NULL, httpd_thread, NULL);
+	pthread_create(&thread, NULL, httpd_thread, NULL);
 #else
-	mhd = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, HTTP_PORT,
+	mhd = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, port,
 			       NULL, NULL, &callback, NULL, MHD_OPTION_END);
 #endif
+
+	return 0;
+}
+
+int
+httpd_stop(void)
+{
+#if defined(MVPMC_MG35)
+	pthread_cancel(thread);
+#else
+	MHD_stop_daemon(mhd);
+#endif
+
+	port = 0;
 
 	return 0;
 }
