@@ -155,25 +155,52 @@ is_dvd(char *path)
 static int
 start_player(void)
 {
-	char cmd[1024];
+	char path[strlen(pathname)+1];
+	char *argv[16];
+	pid_t child;
+
+	memset(argv, 0, sizeof(argv));
 
 	if (is_audio(pathname)) {
-		snprintf(cmd,sizeof(cmd),
-			 "/bin/mono -audio -prebuf 100 -bgimg -single '%s' -dram 1",
-			 pathname);
+		argv[0] = "/bin/mono";
+		argv[1] = "-audio";
+		argv[2] = "-prebuf";
+		argv[3] = "100";
+		argv[4] = "-bgimg";
+		argv[5] = "-single";
+		argv[6] = pathname;
+		argv[7] = "-dram";
+		argv[8] = "1";
 	} else if (is_video(pathname)) {
-		snprintf(cmd,sizeof(cmd),
-			 "/bin/mono -single -nogui '%s' -dram 1", pathname);
+		argv[0] = "/bin/mono";
+		argv[1] = "-single";
+		argv[2] = "-nogui";
+		argv[3] = pathname;
+		argv[4] = "-dram";
+		argv[5] = "1";
 	} else if (is_dvd(pathname)) {
-		snprintf(cmd,sizeof(cmd),
-			 "/bin/amp_test %s/ --dfb:quiet -osd32 -bgnd:/bin/logo.jpg",
-			 pathname);
+		sprintf(path, "%s/", pathname);
+		argv[0] = "/bin/amp_test";
+		argv[1] = path;
+		argv[2] = "--dfb:quiet";
+		argv[3] = "--osd32";
+		argv[4] = "--bgnd:/bin/logo.jpg";
 	} else {
 		return -1;
 	}
 
-	printf("Starting player: %s\n", cmd);
-	system(cmd);
+	printf("Starting player: %s\n", argv[0]);
+	switch (child=fork()) {
+	case 0:
+		execv(argv[0], argv);
+		exit(1);
+	case -1:
+		return -1;
+		break;
+	}
+
+	while (waitpid(child, NULL, 0) != child)
+		;
 
 	return 0;
 }

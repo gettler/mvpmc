@@ -364,9 +364,133 @@ dfb_create(int w, int h, unsigned long color)
 	return surface;
 }
 
+static int
+get_video_mode(void)
+{
+	FILE *f;
+	char line[256];
+	int mode = -1;
+
+	/*
+	 * TV Modes (/tmp/setting.txt video_output):
+	 *
+	 *    1   - NTSC 480i
+	 *    2   - PAL 576i
+	 *    6   - 720p50
+	 *    8   - 1080i50
+	 *    7   - 1080p50
+	 *    10  - 720p60
+	 *    12  - 1080i60
+	 *    11  - 1080p60
+	 */
+
+	if ((f=fopen("/tmp/setting.txt", "r")) == NULL) {
+		return -1;
+	}
+
+	while (fgets(line, sizeof(line), f) != NULL) {
+		char *p;
+
+		if ((p=strchr(line, '=')) != NULL) {
+			*(p++) = '\0';
+			if (strcmp(line, "video_output") == 0) {
+				mode = atoi(p);
+				break;
+			}
+		}
+	}
+
+	fclose(f);
+
+	printf("DFB: tv mode %d\n", mode);
+
+	return mode;
+}
+
+static int
+get_tv_name(void)
+{
+	FILE *f;
+	char line[256];
+	int ret = 0;
+
+	/*
+	 * Values seen in /tmp/tvname
+	 *
+	 *    HDMI_1080p60
+	 *    Component NTSC
+	 */
+
+	if ((f=fopen("/tmp/tvname", "r")) == NULL) {
+		return 0;
+	}
+
+	do {
+		char *res, *mode;
+
+		if (fgets(line, sizeof(line), f) == NULL) {
+			break;
+		}
+
+		if ((res=strchr(line, '_')) != NULL) {
+			*(res++) = '\0';
+		}
+		if ((mode=strchr(line, ' ')) != NULL) {
+			*(mode++) = '\0';
+		}
+
+		if (mode && strcmp(mode, "NTSC") == 0) {
+			ret = 1;
+			break;
+		}
+		if (mode && strcmp(mode, "PAL") == 0) {
+			ret = 2;
+			break;
+		}
+
+		if (res && strcmp(res, "720p60") == 0) {
+			ret = 10;
+			break;
+		}
+		if (res && strcmp(res, "1080p60") == 0) {
+			ret = 11;
+			break;
+		}
+		if (res && strcmp(res, "1080i60") == 0) {
+			ret = 12;
+			break;
+		}
+		if (res && strcmp(res, "720p50") == 0) {
+			ret = 6;
+			break;
+		}
+		if (res && strcmp(res, "1080p50") == 0) {
+			ret = 7;
+			break;
+		}
+		if (res && strcmp(res, "1080i50") == 0) {
+			ret = 8;
+			break;
+		}
+	} while (0);
+
+	printf("DFB: tv name %d\n", ret);
+
+	fclose(f);
+
+	return ret;
+}
+
 int
 dfb_init(void)
 {
+	int mode, name;
+	char dfb_mode[32];
+	char *dfb_signal = NULL;
+	char *dfb_tv = NULL;
+	char *dfb_connector = NULL;
+	char *dfb_analog_mode = NULL;
+
 	if (dfb)
 		return 0;
 
@@ -383,9 +507,98 @@ dfb_init(void)
 	}
 #endif /* USE_LIBDL */
 
+	mode = get_video_mode();
+	name = get_tv_name();
+
+	/*
+	 * If mode is 0 (Auto TV Mode), then use the mode from get_tv_name()
+	 */
+	if (mode == 0) {
+		mode = name;
+	}
+
 	DFBCHECK(dl_DirectFBInit( NULL, NULL));
 
-	DFBCHECK(dl_DirectFBSetOption ("mode", "640x576"));
+	switch (mode) {
+	case 1:
+		full_width = 720;
+		full_height = 480;
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "ntsc";
+		break;
+	case 2:
+		full_width = 720;
+		full_height = 576;
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "pal";
+		break;
+	case 6:
+		full_width = 1280;
+		full_height = 720;
+		dfb_signal = "720p";
+		dfb_tv = "hdtv50";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "pal";
+		break;
+	case 7:
+		full_width = 1920;
+		full_height = 1080;
+		dfb_signal = "1080p";
+		dfb_tv = "hdtv50";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "pal";
+		break;
+	case 8:
+		full_width = 1920;
+		full_height = 1080;
+		dfb_signal = "1080i";
+		dfb_tv = "hdtv50";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "pal";
+		break;
+	case 10:
+		full_width = 1280;
+		full_height = 720;
+		dfb_signal = "720p";
+		dfb_tv = "hdtv60";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "ntsc";
+		break;
+	case 11:
+		full_width = 1920;
+		full_height = 1080;
+		dfb_signal = "1080p";
+		dfb_tv = "hdtv60";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "ntsc";
+		break;
+	case 12:
+		full_width = 1920;
+		full_height = 1080;
+		dfb_signal = "1080i";
+		dfb_tv = "hdtv60";
+		dfb_connector = "ycrcb";
+		dfb_analog_mode = "ntsc";
+		break;
+	}
+
+	snprintf(dfb_mode, sizeof(dfb_mode), "%dx%d", full_width, full_height);
+	DFBCHECK(dl_DirectFBSetOption ("mode", dfb_mode));
+	if (dfb_signal) {
+		DFBCHECK(dl_DirectFBSetOption ("dtv-signal", dfb_signal));
+		DFBCHECK(dl_DirectFBSetOption ("component-signal", dfb_signal));
+	}
+	if (dfb_tv) {
+		DFBCHECK(dl_DirectFBSetOption ("dtv-tv-standard", dfb_tv));
+		DFBCHECK(dl_DirectFBSetOption ("component-tv-standard", dfb_tv));
+	}
+	if (dfb_connector)
+		DFBCHECK(dl_DirectFBSetOption ("component-connector",
+					       dfb_connector));
+	if (dfb_analog_mode)
+		DFBCHECK(dl_DirectFBSetOption ("analog-tv-standard",
+					       dfb_analog_mode));
+
 	/* create the super interface */
 	DFBCHECK(dl_DirectFBCreate( &dfb ));
 

@@ -120,6 +120,10 @@ draw_logo(osd_surface_t *surface)
 		else
 			oy = (rand() % 2) - 1;
 
+		if ((ox == 0) && (oy == 0)) {
+			continue;
+		}
+
 		x += ox;
 		y += oy;
 
@@ -184,6 +188,13 @@ ss(void)
 {
 	unsigned int bg = OSD_COLOR_BLACK;
 	osd_surface_t *s, *v;
+
+#if defined(MVPMC_NMT)
+	system("hdparm -y /dev/hda");
+#endif
+#if defined(MVPMC_MG35)
+	system("hdparm -y /dev/discs/disc0/part1");
+#endif
 
 	v = osd_get_visible_surface();
 
