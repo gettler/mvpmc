@@ -150,12 +150,6 @@ get_servlink(void)
 		}
 	}
 
-	/*
-	 * Command:
-	 *
-	 *   /opt/sybhttpd/default/smbclient.cgi smb.cmd=mount&smb.opt=
-	 */
-
 	fclose(f);
 #endif /* MVPMC_NMT */
 
@@ -186,27 +180,26 @@ fb_init(gw_t *root)
 	return -1;
 }
 
-static int
-select_dir(gw_t *widget, char *text, void *key)
+static void
+mount_share(char *dir)
 {
+#if defined(MVPMC_NMT)
 	int i;
-	char *buf;
-	char *dvd_path;
-	char *dir = ref_hold(text);
-	extern void fb_display(void);
 
-	printf("Select dir: '%s'\n", dir);
+	if ((strcmp(dir, "/") == 0) || (strcmp(dir, "../") == 0)) {
+		return;
+	}
 
 	i = 0;
 	while (sl[i].path) {
-		char buf[128];
+		char buf[256];
 
 		snprintf(buf, sizeof(buf), "%s%s", cwd, dir);
 
 		if (strcmp(buf, sl[i].path) == 0) {
 			pid_t child;
 
-			printf("Mounting directory\n");
+			printf("Mounting directory %s\n", dir);
 
 			if ((child=fork()) == 0) {
 				char *argv[3];
@@ -229,6 +222,20 @@ select_dir(gw_t *widget, char *text, void *key)
 		}
 		i++;
 	}
+#endif /* MVPMC_NMT */
+}
+
+static int
+select_dir(gw_t *widget, char *text, void *key)
+{
+	char *buf;
+	char *dvd_path;
+	char *dir = ref_hold(text);
+	extern void fb_display(void);
+
+	printf("Select dir: '%s'\n", dir);
+
+	mount_share(dir);
 
 	if ((dvd_path=malloc(strlen(cwd)+strlen(dir)+32)) != NULL) {
 		sprintf(dvd_path, "%s/%s", cwd, dir);
