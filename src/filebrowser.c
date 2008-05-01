@@ -33,6 +33,7 @@
 #include <pthread.h>
 #include <limits.h>
 #include <libgen.h>
+#include <sys/wait.h>
 
 #include <mvp_av.h>
 #include <mvp_demux.h>
@@ -65,11 +66,119 @@ static void fb_exit(void);
 
 extern plugin_av_t *av;
 
+typedef struct {
+	char *path;
+	char *opt;
+} servlink_t;
+
+static servlink_t sl[16];
+
+#if defined(MVPMC_NMT)
+static char*
+get_servlink_path(char *cmd)
+{
+	char *c;
+	char *root = "/opt/sybhttpd/localhost.drives/";
+	char *proto = NULL;
+	char *host = NULL;
+	char *path = NULL;
+	char *type = NULL;
+	char buf[256];
+
+	if ((c=strchr(cmd, '&')) != NULL) {
+		*c = '\0';
+	}
+
+	if ((c=strchr(cmd, ':')) != NULL) {
+		*(c++) = '\0';
+		if ((*c == '/') && (*(c+1) == '/')) {
+			host = c + 2;
+		}
+		proto = cmd;
+		cmd = host;
+	}
+
+	if ((c=strchr(cmd, '/')) != NULL) {
+		*(c++) = '\0';
+		path = c;
+	}
+
+	if (strcmp(proto, "nfs") == 0) {
+		type = "NFS";
+	} else if (strcmp(proto, "smb") == 0) {
+		type = "SMB";
+	} else {
+		return NULL;
+	}
+
+	if ((proto == NULL) || (host == NULL) || (path == NULL)) {
+		return NULL;
+	}
+
+	while ((c=strchr(path, '/')) != NULL) {
+		*c = ':';
+	}
+
+	snprintf(buf, sizeof(buf), "%s[%s] %s:%s/", root, type, host, path);
+
+	return strdup(buf);
+}
+#endif /* MVPMC_NMT */
+
+static int
+get_servlink(void)
+{
+	int n = 0;
+#if defined(MVPMC_NMT)
+	FILE *f;
+	char line[256];
+
+	if ((f=fopen("/tmp/setting.txt", "r")) == NULL) {
+		return -1;
+	}
+
+	while (fgets(line, sizeof(line), f) != NULL) {
+		char *p;
+
+		if ((p=strchr(line, '=')) != NULL) {
+			*(p++) = '\0';
+			if (strncmp(line, "servlink", 8) == 0) {
+				sl[n].opt = strdup(p);
+				sl[n].path = get_servlink_path(p);
+				n++;
+			}
+		}
+	}
+
+	/*
+	 * Command:
+	 *
+	 *   /opt/sybhttpd/default/smbclient.cgi smb.cmd=mount&smb.opt=
+	 */
+
+	fclose(f);
+#endif /* MVPMC_NMT */
+
+	return n;
+}
+
 int
 fb_init(gw_t *root)
 {
+	int i;
+
 	if ((fb=gw_create(GW_TYPE_MENU, root)) == NULL)
 		goto err;
+
+	if (get_servlink() < 0) {
+		fprintf(stderr, "servlink error!\n");
+	} else {
+		i = 0;
+		while (sl[i].path) {
+			printf("servlink: '%s'\n", sl[i].path);
+			i++;
+		}
+	}
 
 	return 0;
 
@@ -80,12 +189,46 @@ fb_init(gw_t *root)
 static int
 select_dir(gw_t *widget, char *text, void *key)
 {
+	int i;
 	char *buf;
 	char *dvd_path;
 	char *dir = ref_hold(text);
 	extern void fb_display(void);
 
 	printf("Select dir: '%s'\n", dir);
+
+	i = 0;
+	while (sl[i].path) {
+		char buf[128];
+
+		snprintf(buf, sizeof(buf), "%s%s", cwd, dir);
+
+		if (strcmp(buf, sl[i].path) == 0) {
+			pid_t child;
+
+			printf("Mounting directory\n");
+
+			if ((child=fork()) == 0) {
+				char *argv[3];
+
+				snprintf(buf, sizeof(buf),
+					 "smb.cmd=mount&smb.opt=%s",
+					 sl[i].opt);
+
+				argv[0] = "/opt/sybhttpd/default/smbclient.cgi";
+				argv[1] = buf;
+				argv[2] = NULL;
+				execv(argv[0], argv);
+				exit(1);
+			}
+
+			while (waitpid(child, NULL, 0) != child)
+				;
+			break;
+
+		}
+		i++;
+	}
 
 	if ((dvd_path=malloc(strlen(cwd)+strlen(dir)+32)) != NULL) {
 		sprintf(dvd_path, "%s/%s", cwd, dir);
