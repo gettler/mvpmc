@@ -316,6 +316,31 @@ select_file(gw_t *widget, char *text, void *key)
 	return 0;
 }
 
+#if defined(MVPMC_MG35)
+#define alphasort	NULL
+
+static void
+sort_dirent(struct dirent **nl, int n)
+{
+	int sorted;
+
+	do {
+		int i;
+
+		sorted = 1;
+		for (i=0; i<n-1; i++) {
+			if (strcmp(nl[i]->d_name, nl[i+1]->d_name) > 0) {
+				struct dirent *d;
+				d = nl[i];
+				nl[i] = nl[i+1];
+				nl[i+1] = d;
+				sorted = 0;
+			}
+		}
+	} while (!sorted);
+}
+#endif /* MVPMC_MG35 */
+
 static void
 add_dirs(void)
 {
@@ -328,6 +353,11 @@ add_dirs(void)
 	dir_count = 1;
 
 	n = scandir(cwd, &nl, NULL, alphasort);
+
+#if defined(MVPMC_MG35)
+	/* alphasort() doesn't seem to get called from scandir()... */
+	sort_dirent(nl, n);
+#endif
 
 	for (i=0; i<n; i++) {
 		d = nl[i];
@@ -366,6 +396,11 @@ do_glob(char *wc[])
 		int n, i;
 
 		n = scandir(cwd, &nl, NULL, alphasort);
+
+#if defined(MVPMC_MG35)
+		/* alphasort() doesn't seem to get called from scandir()... */
+		sort_dirent(nl, n);
+#endif
 
 		for (i=0; i<n; i++) {
 			d = nl[i];
