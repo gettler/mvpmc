@@ -239,8 +239,6 @@ resp_free(void *cls)
 
 	while (resp) {
 		next = resp->next;
-		if (resp->data)
-			free(resp->data);
 		free(resp);
 		resp = next;
 	}

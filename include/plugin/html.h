@@ -23,11 +23,14 @@
 #include <gw.h>
 #include <plugin.h>
 
+#define HTML_RESP_SIZE	1024
+
 typedef struct plugin_html_data_s {
 	struct plugin_html_data_s *next;
 	int offset;
 	int len;
-	char *data;
+	int used;
+	char data[HTML_RESP_SIZE];
 } plugin_html_resp_t;
 
 typedef struct {

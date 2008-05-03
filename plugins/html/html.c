@@ -82,27 +82,52 @@ static char *footer = HTML_FOOTER;
 static unsigned int state;
 
 static int
-write_resp(plugin_html_resp_t *resp, char *buf, int len)
+write_resp_guts(plugin_html_resp_t *resp, char *buf, int len)
 {
 	plugin_html_resp_t *new;
+	plugin_html_resp_t *cur;
 
 	if (resp->data == NULL) {
 		new = resp;
-		resp->data = strdup(buf);
+		memcpy(resp->data, buf, len);
 		resp->len = len;
 	} else {
-		if ((new=malloc(sizeof(*new))) == NULL) {
+		cur = resp;
+		while (cur->next) {
+			cur = cur->next;
+		}
+
+		if (len < (sizeof(cur->data)-cur->len)) {
+			memcpy(cur->data+cur->len, buf, len);
+			cur->len += len;
+		} else {
+			if ((new=malloc(sizeof(*new))) == NULL) {
+				return -1;
+			}
+			memcpy(new->data, buf, len);
+			new->len = len;
+			new->next = NULL;
+
+			cur->next = new;
+			new->offset = cur->offset + cur->len;
+		}
+	}
+
+	return 0;
+}
+
+static int
+write_resp(plugin_html_resp_t *resp, char *buf, int len)
+{
+	int n, total = 0, r = len;
+
+	while (r > 0) {
+		n = (r < sizeof(resp->data)) ? r : sizeof(resp->data);
+		if (write_resp_guts(resp, buf+total, n) < 0) {
 			return -1;
 		}
-		new->data = strdup(buf);
-		new->len = len;
-		new->next = NULL;
-
-		while (resp->next) {
-			resp = resp->next;
-		}
-		resp->next = new;
-		new->offset = resp->offset + resp->len;
+		total += n;
+		r -= n;
 	}
 
 	return 0;
