@@ -12,7 +12,7 @@ ldflags = env['LDFLAGS']
 linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
 
-common = [ 'init.c', 'gw.c', 'menu.c' ]
+common = [ 'init.c', 'gw.c', 'menu.c', 'image.c' ]
 
 if target == 'mvp':
     src = [ common ]

@@ -27,6 +27,7 @@
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <wait.h>
+#include <sys/stat.h>
 
 #include "mvp_osd.h"
 
@@ -148,8 +149,8 @@ dfb_draw_line(osd_surface_t *surface, int x1, int y1, int x2, int y2,
 }
 
 static int
-dfb_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
-		   int x, int y)
+dfb_draw_indexed_image(osd_surface_t *surface, osd_indexed_image_t *image,
+		       int x, int y)
 {
 	int i, p, X, Y;
 	unsigned char r, g, b;
@@ -306,11 +307,50 @@ dfb_draw_text(osd_surface_t *surface, int x, int y, const char *text,
 	return 0;
 }
 
+static int
+dfb_draw_image(osd_surface_t *surface, char *path)
+{
+	struct stat sb;
+	IDirectFBSurface *s = surface->data.primary;
+	IDirectFBImageProvider *provider;
+
+	if (access(path, R_OK) != 0) {
+		return -1;
+	}
+
+	if (stat(path, &sb) != 0) {
+		return -1;
+	}
+
+	/*
+	 * This method of drawing images takes a lot of memory, so for now
+	 * cap the image size at 2mb.
+	 */
+	if (sb.st_size > (1024*1024*2)) {
+		return -1;
+	}
+
+	if (dfb->CreateImageProvider(dfb, path, &provider) != DFB_OK) {
+		return -1;
+	}
+
+	DFBCHECK(provider->GetSurfaceDescription(provider, &dsc));
+	DFBCHECK(provider->RenderTo(provider, s, NULL));
+
+	if (surface == visible) {
+		root->Blit(root, s, NULL, 0, 0);
+	}
+
+	provider->Release(provider);
+
+	return -1;
+}
+
 static osd_func_t fp_dfb = {
 	.draw_pixel = dfb_draw_pixel,
 	.read_pixel = dfb_read_pixel,
 	.draw_line = dfb_draw_line,
-	.draw_indexed_image = dfb_draw_image,
+	.draw_indexed_image = dfb_draw_indexed_image,
 	.fill_rect = dfb_fill_rect,
 	.display = dfb_display_surface,
 	.undisplay = dfb_undisplay_surface,
@@ -318,6 +358,7 @@ static osd_func_t fp_dfb = {
 	.palette_add_color = dfb_add_color,
 	.blit = dfb_blit,
 	.draw_text = dfb_draw_text,
+	.draw_image = dfb_draw_image,
 };
 
 osd_surface_t*

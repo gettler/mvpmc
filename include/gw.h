@@ -80,6 +80,8 @@ extern int gw_menu_item_add(gw_t *widget, char *text, void *key,
 extern int gw_menu_input(gw_t *widget, int c);
 extern int gw_menu_clear(gw_t *widget);
 
+extern int gw_image_set(gw_t *widget, char *path);
+
 extern int gw_text_set(gw_t *widget, char *text);
 
 extern int gw_html_generate(int fd);

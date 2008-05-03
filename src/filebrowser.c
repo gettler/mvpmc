@@ -50,6 +50,7 @@
 #endif
 
 static gw_t *fb;
+static gw_t *image;
 
 #if defined(MVPMC_MG35)
 static char cwd[1024] = "/cdrom/";
@@ -63,6 +64,7 @@ static long dir_count = 0;
 static int file_count = 0;
 
 static void fb_exit(void);
+static int do_key_image(gw_t *widget, int key);
 
 extern plugin_av_t *av;
 
@@ -163,6 +165,9 @@ fb_init(gw_t *root)
 
 	if ((fb=gw_create(GW_TYPE_MENU, root)) == NULL)
 		goto err;
+	if ((image=gw_create(GW_TYPE_IMAGE, root)) == NULL)
+		goto err;
+	gw_name_set(image, "image_viewer");
 
 	if (get_servlink() < 0) {
 		fprintf(stderr, "servlink error!\n");
@@ -274,6 +279,22 @@ select_dir(gw_t *widget, char *text, void *key)
 }
 
 static int
+is_image(char *item)
+{
+	char *wc[] = { ".bmp", ".gif", ".jpg", ".jpeg", ".png", NULL };
+	int i = 0;
+
+	while (wc[i] != NULL) {
+		if ((strlen(item) >= strlen(wc[i])) &&
+		    (strcasecmp(item+strlen(item)-strlen(wc[i]), wc[i]) == 0))
+			return 1;
+		i++;
+	}
+
+	return 0;
+}
+
+static int
 select_file(gw_t *widget, char *text, void *key)
 {
 	char path[1024];
@@ -281,7 +302,16 @@ select_file(gw_t *widget, char *text, void *key)
 	printf("Select file: '%s'\n", text);
 
 	snprintf(path, sizeof(path), "%s/%s", cwd, text);
-	av->play_file(path);
+
+	if (is_image(text)) {
+		gw_image_set(image, path);
+		gw_map(image);
+		gw_focus_set(image);
+		gw_unmap(widget);
+		gw_focus_cb_set(do_key_image);
+	} else {
+		av->play_file(path);
+	}
 
 	return 0;
 }
@@ -411,6 +441,17 @@ do_key(gw_t *widget, int key)
 	slash = ref_strdup("/");
 	select_dir(widget, slash, NULL);
 	ref_release(slash);
+
+	return 0;
+}
+
+static int
+do_key_image(gw_t *widget, int key)
+{
+	gw_unmap(widget);
+	gw_map(fb);
+	gw_focus_set(fb);
+	gw_focus_cb_set(do_key);
 
 	return 0;
 }

@@ -882,3 +882,15 @@ osd_font_width(osd_font_t *font, char *text)
 {
 	return font_width(font, text);
 }
+
+int
+osd_draw_image(osd_surface_t *surface, char *path)
+{
+	if (surface == NULL)
+		return -1;
+
+	if (surface->fp->draw_image)
+		return surface->fp->draw_image(surface, path);
+	else
+		return -1;
+}

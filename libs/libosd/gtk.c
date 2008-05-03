@@ -155,8 +155,8 @@ gtk_draw_vert_line(osd_surface_t *surface, int x, int y1, int y2,
 }
 
 static int
-gtk_draw_image(osd_surface_t *surface, osd_indexed_image_t *image,
-		   int x, int y)
+gtk_draw_indexed_image(osd_surface_t *surface, osd_indexed_image_t *image,
+		       int x, int y)
 {
 	int i, p, X, Y;
 	unsigned char r, g, b;
@@ -312,6 +312,12 @@ gtk_get_visible_surface(void)
 	return NULL;
 }
 
+static int
+gtk_draw_image(osd_surface_t *surface, char *path)
+{
+	return -1;
+}
+
 static osd_func_t fp = {
 	.draw_pixel = gtk_draw_pixel,
 	.blit = gtk_blit,
@@ -319,8 +325,9 @@ static osd_func_t fp = {
 	.display = gtk_display_surface,
 	.undisplay = gtk_undisplay_surface,
 	.destroy = gtk_destroy_surface,
-	.draw_indexed_image = gtk_draw_image,
+	.draw_indexed_image = gtk_draw_indexed_image,
 	.palette_add_color = gtk_add_color,
+	.draw_image = gtk_draw_image,
 };
 
 osd_surface_t*

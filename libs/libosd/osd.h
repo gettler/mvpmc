@@ -83,6 +83,7 @@ struct osd_func_s {
 	int (*memcpy)(osd_surface_t*,int, int, unsigned char *,int, int);
 	int (*draw_text)(osd_surface_t*, int, int, const char*, unsigned int,
 			 unsigned int, int, osd_font_t*);
+	int (*draw_image)(osd_surface_t*, char*);
 };
 
 /**

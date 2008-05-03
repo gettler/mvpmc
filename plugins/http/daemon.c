@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <microhttpd.h>
+#include <sys/stat.h>
 
 #include <mvp_string.h>
 #include <plugin.h>
@@ -55,7 +56,8 @@
 	"a { text-decoration: none; }\n" \
 	"a, a:link, a:visited, a:acted { color: white; }\n" \
 	"a:hover { background: green; color: white; }\n" \
-	".title { background: blue; color: white; }\n"
+	".title { background: blue; color: white; }\n" \
+	"#image_viewer img { max-width: 100%; }\n"
 
 typedef struct {
 	const char *state;
@@ -136,11 +138,81 @@ notfound(struct MHD_Connection *connection, const char *url)
 }
 
 static int
+file_reader (void *cls, size_t pos, char *buf, int max)
+{
+	FILE *file = cls;
+
+	fseek (file, pos, SEEK_SET);
+	return fread (buf, 1, max, file);
+}
+
+static int
+conv_str(char *buf)
+{
+	char *p;
+	int found = 0;
+
+	if ((p=strstr(buf, "%5B")) != NULL) {
+		*p = '[';
+		found = 1;
+	} else if ((p=strstr(buf, "%5D")) != NULL) {
+		*p = ']';
+		found = 1;
+	} else if ((p=strstr(buf, "%20")) != NULL) {
+		*p = ' ';
+		found = 1;
+	}
+
+	if (found) {
+		memmove(p+1, p+3, strlen(p)-3+1);
+	}
+
+	return found;
+}
+
+static int
+cat_file(struct MHD_Connection *connection, const char *path)
+{
+	int ret;
+	FILE *file;
+	struct stat sb;
+	struct MHD_Response *response;
+	char buf[strlen(path)+1];
+
+	printf("PROVIDE: '%s'\n", path);
+
+	strcpy(buf, path);
+	while (conv_str(buf) > 0)
+		;
+
+	if (stat(buf, &sb) != 0) {
+		return notfound(connection, path);
+	}
+
+	if ((file=fopen(buf, "r")) == NULL) {
+		return notfound(connection, path);
+	}
+
+	response = MHD_create_response_from_callback(sb.st_size, 32*1024,
+						     &file_reader, file,
+						     (MHD_ContentReaderFreeCallback)
+						     &fclose);
+	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+	MHD_destroy_response(response);
+
+	return ret;
+}
+
+static int
 resp_callback(void *cls, size_t pos, char *buf, int max)
 {
 	plugin_html_resp_t *resp = (plugin_html_resp_t*)cls;
 	int len, remain;
 	int offset = 0;
+
+	if (resp == NULL) {
+		return 0;
+	}
 
 	while ((resp->offset+resp->len) <= pos) {
 		offset += resp->len;
@@ -279,6 +351,9 @@ callback(void *cls, struct MHD_Connection *connection,
 		} else {
 			ret = send_command(connection, &data);
 		}
+	} else if (strncmp(url, "/opt/sybhttpd/", 14) == 0) {
+		printf("=== PROVIDE FILE ===\n");
+		ret = cat_file(connection, url);
 	} else {
 		ret = notfound(connection, url);
 	}

@@ -81,6 +81,22 @@ gw_create_text(gw_t *widget)
 }
 
 static int
+gw_create_image(gw_t *widget)
+{
+	widget->data.image = (gw_image_t*)ref_alloc(sizeof(gw_image_t));
+
+	if (widget->data.image == NULL) {
+		return -1;
+	}
+
+	memset(widget->data.image, 0, sizeof(gw_image_t));
+
+	gw_name_set(widget, "image");
+
+	return 0;
+}
+
+static int
 add_child(gw_t *parent, gw_t *child)
 {
 	gw_t *cur;
@@ -136,6 +152,9 @@ gw_create(gw_type_t type, gw_t *parent)
 		break;
 	case GW_TYPE_TEXT:
 		gw_create_text(gw);
+		break;
+	case GW_TYPE_IMAGE:
+		gw_create_image(gw);
 		break;
 	default:
 		break;
@@ -244,6 +263,7 @@ input(int c)
 		ret = gw_menu_input(focus, c);
 		break;
 	case GW_TYPE_TEXT:
+	case GW_TYPE_IMAGE:
 		if (focus_input) {
 			ret = focus_input(focus, c);
 		}

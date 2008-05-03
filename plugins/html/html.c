@@ -63,6 +63,7 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 static int html_generate_container(plugin_html_resp_t*, gw_t*, int);
 static int html_generate_menu(plugin_html_resp_t*, gw_t*, int);
 static int html_generate_text(plugin_html_resp_t*, gw_t*, int);
+static int html_generate_image(plugin_html_resp_t*, gw_t*, int);
 
 static struct html_output_s {
 	gw_type_t type;
@@ -71,6 +72,7 @@ static struct html_output_s {
 	{ GW_TYPE_CONTAINER, html_generate_container },
 	{ GW_TYPE_MENU, html_generate_menu },
 	{ GW_TYPE_TEXT, html_generate_text },
+	{ GW_TYPE_IMAGE, html_generate_image },
 	{ 0, NULL },
 };
 
@@ -102,9 +104,6 @@ write_resp(plugin_html_resp_t *resp, char *buf, int len)
 		resp->next = new;
 		new->offset = resp->offset + resp->len;
 	}
-
-	printf("%s(): new %p data %p len %d\n", __FUNCTION__,
-	       new, new->data, new->len);
 
 	return 0;
 }
@@ -308,6 +307,39 @@ html_generate_text(plugin_html_resp_t *resp, gw_t *widget, int level)
 	if (text)
 		WRITE(resp, text, strlen(text));
 	
+	LEVEL();
+	WRITE(resp, foot, strlen(foot));
+
+	return 0;
+
+ err:
+	return -1;
+}
+
+static int
+html_generate_image(plugin_html_resp_t *resp, gw_t *widget, int level)
+{
+	char *head1 = "<div id=\"";
+	char *head2 = "\"><p>\n";
+	char *img1 = "<img src=\"";
+	char *img2 = "\">";
+	char *foot = "</p></div>\n";
+	char *path = widget->data.image->path;
+
+	LEVEL();
+	WRITE(resp, head1, strlen(head1));
+	if (widget->name) {
+		WRITE(resp, widget->name, strlen(widget->name));
+	} else {
+		char *def = "image";
+		WRITE(resp, def, strlen(def));
+	}
+	WRITE(resp, head2, strlen(head2));
+
+	WRITE(resp, img1, strlen(img1));
+	WRITE(resp, path, strlen(path));
+	WRITE(resp, img2, strlen(img2));
+
 	LEVEL();
 	WRITE(resp, foot, strlen(foot));
 

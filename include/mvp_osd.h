@@ -240,6 +240,8 @@ extern int osd_draw_text(osd_surface_t *surface, int x, int y, const char *str,
 			 unsigned int fg, unsigned int bg, 
 			 int background, osd_font_t *font);
 
+extern int osd_draw_image(osd_surface_t *surface, char *path);
+
 /**
  * Bit blast a rectangle from one drawing surface to another.
  * \param dstsfc handle to the destination drawing surface

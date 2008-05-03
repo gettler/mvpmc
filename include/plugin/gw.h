@@ -122,6 +122,7 @@ struct gw_s {
 		gw_pointer_t *pointer;
 		gw_command_t *command;
 		gw_screensaver_t *screensaver;
+		gw_image_t *image;
 	} data;
 };
 

@@ -120,6 +120,10 @@ draw(osd_widget_t *widget)
 			      widget->width, widget->height,
 			      OSD_COLOR_BLACK);
 		break;
+	case GW_TYPE_IMAGE:
+		printf("Draw image!\n");
+		osd_draw_image(drawable, widget->gw->data.image->path);
+		break;
 	default:
 		break;
 	}
