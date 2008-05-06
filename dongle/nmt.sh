@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # create a tarball containing the NMT filesystem
 #

@@ -9,7 +9,6 @@ Import('env')
 
 target = env['TARG']
 
-freetype = env.SConscript('freetype/SConscript')
 microhttpd = env.SConscript('microhttpd/SConscript')
 curl = env.SConscript('curl/SConscript')
 #zlib = env.SConscript('zlib/SConscript')
@@ -24,8 +23,13 @@ curl = env.SConscript('curl/SConscript')
 #ncurses = env.SConscript('ncurses/SConscript')
 #mysql = env.SConscript('mysql/SConscript')
 
+common = [ microhttpd, curl ]
+
 if target == 'nmt':
     directfb = env.SConscript('directfb/SConscript')
+
+if target != 'host':
+    freetype = env.SConscript('freetype/SConscript')
 
 #libs = [ zlib, png, jpg, mw, a52, expat, dvb, id3, tremor, ncurses, mysql ]
 
@@ -34,8 +38,12 @@ if target == 'nmt':
 #	libs.append(flac)
 
 if target == 'nmt':
-    libs = [ curl, freetype, microhttpd, directfb ]
-else:
-    libs = [ curl, freetype, microhttpd ]
+    libs = common + [ freetype, directfb ]
+elif target == 'mvp':
+    libs = common + [ freetype ]
+elif target == 'host':
+    libs = common
+elif target == 'mg35':
+    libs = common + [ freetype ]
 
 Return('libs')

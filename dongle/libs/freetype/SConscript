@@ -23,9 +23,6 @@ elif build_target == 'mg35':
 elif build_target == 'nmt':
   cross = env['CROSS']
   config = '--host=mips-linux'
-else:
-  cross = ''
-  config = ''
 
 url = [ 'http://www.mvpmc.org/dl/freetype-2.2.1.tar.gz' ]
 

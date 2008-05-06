@@ -20,17 +20,26 @@ Prerequisites
 -------------
 
 In order to build mvpmc, you will need to make sure you have the
-following installed on your system:
+following installed on your Linux system:
 
-	- scons (http://www.scons.org/)
+	- python
+	- scons
 	- make
 	- gcc
+	- g++
 	- flex
 	- bison
+	- patch
+	- autoconf
+	- automake
+	- libtool
+	- awk
+	- sed
 
 
 If you do not currently have the cross-compilers installed on your
-system, they will be built as needed.
+system, they will be built as needed (except for the MG-35 compiler,
+which needs to be installed from http://dslinux.org/wiki/Compiling_DSLinux).
 
 
 Source Repository

@@ -30,8 +30,12 @@ osdlib = libdir + '/libosd.a'
 osdlibso = libdir + '/libosd.so'
 inputlib = libdir + '/libinput.a'
 inputlibso = libdir + '/libinput.so'
-ftlib = libdir + '/libfreetype.a'
-libs = '-a ' + osdlib + ' -a ' + inputlib + ' -a ' + ftlib
+
+if target == 'host':
+	libs = '-a ' + osdlib + ' -a ' + inputlib
+else:
+	ftlib = libdir + '/libfreetype.a'
+	libs = '-a ' + osdlib + ' -a ' + inputlib + ' -a ' + ftlib
 
 plugin = pwd + '/libmvpmc_osd.plugin.a'
 
@@ -39,7 +43,8 @@ dummy = env.Command('dummy.a', 0,
 		    'scons/build_plugin.sh -t ' + plugin + ' ' + libs)
 env.Depends(dummy, osdlib)
 env.Depends(dummy, inputlib)
-env.Depends(dummy, ftlib)
+if target != 'host':
+	env.Depends(dummy, ftlib)
 
 static = env.StaticLibrary('mvpmc_osd.plugin.a', [ src, osdlib ],
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
@@ -50,11 +55,11 @@ if linkmode == 'dynamic':
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                                LINKFLAGS = ldflags + ' ' + osdlibso + ' ' + inputlibso)
     env.Depends(shared, osdlibso)
+    env.Depends(shared, inputlibso)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])
 
-env.Depends(dummy, static)
 env.Depends(inst, dummy)
 
 csstest = env.Program('csstest',

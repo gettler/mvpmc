@@ -44,7 +44,6 @@ if linkmode == 'dynamic':
 else:
     inst = env.Install(libdir, [ static ])
 
-env.Depends(dummy, static)
 env.Depends(inst, dummy)
 
 Return('inst')
