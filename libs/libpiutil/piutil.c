@@ -292,7 +292,10 @@ pi_deregister(void *handle)
 			       shmaddr[i].name, handle);
 			if ((ref=mvp_atomic_dec(&(shmaddr[i].refcnt))) == 0) {
 				printf("piutil: calling dlclose()...\n");
-				dlclose(shmaddr[i].handle);
+				if (dlclose(shmaddr[i].handle) != 0) {
+					fprintf(stderr, "dlclose(%p) failed\n",
+						shmaddr[i].handle);
+				}
 				shmaddr[i].handle = NULL;
 				return 0;
 			} else {

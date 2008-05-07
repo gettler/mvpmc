@@ -412,7 +412,12 @@ mvpmc_main(int argc, char **argv)
 
 	if (gw_device_add(GW_DEV_OSD) < 0) {
 		fprintf(stderr, "failed to initialize OSD!\n");
+#if defined(MVPMC_NMT)
+		/* directfb causes a segfault if exit() is used... */
+		_exit(1);
+#else
 		exit(1);
+#endif
 	}
 
 	if (gw_device_add(GW_DEV_HTTP) < 0) {

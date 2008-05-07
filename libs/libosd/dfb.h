@@ -37,4 +37,6 @@
 
 #define DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
 
+extern void dfb_deinit();
+
 #endif /* OSD_DFB_H */

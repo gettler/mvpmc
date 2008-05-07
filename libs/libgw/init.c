@@ -83,7 +83,8 @@ gw_load_plugins(unsigned int dev)
 	}
 
 	if (loaded & GW_DEV_HTTP) {
-		http->stopd();
+		if (http)
+			http->stopd();
 		plugin_unload("http");
 		http = NULL;
 	}

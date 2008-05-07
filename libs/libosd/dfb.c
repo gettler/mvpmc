@@ -56,6 +56,7 @@ static DFBResult (*dl_DirectFBCreate)(IDirectFB **) = NULL;
 static DFBResult (*dl_DirectFBInit)(int*, char *(*argv[])) = NULL;
 static DFBResult (*dl_DirectFBSetOption)(const char*, const char*) = NULL;
 static DFBResult (*dl_DirectFBErrorFatal)(const char*, DFBResult) = NULL;
+static const char* (*dl_DirectFBErrorString)(DFBResult) = NULL;
 
 static void *handle = NULL;
 #else
@@ -63,6 +64,7 @@ static void *handle = NULL;
 #define dl_DirectFBInit		DirectFBInit
 #define dl_DirectFBSetOption	DirectFBSetOption
 #define dl_DirectFBErrorFatal	DirectFBErrorFatal
+#define dl_DirectFBErrorString	DirectFBErrorString
 #endif /* USE_LIBDL */
 
 static int
@@ -531,6 +533,7 @@ dfb_init(void)
 	char *dfb_tv = NULL;
 	char *dfb_connector = NULL;
 	char *dfb_analog_mode = NULL;
+	DFBResult r;
 
 	if (dfb)
 		return 0;
@@ -545,6 +548,7 @@ dfb_init(void)
 		dl_DirectFBInit = dlsym(handle, "DirectFBInit");
 		dl_DirectFBSetOption = dlsym(handle, "DirectFBSetOption");
 		dl_DirectFBErrorFatal = dlsym(handle, "DirectFBErrorFatal");
+		dl_DirectFBErrorString = dlsym(handle, "DirectFBErrorString");
 	}
 #endif /* USE_LIBDL */
 
@@ -641,7 +645,11 @@ dfb_init(void)
 					       dfb_analog_mode));
 
 	/* create the super interface */
-	DFBCHECK(dl_DirectFBCreate( &dfb ));
+	if ((r=dl_DirectFBCreate( &dfb )) != DFB_OK) {
+		fprintf(stderr, "fatal directfb error: %s\n",
+			dl_DirectFBErrorString(r));
+		goto err;
+	}
 
 	dfb->SetCooperativeLevel(dfb, DFSCL_FULLSCREEN);
 
@@ -661,6 +669,11 @@ dfb_init(void)
 	DFBCHECK(dfb->CreateFont(dfb, DATADIR"/decker.ttf", &font_dsc, &font));
 
 	return 0;
+
+ err:
+	dfb_deinit();
+
+	return -1;
 }
 
 void 
