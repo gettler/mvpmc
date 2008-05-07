@@ -293,6 +293,10 @@ command(plugin_http_cmd_t *cmd)
 
 	data = cmd->menu;
 
+	if (ss) {
+		ss->feed(SS_TIMEOUT);
+	}
+
 	if (data) {
 		while (i < data->n) {
 			if (data->items[i]->hilited) {
