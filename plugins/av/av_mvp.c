@@ -186,6 +186,12 @@ do_play_url(char *path)
 }
 
 int
+do_play_list(char **list)
+{
+	return -1;
+}
+
+int
 do_stop(void)
 {
 	stop_request = 1;

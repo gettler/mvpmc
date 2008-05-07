@@ -28,6 +28,7 @@ typedef struct {
 #define do_play_file	__av_play_file
 #define do_play_dvd	__av_play_dvd
 #define do_play_url	__av_play_url
+#define do_play_list	__av_play_list
 #define do_stop		__av_stop
 #define info		__av_info
 #define arch_init	__av_arch_init
@@ -35,6 +36,7 @@ typedef struct {
 extern int do_play_file(char *path);
 extern int do_play_dvd(char *path);
 extern int do_play_url(char *path);
+extern int do_play_list(char **list);
 extern int do_stop(void);
 extern int arch_init(void);
 

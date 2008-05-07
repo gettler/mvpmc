@@ -27,6 +27,7 @@ typedef struct {
 	int (*play_file)(char*);
 	int (*play_dvd)(char*);
 	int (*play_url)(char*);
+	int (*play_list)(char**);
 	int (*stop)(void);
 } plugin_av_t;
 

@@ -295,6 +295,55 @@ is_image(char *item)
 }
 
 static int
+is_playlist(char *item)
+{
+	char *wc[] = { ".m3u", NULL };
+	int i = 0;
+
+	while (wc[i] != NULL) {
+		if ((strlen(item) >= strlen(wc[i])) &&
+		    (strcasecmp(item+strlen(item)-strlen(wc[i]), wc[i]) == 0))
+			return 1;
+		i++;
+	}
+
+	return 0;
+}
+
+static int
+play_playlist(char *path)
+{
+	FILE *f;
+	char *list[128];
+	char buf[512], line[512];
+	int i;
+
+	if ((f=fopen(path, "r")) == NULL) {
+		return -1;
+	}
+
+	i = 0;
+	while ((fgets(line, sizeof(line), f) != NULL) && (i < 127)) {
+		if (line[strlen(line)-1] == '\n')
+			line[strlen(line)-1] = '\0';
+		if (line[0] == '/') {
+			list[i] = strdup(line);
+		} else {
+			snprintf(buf, sizeof(buf), "%s%s", cwd, line);
+			list[i] = strdup(buf);
+		}
+		i++;
+	}
+	list[i] = NULL;
+
+	fclose(f);
+
+	av->play_list(list);
+
+	return 0;
+}
+
+static int
 select_file(gw_t *widget, char *text, void *key)
 {
 	char path[1024];
@@ -309,6 +358,8 @@ select_file(gw_t *widget, char *text, void *key)
 		gw_focus_set(image);
 		gw_unmap(widget);
 		gw_focus_cb_set(do_key_image);
+	} else if (is_playlist(path)) {
+		play_playlist(path);
 	} else {
 		av->play_file(path);
 	}

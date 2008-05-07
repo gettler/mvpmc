@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/wait.h>
+#include <libgen.h>
 
 #include <plugin.h>
 #include <plugin/av.h>
@@ -46,6 +47,34 @@ static pid_t player;
 static char *pathname;
 
 static volatile int pending;
+static volatile int playlist;
+
+#define PL_HTML	"/tmp/playlist.htm"
+
+static int
+create_playlist(char **files)
+{
+	FILE *f;
+	char *c;
+	int i = 0;
+
+	if ((f=fopen(PL_HTML, "w")) == NULL) {
+		return -1;
+	}
+
+	c = files[i];
+	while (c) {
+		if (i != 0) {
+			fprintf(f, "|");
+		}
+		fprintf(f, "%s|0|0|file://%s", basename(c), c);
+		c = files[++i];
+	}
+
+	fclose(f);
+
+	return 0;
+}
 
 static int
 monitor(pid_t pid)
@@ -167,8 +196,18 @@ start_player(void)
 		argv[2] = "-prebuf";
 		argv[3] = "100";
 		argv[4] = "-bgimg";
-		argv[5] = "-single";
-		argv[6] = pathname;
+		if (playlist) {
+			char pl[512];
+			snprintf(pl, sizeof(pl),
+				 "file://%s?start_url=file:/%s",
+				 PL_HTML, pathname);
+			argv[5] = "-playlist";
+			argv[6] = pl;
+			playlist = 0;
+		} else {
+			argv[5] = "-single";
+			argv[6] = pathname;
+		}
 		argv[7] = "-dram";
 		argv[8] = "1";
 	} else if (is_video(pathname)) {
@@ -277,6 +316,18 @@ int
 do_play_url(char *path)
 {
 	return do_play_file(path);
+}
+
+int
+do_play_list(char **list)
+{
+	if (create_playlist(list) != 0) {
+		return -1;
+	}
+
+	playlist = 1;
+
+	return do_play_file(*list);
 }
 
 int
