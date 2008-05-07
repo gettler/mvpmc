@@ -35,6 +35,8 @@ typedef enum {
 	INPUT_CMD_LEFT,
 	INPUT_CMD_RIGHT,
 	INPUT_CMD_SELECT,
+	INPUT_CMD_PLAY,
+	INPUT_CMD_STOP,
 } input_cmd_t;
 
 #define INPUT_BLOCKING	0x1
