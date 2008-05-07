@@ -126,26 +126,32 @@ input_read_kbd(input_t *handle, int raw)
 	if (event.input.type == DIET_KEYPRESS) {
 		int cmd;
 
-		switch (event.input.key_id) {
-		case DIKI_UNKNOWN:
-			cmd = INPUT_CMD_SELECT;
-			break;
-		case DIKI_UP:
+		switch (event.input.key_symbol) {
+		case DIKS_CURSOR_UP:
 			cmd = INPUT_CMD_UP;
 			break;
-		case DIKI_DOWN:
+		case DIKS_CURSOR_DOWN:
 			cmd = INPUT_CMD_DOWN;
 			break;
-		case DIKI_LEFT:
-		case DIKI_ENTER:
+		case 0xd: /* return */
+		case DIKS_CURSOR_LEFT:
 			cmd = INPUT_CMD_LEFT;
 			break;
-		case DIKI_RIGHT:
+		case DIKS_CURSOR_RIGHT:
 			cmd = INPUT_CMD_RIGHT;
 			break;
+		case DIKS_SELECT:
+			cmd = INPUT_CMD_SELECT;
+			break;
+		case DIKS_PLAY:
+			cmd = INPUT_CMD_PLAY;
+			break;
+		case DIKS_STOP:
+			cmd = INPUT_CMD_STOP;
+			break;
 		default:
-			fprintf(stderr, "Unknown code: %x\n",
-				event.input.key_id);
+			fprintf(stderr, "Unknown key: %x\n",
+				event.input.key_symbol);
 			cmd = INPUT_CMD_ERROR;
 			break;
 		}

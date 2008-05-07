@@ -113,6 +113,18 @@ av_play_url(char *url)
 }
 
 static int
+av_play_list(char **list)
+{
+	if (info.playing) {
+		do_stop();
+	}
+
+	info.playing = 1;
+
+	return do_play_list(list);
+}
+
+static int
 av_stop(void)
 {
 	info.playing = 0;
@@ -124,6 +136,7 @@ static plugin_av_t av = {
 	.play_file = av_play_file,
 	.play_dvd = av_play_dvd,
 	.play_url = av_play_url,
+	.play_list = av_play_list,
 	.stop = av_stop,
 };
 
