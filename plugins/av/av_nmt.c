@@ -44,7 +44,7 @@ static pthread_t thread;
 
 static pid_t player;
 
-static char *pathname;
+static volatile char *pathname;
 
 static volatile int pending;
 static volatile int playlist;
@@ -184,13 +184,13 @@ is_dvd(char *path)
 static int
 start_player(void)
 {
-	char path[strlen(pathname)+1];
+	char *p = (char*)pathname;
 	char *argv[16];
 	pid_t child;
 
 	memset(argv, 0, sizeof(argv));
 
-	if (is_audio(pathname)) {
+	if (is_audio(p)) {
 		argv[0] = "/bin/mono";
 		argv[1] = "-audio";
 		argv[2] = "-prebuf";
@@ -200,25 +200,25 @@ start_player(void)
 			char pl[512];
 			snprintf(pl, sizeof(pl),
 				 "file://%s?start_url=file:/%s",
-				 PL_HTML, pathname);
+				 PL_HTML, p);
 			argv[5] = "-playlist";
 			argv[6] = pl;
-			playlist = 0;
 		} else {
 			argv[5] = "-single";
-			argv[6] = pathname;
+			argv[6] = p;
 		}
 		argv[7] = "-dram";
 		argv[8] = "1";
-	} else if (is_video(pathname)) {
+	} else if (is_video(p)) {
 		argv[0] = "/bin/mono";
 		argv[1] = "-single";
 		argv[2] = "-nogui";
-		argv[3] = pathname;
+		argv[3] = p;
 		argv[4] = "-dram";
 		argv[5] = "1";
-	} else if (is_dvd(pathname)) {
-		sprintf(path, "%s/", pathname);
+	} else if (is_dvd(p)) {
+		char path[strlen(p)+1];
+		sprintf(path, "%s/", p);
 		argv[0] = "/bin/amp_test";
 		argv[1] = path;
 		argv[2] = "--dfb:quiet";
@@ -252,9 +252,12 @@ av_monitor(void *arg)
 	pthread_mutex_lock(&mutex);
 
 	while (1) {
-		pthread_cond_wait(&cond, &mutex);
+		if (!pending) {
+			pthread_cond_wait(&cond, &mutex);
+		}
 
 		pending = 0;
+		playlist = 0;
 		if ((child=fork()) == 0) {
 			_exit(start_player());
 		} else {
@@ -263,7 +266,7 @@ av_monitor(void *arg)
 		}
 		player = 0;
 		if (!pending) {
-			free(pathname);
+			free((char*)pathname);
 			pathname = NULL;
 
 			do_stop();
@@ -298,7 +301,7 @@ do_play_file(char *path)
 	gw_device_remove(GW_DEV_OSD);
 
 	if (pathname) {
-		free(pathname);
+		free((char*)pathname);
 	}
 	pathname = strdup(path);
 	pthread_cond_broadcast(&cond);

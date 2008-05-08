@@ -358,7 +358,7 @@ select_file(gw_t *widget, char *text, void *key)
 		gw_focus_set(image);
 		gw_unmap(widget);
 		gw_focus_cb_set(do_key_image);
-	} else if (is_playlist(path)) {
+	} else if (is_playlist(text)) {
 		play_playlist(path);
 	} else {
 		av->play_file(path);
