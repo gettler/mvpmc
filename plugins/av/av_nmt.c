@@ -257,13 +257,13 @@ av_monitor(void *arg)
 		}
 
 		pending = 0;
-		playlist = 0;
 		if ((child=fork()) == 0) {
 			_exit(start_player());
 		} else {
 			player = child;
 			monitor(child);
 		}
+		playlist = 0;
 		player = 0;
 		if (!pending) {
 			free((char*)pathname);
