@@ -187,6 +187,7 @@ start_player(void)
 	char *p = (char*)pathname;
 	char *argv[16];
 	pid_t child;
+	char path[strlen(p)+1];
 
 	memset(argv, 0, sizeof(argv));
 
@@ -217,7 +218,6 @@ start_player(void)
 		argv[4] = "-dram";
 		argv[5] = "1";
 	} else if (is_dvd(p)) {
-		char path[strlen(p)+1];
 		sprintf(path, "%s/", p);
 		argv[0] = "/bin/amp_test";
 		argv[1] = path;
