@@ -27,9 +27,10 @@
 
 #include <plugin.h>
 #include <plugin/app.h>
+#include <mvp_refmem.h>
+#include <input.h>
 
-#include "mvp_refmem.h"
-#include "input.h"
+#include "myth_local.h"
 
 #if defined(PLUGIN_SUPPORT)
 unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
@@ -39,6 +40,8 @@ static gw_t *menu;
 static int level = 0;
 static void (*return_func)(void) = NULL;
 static int top(gw_t *widget, char *text, void *key);
+
+char *recdir;
 
 static int
 set_top(void)
@@ -91,6 +94,20 @@ myth_enter(void (*cb)(void))
 static int
 myth_exit(void)
 {
+	gw_unmap(menu);
+
+	return 0;
+}
+
+static int
+myth_option(char *option, void *val)
+{
+	if (strcmp(option, "server") == 0) {
+		server = strdup((char*)val);
+	} else if (strcmp(option, "recdir") == 0) {
+		recdir = strdup((char*)val);
+	}
+
 	return 0;
 }
 
@@ -98,6 +115,7 @@ static plugin_app_t reloc = {
 	.name = "MythTV",
 	.enter = myth_enter,
 	.exit = myth_exit,
+	.option = myth_option,
 };
 
 static int
@@ -111,6 +129,7 @@ top(gw_t *widget, char *text, void *key)
 	switch (item) {
 	case 0:
 		gw_menu_title_set(widget, "Watch Recordings");
+		rec_list(widget);
 		break;
 	case 1:
 		gw_menu_title_set(widget, "Upcoming Recordings");

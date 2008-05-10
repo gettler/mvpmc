@@ -15,22 +15,27 @@ linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
 pwd = os.getcwd()
 
-src = [ 'myth.c' ]
+src = [ 'connection.c', 'myth.c', 'recordings.c' ]
+
+cmlib = libdir + '/libcmyth.a'
+cmlibso = libdir + '/libcmyth.so'
 
 plugin = pwd + '/libmvpmc_myth.plugin.a'
 
 dummy = env.Command('dummy.a', 0,
-		    'scons/build_plugin.sh -t ' + plugin)
+		    'scons/build_plugin.sh -t ' + plugin + ' -a ' + cmlib)
+env.Depends(dummy, cmlib)
 
 static = env.StaticLibrary('mvpmc_myth.plugin.a', [ src ],
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                           LINKFLAGS = ldflags)
+                           LINKFLAGS = ldflags + ' ' + cmlib)
 
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_myth.plugin', [ src ],
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                               LINKFLAGS = ldflags)
+                               LINKFLAGS = ldflags + ' ' + cmlibso)
     inst = env.Install(libdir, [ static, shared ])
+    env.Depends(shared, cmlibso)
 else:
     inst = env.Install(libdir, [ static ])
 

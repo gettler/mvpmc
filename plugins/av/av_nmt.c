@@ -146,7 +146,7 @@ is_audio(char *file)
 static int
 is_video(char *file)
 {
-	char *wc[] = { ".mpg", ".mpeg", NULL };
+	char *wc[] = { ".mpg", ".mpeg", ".nuv", NULL };
 	int i = 0;
 
 	while (wc[i] != NULL) {

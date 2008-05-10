@@ -75,6 +75,7 @@ char build_info[256];
 
 char *mclient_server = NULL;
 char *mythtv_server = NULL;
+char *mythtv_recdir = NULL;
 
 static struct option opts[] = {
 	{ "aspect", required_argument, 0, 'a' },
@@ -414,6 +415,9 @@ mvpmc_main(int argc, char **argv)
 		case 'h':
 			exit(0);
 			break;
+		case 'r':
+			mythtv_recdir = strdup(optarg);
+			break;
 		case 's':
 			mythtv_server = strdup(optarg);
 			break;
@@ -456,8 +460,16 @@ mvpmc_main(int argc, char **argv)
 
 	printf("gw initialized\n");
 
-	if ((mythtv_server != NULL) && (myth=plugin_load("myth")) == NULL) {
-		fprintf(stderr, "mythtv plugin not found!\n");
+	if (mythtv_server != NULL) { 
+		if ((myth=plugin_load("myth")) == NULL) {
+			fprintf(stderr, "mythtv plugin not found!\n");
+		} else {
+			myth->option("server", mythtv_server);
+		}
+	}
+
+	if (myth && mythtv_recdir) {
+		myth->option("recdir", mythtv_recdir);
 	}
 
 	gui_start(NULL);
