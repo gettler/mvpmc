@@ -25,7 +25,6 @@ done
 
 if [ "$ARCHIVES" = "" ] ; then
     echo "No archives specified!"
-    exit 1
 fi
 
 if [ "$TARGET" = "" ] ; then

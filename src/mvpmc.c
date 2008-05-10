@@ -68,11 +68,13 @@
 #include <plugin.h>
 #include <gw.h>
 #include <plugin/av.h>
+#include <plugin/app.h>
 
 char *version = NULL;
 char build_info[256];
 
 char *mclient_server = NULL;
+char *mythtv_server = NULL;
 
 static struct option opts[] = {
 	{ "aspect", required_argument, 0, 'a' },
@@ -112,6 +114,9 @@ static gw_t *about;
 static gw_t *menu;
 
 plugin_av_t *av;
+plugin_app_t *myth;
+
+static int do_key(gw_t *widget, int key);
 
 #if defined(MVPMC_MEDIAMVP) || defined(MVPMC_NMT)
 #include <sys/reboot.h>
@@ -230,6 +235,24 @@ do_ss(gw_t *widget, char *text, void *key)
 }
 #endif
 
+static void
+redisplay(void)
+{
+	gw_map(menu);
+	gw_focus_set(menu);
+	gw_focus_cb_set(do_key);
+}
+
+static int
+do_myth(gw_t *widget, char *text, void *key)
+{
+	gw_unmap(widget);
+
+	myth->enter(redisplay);
+
+	return 0;
+}
+
 static int
 do_key(gw_t *widget, int key)
 {
@@ -297,6 +320,9 @@ gui_start(void *arg)
 		gw_menu_item_add(menu, "SlimServer", (void*)5, do_ss, NULL);
 	}
 #endif
+	if (myth) {
+		gw_menu_item_add(menu, "MythTV", (void*)6, do_myth, NULL);
+	}
 	gw_menu_item_add(menu, "About", (void*)1, do_about, NULL);
 #if defined(MVPMC_NMT)
 	if (gaya) {
@@ -388,6 +414,9 @@ mvpmc_main(int argc, char **argv)
 		case 'h':
 			exit(0);
 			break;
+		case 's':
+			mythtv_server = strdup(optarg);
+			break;
 		default:
 			exit(1);
 			break;
@@ -426,6 +455,10 @@ mvpmc_main(int argc, char **argv)
 	}
 
 	printf("gw initialized\n");
+
+	if ((mythtv_server != NULL) && (myth=plugin_load("myth")) == NULL) {
+		fprintf(stderr, "mythtv plugin not found!\n");
+	}
 
 	gui_start(NULL);
 

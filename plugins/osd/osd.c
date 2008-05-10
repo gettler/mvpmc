@@ -62,6 +62,9 @@ widget_draw(gw_t *widget)
 {
 	osd_widget_t *cur;
 
+	if (!widget->realized)
+		return 0;
+
 	/*
 	 * Draw the widgets in wlist
 	 */
@@ -76,11 +79,8 @@ widget_draw(gw_t *widget)
 		list = cur->child;
 		while (list) {
 			widget_draw(list->gw);
-#if 0
+
 			list = list->next;
-#else
-			list = NULL;
-#endif
 		}
 
 		cur = cur->next;
