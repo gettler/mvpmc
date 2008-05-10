@@ -33,7 +33,7 @@ static = env.StaticLibrary('cmyth',
                            CPPPATH = [ env['INCDIR'], incdir, '.' ],
                            CCFLAGS=flags)
 
-if linkmode == 'shared':
+if linkmode == 'dynamic':
     shared = env.SharedLibrary('cmyth',
                                src,
                                CPPPATH = [ env['INCDIR'], incdir, '.' ],
