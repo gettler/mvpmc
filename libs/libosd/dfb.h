@@ -35,7 +35,9 @@
 
 #define osd_layer	__dfb_osd_layer
 
-#define DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
+#define PCH_DATADIR "/home/firmware/whsaw/SMP8634/2.7.176/dcchd/directfb/share/directfb-examples/fonts/"
+
+#define ISTAR_DATADIR "/home/firmware/rolandhii/release/8634/dcchd/directfb/share/directfb-examples/fonts/"
 
 extern void dfb_deinit();
 

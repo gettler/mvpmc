@@ -666,7 +666,12 @@ dfb_init(void)
 
 	font_dsc.flags = DFDESC_HEIGHT;
 	font_dsc.height = 26;
-	DFBCHECK(dfb->CreateFont(dfb, DATADIR"/decker.ttf", &font_dsc, &font));
+
+	if (access(PCH_DATADIR, F_OK) == 0) {
+		DFBCHECK(dfb->CreateFont(dfb, PCH_DATADIR"/decker.ttf", &font_dsc, &font));
+	} else {
+		DFBCHECK(dfb->CreateFont(dfb, ISTAR_DATADIR"/decker.ttf", &font_dsc, &font));
+	}
 
 	return 0;
 
