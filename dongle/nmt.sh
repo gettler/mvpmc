@@ -12,11 +12,11 @@ TOP=`pwd`
 
 DIRS="bin sbin usr/bin usr/sbin lib dev proc var usr/share usr/share/mvpmc usr/share/udhcpc etc tmp oldroot usr/share/mvpmc/plugins"
 
-BIN="busybox mvpmc osdtest strace"
+BIN="busybox mvpmc osdtest strace mythfuse"
 SBIN="smartctl dropbearmulti dropbear dropbearkey fusermount"
 TBIN="gdb gdbserver"
 PLUGINS="libmvpmc_osd.plugin libmvpmc_html.plugin libmvpmc_http.plugin libmvpmc_av.plugin libmvpmc_screensaver.plugin libmvpmc_myth.plugin"
-LIB="libinput.so libgw.so librefmem.so libosd.so libcurl.so libcurl.so.4 libcurl.so.4.0.1 libcmyth.so"
+LIB="libinput.so libgw.so librefmem.so libosd.so libcurl.so libcurl.so.4 libcurl.so.4.0.1 libcmyth.so libfuse.so libfuse.so.2 libfuse.so.2.7.2"
 TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libpthread.so.0 libthread_db.so.1 libutil.so.0 libdl.so.0 libresolv.so.0"
 LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 GCCLIB="libgcc_s.so.1"

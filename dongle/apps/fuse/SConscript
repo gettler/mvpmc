@@ -11,6 +11,8 @@ Import('env')
 build_target = env['TARG']
 topdir = env['TOPDIR']
 sbindir = '%s/dongle/install/%s/sbin/' % (topdir,build_target)
+incdir = '%s/dongle/install/%s/include/' % (topdir,build_target)
+libdir = '%s/dongle/install/%s/lib/' % (topdir,build_target)
 prefix = '%s/dongle/install/%s' % (topdir,build_target)
 
 e = Environment()
@@ -18,15 +20,20 @@ e = Environment()
 if build_target == 'nmt':
     url = [ 'http://www.mvpmc.org/dl/fuse-2.7.2.tar.gz' ]
     config = '--host=mipsel-linux-uclibc'
+    shared = '--enable-shared'
 else:
     url = [ 'http://www.mvpmc.org/dl/fuse-2.5.3.tar.gz' ]
     config = '--host=powerpc-linux '
+    shared = '--disable-shared'
 
-target = [ sbindir + 'fusermount' ]
-cmd = [ './configure %s -with-gnu-ld --disable-debug  --enable-lib --enable-util --enable-example=no --disable-kernel-module --disable-shared' % config,
+target = [ sbindir + 'fusermount',
+           libdir + 'libfuse.a',
+           incdir + 'fuse.h' ]
+cmd = [ './configure %s -with-gnu-ld --disable-debug  --enable-lib --enable-util --enable-example=no --disable-kernel-module %s' % (config,shared),
         'make',
-        'cp util/fusermount %s/sbin/fusermount' % prefix,
-        'cp lib/.libs/libfuse.a lib' ]
+        'cp include/*.h %s' % incdir,
+        'cp util/fusermount %s' % sbindir,
+        'cp -a lib/.libs/libfuse.* %s' % libdir ]
 patches = []
 
 build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)

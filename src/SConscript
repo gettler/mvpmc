@@ -86,6 +86,13 @@ mvpmc = env.Program('mvpmc', src,
                     LIBPATH = [ libdir ],
                     LINKFLAGS = ldflags + ' ' + linkflags + ' ' + gtkldflags)
 
+if target == 'nmt' or target == 'host':
+	fuse = env.Program('mythfuse', 'mythfuse.c',
+			   CPPPATH = [ env['INCDIR'], env['INSTINCDIR'] ],
+			   LIBS = [ 'cmyth', 'fuse', 'pthread', 'refmem' ],
+			   LIBPATH = [ libdir ],
+			   LINKFLAGS = ldflags)
+
 # XXX: for static linking, the dependencies are not correct
 if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libmvpmc_html.plugin.a')
@@ -99,6 +106,8 @@ if linkmode == 'static':
 
 if target == 'mvp':
 	inst = env.Install(bindir, [ mvpmc, splash ])
+elif target == 'nmt' or target == 'host':
+	inst = env.Install(bindir, [ mvpmc, fuse ])
 else:
 	inst = env.Install(bindir, mvpmc)
 
