@@ -33,6 +33,7 @@
 #include <mvp_refmem.h>
 
 #define MAX_CONN	32
+#define MAX_FILES	32
 #define MAX_BSIZE	(256*1024*3)
 #define MIN_BSIZE	(1024*2)
 
@@ -51,14 +52,19 @@ struct file_info {
 	cmyth_file_t file;
 	off_t offset;
 	struct path_info *info;
+	char *buf;
+	size_t n;
+	off_t start;
 };
 
 static struct myth_conn conn[MAX_CONN];
 
+static struct file_info files[MAX_FILES];
+
 static FILE *F = NULL;
 
 static int tcp_control = 4096;
-static int tcp_program = 0;
+static int tcp_program = 128*1024;
 static int port = 6543;
 
 #define debug(fmt...) 					\
@@ -167,7 +173,7 @@ static void myth_destroy(void *arg)
 }
 
 static int
-do_open(cmyth_proginfo_t prog, struct fuse_file_info *fi)
+do_open(cmyth_proginfo_t prog, struct fuse_file_info *fi, int i)
 {
 	cmyth_conn_t c = NULL;
 	cmyth_file_t f = NULL;
@@ -182,7 +188,7 @@ do_open(cmyth_proginfo_t prog, struct fuse_file_info *fi)
 		return -1;
 	}
 
-	if ((c=cmyth_conn_connect_ctrl(host, port, 1024,
+	if ((c=cmyth_conn_connect_ctrl(host, port, 16*1024,
 				       tcp_control)) == NULL) {
 		return -1;
 	}
@@ -195,14 +201,19 @@ do_open(cmyth_proginfo_t prog, struct fuse_file_info *fi)
 	ref_release(host);
 	ref_release(c);
 
-	fi->fh = (uint64_t)(unsigned long)f;
+	files[i].file = f;
+	files[i].buf = malloc(MAX_BSIZE);
+	files[i].start = 0;
+	files[i].n = 0;
+
+	fi->fh = i;
 
 	return 0;
 }
 
 static int myth_open(const char *path, struct fuse_file_info *fi)
 {
-	int i;
+	int i, f;
 	struct path_info info;
 	cmyth_conn_t control;
 	cmyth_proglist_t list;
@@ -219,7 +230,16 @@ static int myth_open(const char *path, struct fuse_file_info *fi)
 		return -ENOENT;
 	}
 
-	fi->fh = 0;
+	for (f=0; f<MAX_FILES; f++) {
+		if (files[f].file == NULL) {
+			break;
+		}
+	}
+	if (f == MAX_FILES) {
+		return -ENFILE;
+	}
+
+	fi->fh = -1;
 
 	if ((i=lookup_server(info.host)) < 0) {
 		return -ENOENT;
@@ -243,15 +263,18 @@ static int myth_open(const char *path, struct fuse_file_info *fi)
 		pn = cmyth_proginfo_pathname(prog);
 
 		if (strcmp(pn+1, info.file) == 0) {
-			if (do_open(prog, fi) < 0) {
+			if (do_open(prog, fi, f) < 0) {
 				ref_release(pn);
+				ref_release(prog);
 				return -ENOENT;
 			}
 			ref_release(pn);
+			ref_release(prog);
 			return 0;
 		}
 
 		ref_release(pn);
+		ref_release(prog);
 	}
 
 	return -ENOENT;
@@ -260,13 +283,18 @@ static int myth_open(const char *path, struct fuse_file_info *fi)
 static int myth_release(const char *path, struct fuse_file_info *fi)
 {
 	cmyth_file_t f;
+	int i = fi->fh;
 
 	debug("%s(): path '%s'\n", __FUNCTION__, path);
 
-	if (fi->fh) {
-		f = (cmyth_file_t)(unsigned long)(fi->fh);
+	if (fi->fh >= 0) {
+		f = files[i].file;
 		ref_release(f);
-		fi->fh = 0;
+		if (files[i].buf) {
+			free(files[i].buf);
+		}
+		memset(files+i, 0, sizeof(struct file_info));
+		fi->fh = -1;
 	}
 
 	return 0;
@@ -416,24 +444,15 @@ static int myth_getattr(const char *path, struct stat *stbuf)
 	return -ENOENT;
 }
 
-static int myth_read(const char *path, char *buf, size_t size, off_t offset,
-		     struct fuse_file_info *fi)
+static int
+fill_buffer(int i, char *buf, size_t size)
 {
-	cmyth_file_t f;
-	int n, len, tot;
-
-	debug("%s(): path '%s'\n", __FUNCTION__, path);
-
-	if (fi->fh == 0) {
-		return -ENOENT;
-	}
-
-	f = (cmyth_file_t)(unsigned long)(fi->fh);
+	int tot, len, n;
 
 	tot = 0;
-	len = cmyth_file_request_block(f, size);
+	len = cmyth_file_request_block(files[i].file, size);
 	while (tot < len) {
-		n = cmyth_file_get_block(f, buf+tot, len-tot);
+		n = cmyth_file_get_block(files[i].file, buf+tot, len-tot);
 		if (n >= 0) {
 			tot += n;
 		}
@@ -441,7 +460,30 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 			break;
 	}
 
-	debug("%s(): size %d len %d ret %d\n", __FUNCTION__, size, len, tot);
+	return tot;
+}
+
+static int myth_read(const char *path, char *buf, size_t size, off_t offset,
+		     struct fuse_file_info *fi)
+{
+	int tot;
+
+	debug("%s(): path '%s' size %d\n", __FUNCTION__, path, size);
+
+	if (fi->fh < 0) {
+		return -ENOENT;
+	}
+
+	tot = 0;
+	while (size > 0) {
+		int len = (size > MAX_BSIZE) ? MAX_BSIZE : size;
+		if ((len=fill_buffer(fi->fh, buf+tot, len)) <= 0)
+			break;
+		size -= len;
+		tot += len;
+	}
+
+	debug("%s(): read %d bytes at %lld\n", __FUNCTION__, tot, offset);
 
 	return tot;
 }
@@ -459,7 +501,12 @@ static struct fuse_operations myth_oper = {
 int
 main(int argc, char **argv)
 {
-	F = fopen("debug.fuse", "w+");
+	if (argc != 2) {
+		printf("Usage: mythfuse <mountpoint>\n");
+		exit(1);
+	}
+
+//	F = fopen("debug.fuse", "w+");
 
 	fuse_main(argc, argv, &myth_oper, NULL);
 
