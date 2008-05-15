@@ -320,6 +320,12 @@ static int myth_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	filler(buf, "..", NULL, 0);
 
 	if (info.host == NULL) {
+		for (i=0; i<MAX_CONN; i++) {
+			if (conn[i].host) {
+				filler(buf, conn[i].host, NULL, 0);
+			}
+		}
+
 		return 0;
 	}
 
@@ -350,7 +356,7 @@ static int myth_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		fn = pn+1;
 
 		memset(&st, 0, sizeof(st));
-		st.st_mode = S_IFREG | 0644;
+		st.st_mode = S_IFREG | 0444;
 		st.st_size = len;
 
 		debug("%s(): file '%s' len %lld\n", __FUNCTION__, fn, len);
@@ -380,13 +386,13 @@ static int myth_getattr(const char *path, struct stat *stbuf)
 
         memset(stbuf, 0, sizeof(struct stat));
         if (info.host == NULL) {
-                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_mode = S_IFDIR | 0555;
                 stbuf->st_nlink = 2;
 		return 0;
 	}
 
 	if (info.file == NULL) {
-                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_mode = S_IFDIR | 0555;
                 stbuf->st_nlink = 2;
 		return 0;
 	}
@@ -405,7 +411,7 @@ static int myth_getattr(const char *path, struct stat *stbuf)
 		list = conn[i].list;
 	}
 
-	stbuf->st_mode = S_IFREG | 0644;
+	stbuf->st_mode = S_IFREG | 0444;
 	stbuf->st_nlink = 1;
 
 	count = cmyth_proglist_get_count(list);
@@ -445,6 +451,16 @@ static int myth_getattr(const char *path, struct stat *stbuf)
 }
 
 static int
+do_seek(int i, off_t offset, int whence)
+{
+	off_t pos;
+
+	pos = cmyth_file_seek(files[i].file, offset, whence);
+
+	return pos;
+}
+
+static int
 fill_buffer(int i, char *buf, size_t size)
 {
 	int tot, len, n;
@@ -474,6 +490,12 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 		return -ENOENT;
 	}
 
+	if (files[fi->fh].offset != offset) {
+		if (do_seek(fi->fh, offset, SEEK_SET) < 0) {
+			return -EINVAL;
+		}
+	}
+
 	tot = 0;
 	while (size > 0) {
 		int len = (size > MAX_BSIZE) ? MAX_BSIZE : size;
@@ -482,6 +504,8 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 		size -= len;
 		tot += len;
 	}
+
+	files[fi->fh].offset = offset + tot;
 
 	debug("%s(): read %d bytes at %lld\n", __FUNCTION__, tot, offset);
 
