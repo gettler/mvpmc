@@ -160,6 +160,7 @@ static void *myth_init(struct fuse_conn_info *conn)
 
 static void myth_destroy(void *arg)
 {
+#if 0
 	int i;
 
 	for (i=0; i<MAX_CONN; i++) {
@@ -170,6 +171,7 @@ static void myth_destroy(void *arg)
 			ref_release(conn[i].control);
 		}
 	}
+#endif
 }
 
 static int
