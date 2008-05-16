@@ -24,6 +24,8 @@
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <plugin.h>
 #include <plugin/app.h>
@@ -87,6 +89,19 @@ myth_enter(void (*cb)(void))
 	gw_map(menu);
 	gw_focus_set(menu);
 	gw_focus_cb_set(do_key);
+
+#if defined(MVPMC_NMT)
+	if (recdir == NULL) {
+		char buf[512];
+
+		system("insmod $ROOT/lib/modules/2.6.15-sigma/fuse.ko");
+		mkdir("/tmp/mvpmc_mythtv", 0755);
+		system("mythfuse /tmp/mvpmc_mythtv");
+
+		snprintf(buf, sizeof(buf), "/tmp/mvpmc_mythtv/%s", server);
+		recdir = strdup(buf);
+	}
+#endif /* MVPMC_NMT */
 
 	return 0;
 }
