@@ -29,6 +29,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <getopt.h>
+#include <pthread.h>
 
 #include <cmyth.h>
 #include <mvp_refmem.h>
@@ -41,7 +42,10 @@
 struct myth_conn {
 	char *host;
 	cmyth_conn_t control;
+	cmyth_conn_t event;
 	cmyth_proglist_t list;
+	pthread_t thread;
+	int used;
 };
 
 struct path_info {
@@ -57,6 +61,7 @@ struct file_info {
 	char *buf;
 	size_t n;
 	off_t start;
+	int used;
 };
 
 struct dir_cb {
@@ -76,6 +81,8 @@ static FILE *F = NULL;
 static int tcp_control = 4096;
 static int tcp_program = 128*1024;
 static int port = 6543;
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int rd_files(struct path_info*, void*, fuse_fill_dir_t, off_t,
 		    struct fuse_file_info*);
@@ -105,11 +112,66 @@ static struct option opts[] = {
 		}					\
 	}
 
+static void*
+event_loop(void *arg)
+{
+	int i = (int)arg;
+	char buf[128];
+	cmyth_event_t next;
+	int done = 0;
+	cmyth_conn_t event;
+	cmyth_conn_t control;
+	cmyth_proglist_t list;
+
+	debug("%s(): event loop started\n", __FUNCTION__);
+
+	pthread_mutex_lock(&mutex);
+
+	pthread_detach(pthread_self());
+
+	if (!conn[i].used) {
+		pthread_mutex_unlock(&mutex);
+		return NULL;
+	}
+
+	event = conn[i].event;
+	control = conn[i].control;
+	list = conn[i].list;
+
+	pthread_mutex_unlock(&mutex);
+
+	while (!done) {
+		next = cmyth_event_get(event, buf, 128);
+
+		pthread_mutex_lock(&mutex);
+
+		switch (next) {
+		case CMYTH_EVENT_CLOSE:
+			ref_release(control);
+			ref_release(list);
+			ref_release(event);
+			done = 1;
+			break;
+		case CMYTH_EVENT_RECORDING_LIST_CHANGE:
+			ref_release(list);
+			list = cmyth_proglist_get_all_recorded(control);
+			conn[i].list = list;
+			break;
+		default:
+			break;
+		}
+
+		pthread_mutex_unlock(&mutex);
+	}
+
+	return NULL;
+}
+
 static int
 lookup_server(char *host)
 {
 	int i, j = -1;
-	cmyth_conn_t control;
+	cmyth_conn_t control, event;
 
 	debug("%s(): host '%s'\n", __FUNCTION__, host);
 
@@ -117,30 +179,42 @@ lookup_server(char *host)
 		if (conn[i].host && (strcmp(conn[i].host, host) == 0)) {
 			break;
 		}
-		if (j < 0) {
+		if ((j < 0) && (!conn[i].used)) {
 			j = i;
 		}
 	}
 
 	if (i == MAX_CONN) {
 		if (j < 0) {
-			debug("%s(): %d\n", __FUNCTION__, __LINE__);
+			debug("%s(): error at %d\n", __FUNCTION__, __LINE__);
 			return -1;
 		}
+		conn[j].used = 1;
+	}
 
+	if (i == MAX_CONN) {
 		if ((control=cmyth_conn_connect_ctrl(host, port, 16*1024,
 						     tcp_control)) == NULL) {
-			debug("%s(): %d\n", __FUNCTION__, __LINE__);
+			debug("%s(): error at %d\n", __FUNCTION__, __LINE__);
+			conn[j].used = 0;
+			return -1;
+		}
+		if ((event=cmyth_conn_connect_event(host, port, 16*1024,
+						    tcp_control)) == NULL) {
+			debug("%s(): error at %d\n", __FUNCTION__, __LINE__);
+			conn[j].used = 0;
 			return -1;
 		}
 
 		conn[j].host = strdup(host);
 		conn[j].control = control;
+		conn[j].event = event;
 		conn[j].list = NULL;
+
+		pthread_create(&conn[j].thread, NULL, event_loop, (void*)j);
+
 		i = j;
 	}
-
-	control = conn[i].control;
 
 	return i;
 }
@@ -205,11 +279,15 @@ out:
 
 static void *myth_init(struct fuse_conn_info *conn)
 {
-	return 0;
+	debug("%s(): start\n", __FUNCTION__);
+
+	return NULL;
 }
 
 static void myth_destroy(void *arg)
 {
+	debug("%s(): stop\n", __FUNCTION__);
+
 #if 0
 	int i;
 
@@ -269,12 +347,16 @@ static int o_files(int f, struct path_info *info, struct fuse_file_info *fi)
 	cmyth_conn_t control;
 	cmyth_proglist_t list;
 	int count;
+	int ret = -ENOENT;
+
+	pthread_mutex_lock(&mutex);
 
 	if ((i=lookup_server(info->host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return -ENOENT;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -282,6 +364,11 @@ static int o_files(int f, struct path_info *info, struct fuse_file_info *fi)
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
+
 	count = cmyth_proglist_get_count(list);
 
 	for (i=0; i<count; i++) {
@@ -295,18 +382,23 @@ static int o_files(int f, struct path_info *info, struct fuse_file_info *fi)
 			if (do_open(prog, fi, f) < 0) {
 				ref_release(pn);
 				ref_release(prog);
-				return -ENOENT;
+				goto out;
 			}
 			ref_release(pn);
 			ref_release(prog);
-			return 0;
+			ret = 0;
+			goto out;
 		}
 
 		ref_release(pn);
 		ref_release(prog);
 	}
 
-	return -ENOENT;
+out:
+	ref_release(control);
+	ref_release(list);
+
+	return ret;
 }
 
 static int myth_open(const char *path, struct fuse_file_info *fi)
@@ -325,14 +417,21 @@ static int myth_open(const char *path, struct fuse_file_info *fi)
 		return -ENOENT;
 	}
 
+	pthread_mutex_lock(&mutex);
+
 	for (f=0; f<MAX_FILES; f++) {
-		if (files[f].file == NULL) {
+		if (!files[f].used) {
 			break;
 		}
 	}
 	if (f == MAX_FILES) {
+		pthread_mutex_unlock(&mutex);
 		return -ENFILE;
 	}
+
+	files[f].used = 1;
+
+	pthread_mutex_unlock(&mutex);
 
 	fi->fh = -1;
 
@@ -380,11 +479,14 @@ rd_files(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 	cmyth_proglist_t list;
 	int count;
 
+	pthread_mutex_lock(&mutex);
+
 	if ((i=lookup_server(info->host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return 0;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -392,6 +494,11 @@ rd_files(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
+
 	count = cmyth_proglist_get_count(list);
 
 	for (i=0; i<count; i++) {
@@ -417,6 +524,9 @@ rd_files(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 		ref_release(pn);
 	}
 
+	ref_release(control);
+	ref_release(list);
+
 	return 0;
 }
 
@@ -429,11 +539,14 @@ rd_all(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 	cmyth_proglist_t list;
 	int count;
 
+	pthread_mutex_lock(&mutex);
+
 	if ((i=lookup_server(info->host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return 0;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -441,6 +554,11 @@ rd_all(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
+
 	count = cmyth_proglist_get_count(list);
 
 	for (i=0; i<count; i++) {
@@ -462,7 +580,7 @@ rd_all(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 
 		memset(&st, 0, sizeof(st));
 		st.st_mode = S_IFLNK | 0444;
-		st.st_size = len;
+		st.st_size = strlen(pn) + 8;
 
 		debug("%s(): file '%s' len %lld\n", __FUNCTION__, fn, len);
 		filler(buf, tmp, &st, 0);
@@ -472,6 +590,9 @@ rd_all(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 		ref_release(t);
 		ref_release(s);
 	}
+
+	ref_release(control);
+	ref_release(list);
 
 	return 0;
 }
@@ -534,11 +655,14 @@ static int ga_files(struct path_info *info, struct stat *stbuf)
 	int count;
 	int i;
 
+	pthread_mutex_lock(&mutex);
+
 	if ((i=lookup_server(info->host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return -ENOENT;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -546,6 +670,10 @@ static int ga_files(struct path_info *info, struct stat *stbuf)
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
 
 	stbuf->st_mode = S_IFREG | 0444;
 	stbuf->st_nlink = 1;
@@ -577,11 +705,16 @@ static int ga_files(struct path_info *info, struct stat *stbuf)
 			ref_release(prog);
 			ref_release(pn);
 			ref_release(ts);
+			ref_release(control);
+			ref_release(list);
 			return 0;
 		}
 		ref_release(prog);
 		ref_release(pn);
 	}
+
+	ref_release(control);
+	ref_release(list);
 
 	return -ENOENT;
 }
@@ -593,11 +726,14 @@ static int ga_all(struct path_info *info, struct stat *stbuf)
 	int count;
 	int i;
 
+	pthread_mutex_lock(&mutex);
+
 	if ((i=lookup_server(info->host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return -ENOENT;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -605,6 +741,10 @@ static int ga_all(struct path_info *info, struct stat *stbuf)
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
 
 	stbuf->st_mode = S_IFLNK | 0444;
 	stbuf->st_nlink = 1;
@@ -628,25 +768,34 @@ static int ga_all(struct path_info *info, struct stat *stbuf)
 		if (strcmp(tmp, info->file) == 0) {
 			cmyth_timestamp_t ts;
 			time_t t;
+			char *pn;
+
 			len = cmyth_proginfo_length(prog);
+			pn = cmyth_proginfo_pathname(prog);
 			debug("%s(): file '%s' len %lld\n",
 			      __FUNCTION__, tmp, len);
-			stbuf->st_size = len;
+			stbuf->st_size = strlen(pn) + 8;
 			ts = cmyth_proginfo_rec_end(prog);
 			t = cmyth_timestamp_to_unixtime(ts);
 			stbuf->st_atime = t;
 			stbuf->st_mtime = t;
 			stbuf->st_ctime = t;
+			ref_release(pn);
 			ref_release(prog);
 			ref_release(ts);
 			ref_release(title);
 			ref_release(s);
+			ref_release(control);
+			ref_release(list);
 			return 0;
 		}
 		ref_release(prog);
 		ref_release(title);
 		ref_release(s);
 	}
+
+	ref_release(control);
+	ref_release(list);
 
 	return -ENOENT;
 }
@@ -717,17 +866,25 @@ do_seek(int i, off_t offset, int whence)
 static int
 fill_buffer(int i, char *buf, size_t size)
 {
-	int tot, len, n;
+	int tot, len, n = 0;
 
 	tot = 0;
 	len = cmyth_file_request_block(files[i].file, size);
 	while (tot < len) {
 		n = cmyth_file_get_block(files[i].file, buf+tot, len-tot);
-		if (n >= 0) {
+		if (n > 0) {
 			tot += n;
 		}
-		if (n < 0)
-			break;
+		if (n <= 0) {
+			return -1;
+		}
+	}
+
+	debug("%s(): tot %d len %d n %d size %d\n", __FUNCTION__,
+	      tot, len, n, size);
+
+	if (len < 0) {
+		return -1;
 	}
 
 	return tot;
@@ -736,7 +893,7 @@ fill_buffer(int i, char *buf, size_t size)
 static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 		     struct fuse_file_info *fi)
 {
-	int tot;
+	int tot, len = 0;
 
 	debug("%s(): path '%s' size %d\n", __FUNCTION__, path, size);
 
@@ -746,13 +903,13 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 
 	if (files[fi->fh].offset != offset) {
 		if (do_seek(fi->fh, offset, SEEK_SET) < 0) {
-			return -EINVAL;
+			goto fail;
 		}
 	}
 
 	tot = 0;
 	while (size > 0) {
-		int len = (size > MAX_BSIZE) ? MAX_BSIZE : size;
+		len = (size > MAX_BSIZE) ? MAX_BSIZE : size;
 		if ((len=fill_buffer(fi->fh, buf+tot, len)) <= 0)
 			break;
 		size -= len;
@@ -761,9 +918,24 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 
 	files[fi->fh].offset = offset + tot;
 
-	debug("%s(): read %d bytes at %lld\n", __FUNCTION__, tot, offset);
+	debug("%s(): read %d bytes at %lld (len %d)\n", __FUNCTION__,
+	      tot, offset, len);
+
+	if (len < 0) {
+		goto fail;
+	}
 
 	return tot;
+
+fail:
+	debug("%s(): shutting down file connection!\n", __FUNCTION__);
+
+	pthread_mutex_lock(&mutex);
+	ref_release(files[fi->fh].file);
+	memset(files+fi->fh, 0, sizeof(files[0]));
+	pthread_mutex_unlock(&mutex);
+
+	return -ENOENT;
 }
 
 static int myth_readlink(const char *path, char *buf, size_t size)
@@ -786,11 +958,14 @@ static int myth_readlink(const char *path, char *buf, size_t size)
 		return -ENOENT;
 	}
 
+	pthread_mutex_lock(&mutex);
+
 	if ((i=lookup_server(info.host)) < 0) {
+		pthread_mutex_unlock(&mutex);
 		return -ENOENT;
 	}
 
-	control = conn[i].control;
+	control = ref_hold(conn[i].control);
 
 	if (conn[i].list == NULL) {
 		list = cmyth_proglist_get_all_recorded(control);
@@ -798,6 +973,11 @@ static int myth_readlink(const char *path, char *buf, size_t size)
 	} else {
 		list = conn[i].list;
 	}
+
+	list = ref_hold(list);
+
+	pthread_mutex_unlock(&mutex);
+
 	count = cmyth_proglist_get_count(list);
 
 	for (i=0; i<count; i++) {
@@ -825,6 +1005,8 @@ static int myth_readlink(const char *path, char *buf, size_t size)
 			ref_release(s);
 			ref_release(pn);
 			ref_release(prog);
+			ref_release(control);
+			ref_release(list);
 
 			return 0;
 		}
@@ -834,6 +1016,9 @@ static int myth_readlink(const char *path, char *buf, size_t size)
 		ref_release(pn);
 		ref_release(prog);
 	}
+
+	ref_release(control);
+	ref_release(list);
 
 	return -ENOENT;
 }
