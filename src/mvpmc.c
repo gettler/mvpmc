@@ -130,9 +130,11 @@ do_reboot(gw_t *widget, char *text, void *key)
 	/*
 	 * Do an orderly shutdown, if possible.
 	 */
+#if defined(MVPMC_MEDIAMVP)
 	system("/sbin/reboot");
-
 	sleep(1);
+#endif
+
 	reboot(LINUX_REBOOT_CMD_RESTART);
 
 	return 0;
