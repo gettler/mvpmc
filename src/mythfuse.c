@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <string.h>
 #include <libgen.h>
+#include <getopt.h>
 
 #include <cmyth.h>
 #include <mvp_refmem.h>
@@ -80,15 +81,20 @@ static int rd_files(struct path_info*, void*, fuse_fill_dir_t, off_t,
 		    struct fuse_file_info*);
 static int ga_files(struct path_info*, struct stat*);
 static int o_files(int, struct path_info*, struct fuse_file_info *fi);
-static int rd_titles(struct path_info*, void*, fuse_fill_dir_t, off_t,
-		     struct fuse_file_info*);
-static int ga_titles(struct path_info*, struct stat*);
-static int o_titles(int, struct path_info*, struct fuse_file_info *fi);
+static int rd_all(struct path_info*, void*, fuse_fill_dir_t, off_t,
+		  struct fuse_file_info*);
+static int ga_all(struct path_info*, struct stat*);
 
 static struct dir_cb dircb[] = {
 	{ "files", rd_files, ga_files, o_files },
-	{ "titles", rd_titles, ga_titles, o_titles },
+	{ "all", rd_all, ga_all, NULL },
 	{ NULL, NULL },
+};
+
+static struct option opts[] = {
+	{ "debug", required_argument, 0, 'd' },
+	{ "help", required_argument, 0, 'h' },
+	{ 0, 0, 0, 0 }
 };
 
 #define debug(fmt...) 					\
@@ -176,7 +182,7 @@ lookup_path(const char *path, struct path_info *info)
 
 	if ((i >= 2) && 
 	    ((strcmp(parts[1], "files") != 0) &&
-	     (strcmp(parts[1], "titles") != 0))) {
+	     (strcmp(parts[1], "all") != 0))) {
 		ret = -ENOENT;
 		goto out;
 	}
@@ -303,59 +309,6 @@ static int o_files(int f, struct path_info *info, struct fuse_file_info *fi)
 	return -ENOENT;
 }
 
-static int o_titles(int f, struct path_info *info, struct fuse_file_info *fi)
-{
-	int i;
-	cmyth_conn_t control;
-	cmyth_proglist_t list;
-	int count;
-
-	if ((i=lookup_server(info->host)) < 0) {
-		return -ENOENT;
-	}
-
-	control = conn[i].control;
-
-	if (conn[i].list == NULL) {
-		list = cmyth_proglist_get_all_recorded(control);
-		conn[i].list = list;
-	} else {
-		list = conn[i].list;
-	}
-	count = cmyth_proglist_get_count(list);
-
-	for (i=0; i<count; i++) {
-		cmyth_proginfo_t prog;
-		char tmp[512];
-		char *t, *s;
-
-		prog = cmyth_proglist_get_item(list, i);
-		t = cmyth_proginfo_title(prog);
-		s = cmyth_proginfo_subtitle(prog);
-
-		snprintf(tmp, sizeof(tmp), "%s - %s.mpg", t, s);
-
-		if (strcmp(tmp, info->file) == 0) {
-			if (do_open(prog, fi, f) < 0) {
-				ref_release(t);
-				ref_release(s);
-				ref_release(prog);
-				return -ENOENT;
-			}
-			ref_release(t);
-			ref_release(s);
-			ref_release(prog);
-			return 0;
-		}
-
-		ref_release(t);
-		ref_release(s);
-		ref_release(prog);
-	}
-
-	return -ENOENT;
-}
-
 static int myth_open(const char *path, struct fuse_file_info *fi)
 {
 	int i, f;
@@ -386,6 +339,9 @@ static int myth_open(const char *path, struct fuse_file_info *fi)
 	i = 0;
 	while (dircb[i].name) {
 		if (strcmp(info.dir, dircb[i].name) == 0) {
+			if (dircb[i].open == NULL) {
+				return -ENOENT;
+			}
 			dircb[i].open(f, &info, fi);
 			return 0;
 		}
@@ -465,8 +421,8 @@ rd_files(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 }
 
 static int
-rd_titles(struct path_info *info, void *buf, fuse_fill_dir_t filler,
-	  off_t offset, struct fuse_file_info *fi)
+rd_all(struct path_info *info, void *buf, fuse_fill_dir_t filler,
+       off_t offset, struct fuse_file_info *fi)
 {
 	int i;
 	cmyth_conn_t control;
@@ -500,12 +456,12 @@ rd_titles(struct path_info *info, void *buf, fuse_fill_dir_t filler,
 		s = cmyth_proginfo_subtitle(prog);
 		len = cmyth_proginfo_length(prog);
 
-		snprintf(tmp, sizeof(tmp), "%s - %s.mpg", t, s);
+		snprintf(tmp, sizeof(tmp), "%s - %s.nuv", t, s);
 
 		fn = pn+1;
 
 		memset(&st, 0, sizeof(st));
-		st.st_mode = S_IFREG | 0444;
+		st.st_mode = S_IFLNK | 0444;
 		st.st_size = len;
 
 		debug("%s(): file '%s' len %lld\n", __FUNCTION__, fn, len);
@@ -630,7 +586,7 @@ static int ga_files(struct path_info *info, struct stat *stbuf)
 	return -ENOENT;
 }
 
-static int ga_titles(struct path_info *info, struct stat *stbuf)
+static int ga_all(struct path_info *info, struct stat *stbuf)
 {
 	cmyth_conn_t control;
 	cmyth_proglist_t list;
@@ -650,7 +606,7 @@ static int ga_titles(struct path_info *info, struct stat *stbuf)
 		list = conn[i].list;
 	}
 
-	stbuf->st_mode = S_IFREG | 0444;
+	stbuf->st_mode = S_IFLNK | 0444;
 	stbuf->st_nlink = 1;
 
 	count = cmyth_proglist_get_count(list);
@@ -667,7 +623,7 @@ static int ga_titles(struct path_info *info, struct stat *stbuf)
 		title = cmyth_proginfo_title(prog);
 		s = cmyth_proginfo_subtitle(prog);
 
-		snprintf(tmp, sizeof(tmp), "%s - %s.mpg", title, s);
+		snprintf(tmp, sizeof(tmp), "%s - %s.nuv", title, s);
 
 		if (strcmp(tmp, info->file) == 0) {
 			cmyth_timestamp_t ts;
@@ -810,6 +766,78 @@ static int myth_read(const char *path, char *buf, size_t size, off_t offset,
 	return tot;
 }
 
+static int myth_readlink(const char *path, char *buf, size_t size)
+{
+	struct path_info info;
+	int n;
+	int i;
+	cmyth_conn_t control;
+	cmyth_proglist_t list;
+	int count;
+
+	debug("%s(): path '%s' size %d\n", __FUNCTION__, path, size);
+
+	memset(&info, 0, sizeof(info));
+	if (lookup_path(path, &info) < 0) {
+		return -ENOENT;
+	}
+
+	if (strcmp(info.dir, "all") != 0) {
+		return -ENOENT;
+	}
+
+	if ((i=lookup_server(info.host)) < 0) {
+		return -ENOENT;
+	}
+
+	control = conn[i].control;
+
+	if (conn[i].list == NULL) {
+		list = cmyth_proglist_get_all_recorded(control);
+		conn[i].list = list;
+	} else {
+		list = conn[i].list;
+	}
+	count = cmyth_proglist_get_count(list);
+
+	for (i=0; i<count; i++) {
+		cmyth_proginfo_t prog;
+		char tmp[512];
+		char *t, *s, *pn;
+
+		prog = cmyth_proglist_get_item(list, i);
+		t = cmyth_proginfo_title(prog);
+		s = cmyth_proginfo_subtitle(prog);
+		pn = cmyth_proginfo_pathname(prog);
+
+		snprintf(tmp, sizeof(tmp), "%s - %s.nuv", t, s);
+
+		if (strcmp(tmp, info.file) == 0) {
+			snprintf(tmp, sizeof(tmp), "../files%s", pn);
+
+			n = (strlen(tmp) > size) ? size : strlen(tmp);
+			strncpy(buf, tmp, n);
+
+			debug("%s(): link '%s' %d bytes\n", __FUNCTION__,
+			      tmp, n);
+
+			ref_release(t);
+			ref_release(s);
+			ref_release(pn);
+			ref_release(prog);
+
+			return 0;
+		}
+
+		ref_release(t);
+		ref_release(s);
+		ref_release(pn);
+		ref_release(prog);
+	}
+
+	return -ENOENT;
+}
+ 
 static struct fuse_operations myth_oper = {
 	.init = myth_init,
 	.destroy = myth_destroy,
@@ -818,19 +846,43 @@ static struct fuse_operations myth_oper = {
 	.readdir = myth_readdir,
 	.getattr = myth_getattr,
 	.read = myth_read,
+	.readlink = myth_readlink,
 };
+
+static void
+print_help(char *prog)
+{
+	printf("Usage: %s [-dh] <mountpoint>\n", prog);
+}
 
 int
 main(int argc, char **argv)
 {
-	if (argc != 2) {
-		printf("Usage: mythfuse <mountpoint>\n");
+	int c;
+	int opt_index;
+	char *fuse[3] = { NULL, NULL, NULL };
+
+	while ((c=getopt_long(argc, argv, "dh", opts, &opt_index)) != -1) {
+		switch (c) {
+		case 'd':
+			F = fopen("debug.fuse", "w+");
+			break;
+		case 'h':
+			print_help(argv[0]);
+			exit(0);
+			break;
+		}
+	}
+
+	if (optind == argc) {
+		print_help(argv[0]);
 		exit(1);
 	}
 
-//	F = fopen("debug.fuse", "w+");
+	fuse[0] = argv[0];
+	fuse[1] = argv[optind];
 
-	fuse_main(argc, argv, &myth_oper, NULL);
+	fuse_main(2, fuse, &myth_oper, NULL);
 
 	return 0;
 }
