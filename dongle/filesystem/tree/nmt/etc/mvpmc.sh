@@ -4,7 +4,7 @@ OUTPUT=/tmp/output.html
 
 TOP=/opt/sybhttpd/localhost.drives
 
-MOUNT=${SCRIPT_NAME%%mvpmc*}
+MOUNT="${SCRIPT_NAME%%mvpmc*}"
 
 cat > $OUTPUT <<EOF
 <h1>mvpmc</h1>
