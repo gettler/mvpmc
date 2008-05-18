@@ -98,6 +98,8 @@ get_servlink_path(char *cmd)
 		}
 		proto = cmd;
 		cmd = host;
+	} else {
+		return NULL;
 	}
 
 	if ((c=strchr(cmd, '/')) != NULL) {
@@ -146,8 +148,9 @@ get_servlink(void)
 			*(p++) = '\0';
 			if (strncmp(line, "servlink", 8) == 0) {
 				sl[n].opt = strdup(p);
-				sl[n].path = get_servlink_path(p);
-				n++;
+				if ((sl[n].path=get_servlink_path(p)) != NULL) {
+					n++;
+				}
 			}
 		}
 	}
