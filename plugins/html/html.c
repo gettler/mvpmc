@@ -416,7 +416,7 @@ html_generate(void)
 	}
 	memset(resp, 0, sizeof(*resp));
 
-	if ((root=gw_root()) == NULL) {
+	if ((root=gw_root(ROOT_CONSOLE)) == NULL) {
 		goto err;
 	}
 

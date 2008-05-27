@@ -289,7 +289,12 @@ gui_start(void *arg)
 	}
 #endif
 
-	root = gw_root();
+	root = gw_create_console(ROOT_CONSOLE);
+
+	if (gw_set_console(ROOT_CONSOLE) != 0) {
+		fprintf(stderr, "root console not found!\n");
+		exit(1);
+	}
 
 	gw_focus_cb_set(do_key);
 

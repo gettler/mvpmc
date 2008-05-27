@@ -104,6 +104,10 @@ osd_generate(gw_t *root)
 {
 	int count;
 
+	if (root == NULL) {
+		return -1;
+	}
+
 	if (root->type != GW_TYPE_CONTAINER) {
 		return -1;
 	}

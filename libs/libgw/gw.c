@@ -137,6 +137,9 @@ gw_create(gw_type_t type, gw_t *parent)
 	if (parent == NULL) {
 		parent = root;
 	}
+	if (parent->console == NULL) {
+		return NULL;
+	}
 
 	if ((gw=(gw_t*)ref_alloc(sizeof(gw_t))) == NULL) {
 		return NULL;
@@ -161,10 +164,13 @@ gw_create(gw_type_t type, gw_t *parent)
 	}
 
 	if (gw) {
+		gw_t *root = parent->console->widget;
+
 		gw->type = type;
 		gw->realized = false;
 		gw->event_mask = 0;
 		gw->parent = parent;
+		gw->console = parent->console;
 
 		gw->next = root->next;
 		root->next = gw;

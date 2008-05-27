@@ -30,6 +30,8 @@
 #include <plugin/osd.h>
 #include <plugin/screensaver.h>
 
+#define MAX_CONSOLES	16
+
 gw_t *root = NULL;
 gw_t *commands = NULL;
 
@@ -41,10 +43,90 @@ static volatile unsigned int current = 0;
 
 int pipefds[2];
 
+static gw_console_t consoles[MAX_CONSOLES];
+
 gw_t*
-gw_root(void)
+gw_root(char *name)
 {
+	int i;
+
+	if (name == NULL) {
+		name = ROOT_CONSOLE;
+	}
+
+	for (i=0; i<MAX_CONSOLES; i++) {
+		if (strcmp(consoles[i].name, name) == 0) {
+			return consoles[i].widget;
+		}
+	}
+
+	return NULL;
+}
+
+static gw_t*
+console_create(char *name, int which)
+{
+	gw_t *root;
+
+	if ((root=(gw_t*)ref_alloc(sizeof(*root))) == NULL) {
+		return NULL;
+	}
+
+	memset(root, 0, sizeof(*root));
+
+	root->type = GW_TYPE_CONTAINER;
+	root->realized = false;
+	root->above = NULL;
+	root->below = NULL;
+
+	root->event_mask = 0;
+
+	root->data.container =
+		(gw_container_t*)ref_alloc(sizeof(gw_container_t*));
+
+	if (root->data.container == NULL) {
+		ref_release(root);
+		return NULL;
+	}
+
+	root->data.container->child = NULL;
+
+	root->console = &consoles[which];
+
+	gw_name_set(root, name);
+
 	return root;
+}
+
+gw_t*
+gw_create_console(char *name)
+{
+	int i;
+
+	for (i=0; i<MAX_CONSOLES; i++) {
+		if (consoles[i].name == NULL) {
+			consoles[i].widget = console_create(name, i);
+			consoles[i].name = strdup(name);
+			return consoles[i].widget;
+		}
+	}
+
+	return NULL;
+}
+
+int
+gw_set_console(char *name)
+{
+	int i;
+
+	for (i=0; i<MAX_CONSOLES; i++) {
+		if (strcmp(consoles[i].name, name) == 0) {
+			root = consoles[i].widget;
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 static int
@@ -163,36 +245,6 @@ gw_device_remove(unsigned int dev)
 int
 gw_init(void)
 {
-	if (root != NULL) {
-		return -1;
-	}
-
-	if ((root=(gw_t*)ref_alloc(sizeof(*root))) == NULL) {
-		return -1;
-	}
-
-	memset(root, 0, sizeof(*root));
-
-	root->type = GW_TYPE_CONTAINER;
-	root->realized = false;
-	root->above = NULL;
-	root->below = NULL;
-
-	root->event_mask = 0;
-
-	root->data.container =
-		(gw_container_t*)ref_alloc(sizeof(gw_container_t*));
-
-	if (root->data.container == NULL) {
-		ref_release(root);
-		root = NULL;
-		return -1;
-	}
-
-	root->data.container->child = NULL;
-
-	gw_name_set(root, "root");
-
 	pipe(pipefds);
 
 	return 0;
@@ -207,11 +259,13 @@ gw_shutdown(void)
 int
 gw_output(void)
 {
-	if (current & GW_DEV_HTTP)
+	if (current & GW_DEV_HTTP) {
 		http->generate();
+	}
 
-	if (current & GW_DEV_OSD)
+	if (current & GW_DEV_OSD) {
 		osd->generate(root);
+	}
 
 	return 0;
 }

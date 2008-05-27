@@ -54,15 +54,21 @@ typedef enum {
 	GW_TYPE_BUSY,
 } gw_type_t;
 
+#define ROOT_CONSOLE		"root"
+
 typedef int (*gw_cmd_t)(gw_t*, int);
 typedef int (*gw_select_t)(gw_t*, char*, void*);
 typedef int (*gw_hilite_t)(gw_t*, char*, void*, bool);
 
 extern int gw_init(void);
 extern int gw_shutdown(void);
-extern gw_t *gw_root(void);
+extern gw_t *gw_root(char *name);
 extern int gw_device_add(unsigned int dev);
 extern int gw_device_remove(unsigned int dev);
+
+extern gw_t *gw_create_console(char *name);
+extern int gw_set_console(char *name);
+extern char *gw_get_console(void);
 
 extern gw_t* gw_create(gw_type_t type, gw_t *parent);
 

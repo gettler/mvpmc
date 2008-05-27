@@ -162,7 +162,7 @@ init_myth(void)
 {
 	gw_t *root;
 
-	root = gw_root();
+	root = gw_root(ROOT_CONSOLE);
 
 	if ((menu=gw_create(GW_TYPE_MENU, root)) == NULL)
 		goto err;

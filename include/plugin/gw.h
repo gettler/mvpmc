@@ -100,11 +100,17 @@ typedef struct {
 	int timeout;
 } gw_screensaver_t;
 
+typedef struct {
+	char *name;
+	gw_t *widget;
+} gw_console_t;
+
 struct gw_s {
 	gw_type_t type;
 	char *name;
 	bool realized;
 	bool updating;
+	gw_console_t *console;
 	struct gw_s *next;
 	struct gw_s *prev;
 	struct gw_s *parent;
