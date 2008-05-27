@@ -62,7 +62,7 @@ rec_select(gw_t *widget, char *text, void *key)
 		}
 	}
 
-	av->play_file(buf);
+	av->play_file(buf, NULL);
 
 	return 0;
 }

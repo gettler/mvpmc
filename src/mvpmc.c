@@ -77,6 +77,8 @@ char *mclient_server = NULL;
 char *mythtv_server = NULL;
 char *mythtv_recdir = NULL;
 
+static gw_t *root;
+
 static struct option opts[] = {
 	{ "aspect", required_argument, 0, 'a' },
 	{ "config", required_argument, 0, 'F' },
@@ -234,7 +236,7 @@ do_ss(gw_t *widget, char *text, void *key)
 	snprintf(url, sizeof(url), "http://%s:9000/stream.mp3",
 		 mclient_server);
 
-	return av->play_url(url);
+	return av->play_url(url, NULL);
 }
 #endif
 
@@ -274,7 +276,6 @@ gui_start(void *arg)
 	extern int fb_init(gw_t *root);
 	gw_t *splash;
 	gw_t *text;
-	gw_t *root;
 #if defined(MVPMC_NMT)
 	char *gaya = getenv("EXIT_TO_GAYA");
 #endif
@@ -288,13 +289,6 @@ gui_start(void *arg)
 		system("hdparm -S 24 /dev/hda");
 	}
 #endif
-
-	root = gw_create_console(ROOT_CONSOLE);
-
-	if (gw_set_console(ROOT_CONSOLE) != 0) {
-		fprintf(stderr, "root console not found!\n");
-		exit(1);
-	}
 
 	gw_focus_cb_set(do_key);
 
@@ -428,6 +422,9 @@ mvpmc_main(int argc, char **argv)
 		case 's':
 			mythtv_server = strdup(optarg);
 			break;
+		case 'F':
+			printf("Ignoring option: '%c'\n", c);
+			break;
 		default:
 			exit(1);
 			break;
@@ -466,6 +463,15 @@ mvpmc_main(int argc, char **argv)
 	}
 
 	printf("gw initialized\n");
+
+	root = gw_create_console(ROOT_CONSOLE);
+
+	if (gw_set_console(ROOT_CONSOLE) != 0) {
+		fprintf(stderr, "root console not found!\n");
+		exit(1);
+	}
+
+	printf("root console created\n");
 
 	if (mythtv_server != NULL) { 
 		if ((myth=plugin_load("myth")) == NULL) {

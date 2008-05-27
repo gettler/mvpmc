@@ -55,7 +55,7 @@ gw_root(char *name)
 	}
 
 	for (i=0; i<MAX_CONSOLES; i++) {
-		if (strcmp(consoles[i].name, name) == 0) {
+		if (consoles[i].name && (strcmp(consoles[i].name, name) == 0)) {
 			return consoles[i].widget;
 		}
 	}
@@ -119,14 +119,37 @@ gw_set_console(char *name)
 {
 	int i;
 
+	printf("%s(): set console to %s\n", __FUNCTION__, name);
+
 	for (i=0; i<MAX_CONSOLES; i++) {
 		if (strcmp(consoles[i].name, name) == 0) {
-			root = consoles[i].widget;
+			if (root != consoles[i].widget) {
+				root = consoles[i].widget;
+				gw_output();
+			}
 			return 0;
 		}
 	}
 
+	fprintf(stderr, "%s(): failed to set console!\n", __FUNCTION__);
+
 	return -1;
+}
+
+char*
+gw_get_console(void)
+{
+	int i;
+
+	if (root) {
+		for (i=0; i<MAX_CONSOLES; i++) {
+			if (root == consoles[i].widget) {
+				return consoles[i].name;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 static int
@@ -268,4 +291,24 @@ gw_output(void)
 	}
 
 	return 0;
+}
+
+int
+gw_ss_enable(void)
+{
+	if (ss) {
+		return ss->enable();
+	}
+
+	return -1;
+}
+
+int
+gw_ss_disable(void)
+{
+	if (ss) {
+		return ss->disable();
+	}
+
+	return -1;
 }

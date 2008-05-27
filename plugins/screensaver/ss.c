@@ -50,14 +50,20 @@ static pthread_t thread;
 static int width = -1, height = -1;
 
 static volatile time_t timeout = 0;
+static volatile time_t interval = 0;
 
 static volatile int running = 0;
+static volatile int enabled = 0;
+
+static gw_t *console;
 
 static int
 start(void)
 {
-	timeout = time(NULL);
-	pthread_kill(thread, SIGURG);
+	if (enabled) {
+		timeout = time(NULL) + interval;
+		pthread_kill(thread, SIGURG);
+	}
 
 	return 0;
 }
@@ -65,7 +71,25 @@ start(void)
 static int
 stop(void)
 {
-	timeout = 0;
+	if (enabled) {
+		timeout = 0;
+		pthread_kill(thread, SIGURG);
+	}
+
+	return 0;
+}
+
+static int
+enable(void)
+{
+	enabled = 1;
+	return start();
+}
+
+static int
+disable(void)
+{
+	enabled = 0;
 	pthread_kill(thread, SIGURG);
 
 	return 0;
@@ -74,8 +98,12 @@ stop(void)
 static int
 feed(int seconds)
 {
-	timeout = time(NULL) + seconds;
-	pthread_kill(thread, SIGURG);
+	if (enabled) {
+		interval = seconds;
+
+		timeout = time(NULL) + seconds;
+		pthread_kill(thread, SIGURG);
+	}
 
 	return 0;
 }
@@ -110,7 +138,7 @@ draw_logo(osd_surface_t *surface)
 	x = rand() % (width - image.width);
 	y = rand() % (height - image.height);
 	int oy = 1, ox = 1;
-	while (timeout && (timeout <= time(NULL))) {
+	while (enabled && timeout && (timeout <= time(NULL))) {
 		if (x == 0)
 			ox = rand() % 2;
 		else
@@ -223,12 +251,18 @@ ss(void)
 static void
 sig_handler(int sig)
 {
-	printf("screensaver kicked!\n");
+	if (timeout == 0) {
+		printf("screensaver disabled!\n");
+	} else {
+		printf("screensaver kicked!\n");
+	}
 }
 
 static void*
 ss_thread(void *arg)
 {
+	char *prev;
+
 	signal(SIGURG, sig_handler);
 
 	while (1) {
@@ -236,7 +270,7 @@ ss_thread(void *arg)
 
 		pthread_testcancel();
 
-		if ((to=timeout) == 0) {
+		if (!enabled || ((to=timeout) == 0)) {
 #if defined(MVPMC_MG35)
 			sleep(2);
 #else
@@ -254,12 +288,15 @@ ss_thread(void *arg)
 
 		printf("start screensaver\n");
 		running = 1;
+		prev = gw_get_console();
+		gw_set_console(SCREENSAVER_CONSOLE);
 		if (ss() < 0) {
 			printf("screensaver failed\n");
 			sleep(10);
 		} else {
 			printf("stop screensaver\n");
 		}
+		gw_set_console(prev);
 		running = 0;
 	}
 
@@ -273,6 +310,8 @@ is_running(void)
 }
 
 static plugin_screensaver_t reloc = {
+	.enable = enable,
+	.disable = disable,
 	.start = start,
 	.stop = stop,
 	.feed = feed,
@@ -283,6 +322,8 @@ static void*
 init_screensaver(void)
 {
 	pthread_attr_t attr;
+
+	console = gw_create_console(SCREENSAVER_CONSOLE);
 
 #if !defined(MVPMC_MG35)
 	if (osd_open() < 0) {

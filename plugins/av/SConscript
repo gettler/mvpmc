@@ -28,23 +28,23 @@ elif target == 'nmt':
 	libs = ''
 elif target == 'mvp':
 	src = [ common, 'av_mvp.c' ]
-	libs = libdir + '/libav.so'
+	libs = [ 'libav', 'libdemux' ]
 
 static = env.StaticLibrary('mvpmc_av.plugin.a', src,
                            CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                           LINKFLAGS = ldflags + ' ' + libs)
+			   LIBS = libs,
+			   LIBPATH = [ libdir ],
+                           LINKFLAGS = ldflags)
 
 if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_av.plugin', src,
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
-                               LINKFLAGS = ldflags + ' ' + libs)
+			       LIBS = libs,
+			       LIBPATH = [ libdir ],
+                               LINKFLAGS = ldflags)
     inst = env.Install(libdir, [ static, shared ])
 else:
     inst = env.Install(libdir, [ static ])
-
-if target == 'mvp':
-	env.Depends(shared, libs)
-	env.Depends(static, libs)
 
 
 Return('inst')

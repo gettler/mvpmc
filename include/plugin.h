@@ -23,7 +23,7 @@
 #include "mvp_atomic.h"
 
 #define PLUGIN_MAJOR_VER	0
-#define PLUGIN_MINOR_VER	6
+#define PLUGIN_MINOR_VER	7
 
 #define PLUGIN_MAJOR(x)		((x >> 16) & 0xffff)
 #define PLUGIN_MINOR(x)		(x & 0xffff)

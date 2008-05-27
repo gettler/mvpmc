@@ -42,7 +42,7 @@ unsigned long plugin_version = CURRENT_PLUGIN_VERSION;
 av_info_t info;
 
 static int
-av_play_file(char *path)
+av_play_file(char *path, av_cb_t *callback)
 {
 	if (access(path, R_OK) < 0) {
 		return -1;
@@ -75,7 +75,7 @@ play_dvd(char *path)
 }
 
 static int
-av_play_dvd(char *path)
+av_play_dvd(char *path, av_cb_t *callback)
 {
 	char *dvd_path;
 
@@ -101,7 +101,7 @@ av_play_dvd(char *path)
 }
 
 static int
-av_play_url(char *url)
+av_play_url(char *url, av_cb_t *callback)
 {
 	if (info.playing) {
 		do_stop();
@@ -113,7 +113,7 @@ av_play_url(char *url)
 }
 
 static int
-av_play_list(char **list)
+av_play_list(char **list, av_cb_t *callback)
 {
 	if (info.playing) {
 		do_stop();

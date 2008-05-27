@@ -23,12 +23,24 @@
 #include <gw.h>
 #include <plugin/gw.h>
 
-typedef struct {
-	int (*play_file)(char*);
-	int (*play_dvd)(char*);
-	int (*play_url)(char*);
-	int (*play_list)(char**);
+typedef enum {
+	AV_EVENT_STOPPED,
+	AV_EVENT_PLAYING,
+	AV_EVENT_PAUSED,
+	AV_EVENT_COMPLETE,
+} av_event_t;
+
+typedef struct plugin_av_s plugin_av_t;
+
+typedef int (*av_cb_t)(plugin_av_t*, av_event_t);
+
+struct plugin_av_s {
+	int (*play_file)(char*, av_cb_t*);
+	int (*play_dvd)(char*, av_cb_t*);
+	int (*play_url)(char*, av_cb_t*);
+	int (*play_list)(char**, av_cb_t*);
 	int (*stop)(void);
-} plugin_av_t;
+	av_event_t (*get_event)(void);
+};
 
 #endif /* PLUGIN_AV_H */

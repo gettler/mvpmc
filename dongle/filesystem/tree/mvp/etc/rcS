@@ -161,12 +161,6 @@ mkdir /tmp/themes
 mkdir /uPnP
 
 #
-# XXX: Skip all the fancy setup until the plug-in code requires it...
-#
-mvpmc
-exit 0
-
-#
 # Download the users config and theme files, if they exist.
 #
 if [ -n "$DONGLE" ] ; then
@@ -174,6 +168,7 @@ if [ -n "$DONGLE" ] ; then
     if [ -e "/etc/dongle.config" ] ; then
         tftp -g -l /tmp/themes/default.xml -r ${DONGLE}.xml ${SERVER}
         dos2unix -u /etc/dongle.config
+	export MVPMC_PLUGIN=true
         . /etc/dongle.config    
         if [ "$NOMVPMC" != "" ] ; then
             exit 0

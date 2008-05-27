@@ -24,6 +24,8 @@
 #include <plugin/gw.h>
 
 typedef struct {
+	int (*enable)(void);
+	int (*disable)(void);
 	int (*start)(void);
 	int (*stop)(void);
 	int (*feed)(int);

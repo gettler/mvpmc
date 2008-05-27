@@ -137,7 +137,7 @@ gw_create(gw_type_t type, gw_t *parent)
 	if (parent == NULL) {
 		parent = root;
 	}
-	if (parent->console == NULL) {
+	if ((parent == NULL) || (parent->console == NULL)) {
 		return NULL;
 	}
 

@@ -118,7 +118,7 @@ draw(osd_widget_t *widget)
 		printf("Draw container!\n");
 		osd_fill_rect(drawable, widget->x, widget->y,
 			      widget->width, widget->height,
-			      OSD_COLOR_BLACK);
+			      0);
 		break;
 	case GW_TYPE_IMAGE:
 		printf("Draw image!\n");

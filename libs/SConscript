@@ -16,8 +16,6 @@ av = SConscript('libav/SConscript',
 		build_dir='libav/'+dir, duplicate=0)
 cmyth = SConscript('libcmyth/SConscript',
 		   build_dir='libcmyth/'+dir, duplicate=0)
-#demux = SConscript('libdemux/SConscript',
-#		   build_dir='libdemux/'+dir, duplicate=0)
 osd = SConscript('libosd/SConscript',
 		 build_dir='libosd/'+dir, duplicate=0)
 #replaytv = SConscript('libreplaytv/SConscript',
@@ -39,6 +37,10 @@ if target == 'mg35':
     pt = env.SConscript('libpthread_nommu/SConscript',
                         build_dir='libpthread_nommu/'+dir, duplicate=0)
     libs = common + [ pt ]
+elif target == 'mvpmc':
+    demux = SConscript('libdemux/SConscript',
+                       build_dir='libdemux/'+dir, duplicate=0)
+    libs = common + [ demux ]
 else:
     libs = common
 

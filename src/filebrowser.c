@@ -244,7 +244,7 @@ select_dir(gw_t *widget, char *text, void *key)
 
 	if ((dvd_path=malloc(strlen(cwd)+strlen(dir)+32)) != NULL) {
 		sprintf(dvd_path, "%s/%s", cwd, dir);
-		if (av->play_dvd(dvd_path) == 0) {
+		if (av->play_dvd(dvd_path, NULL) == 0) {
 			free(dvd_path);
 			return 0;
 		}
@@ -287,6 +287,22 @@ is_image(char *item)
 	while (wc[i] != NULL) {
 		if ((strlen(item) >= strlen(wc[i])) &&
 		    (strcasecmp(item+strlen(item)-strlen(wc[i]), wc[i]) == 0))
+			return 1;
+		i++;
+	}
+
+	return 0;
+}
+
+static int
+is_video(char *file)
+{
+	char *wc[] = { ".mpg", ".mpeg", ".nuv", NULL };
+	int i = 0;
+
+	while (wc[i] != NULL) {
+		if ((strlen(file) >= strlen(wc[i])) &&
+		    (strcasecmp(file+strlen(file)-strlen(wc[i]), wc[i]) == 0))
 			return 1;
 		i++;
 	}
@@ -338,7 +354,7 @@ play_playlist(char *path)
 
 	fclose(f);
 
-	av->play_list(list);
+	av->play_list(list, NULL);
 
 	return 0;
 }
@@ -360,8 +376,10 @@ select_file(gw_t *widget, char *text, void *key)
 		gw_focus_cb_set(do_key_image);
 	} else if (is_playlist(text)) {
 		play_playlist(path);
+	} else if (is_video(text)) {
+		av->play_file(path, NULL);
 	} else {
-		av->play_file(path);
+		av->play_file(path, NULL);
 	}
 
 	return 0;

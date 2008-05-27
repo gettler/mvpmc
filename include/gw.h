@@ -55,6 +55,8 @@ typedef enum {
 } gw_type_t;
 
 #define ROOT_CONSOLE		"root"
+#define VIDEO_CONSOLE		"video"
+#define SCREENSAVER_CONSOLE	"screensaver"
 
 typedef int (*gw_cmd_t)(gw_t*, int);
 typedef int (*gw_select_t)(gw_t*, char*, void*);
@@ -94,5 +96,8 @@ extern int gw_html_generate(int fd);
 
 extern int gw_loop(struct timeval *to);
 extern int gw_output(void);
+
+extern int gw_ss_enable(void);
+extern int gw_ss_disable(void);
 
 #endif /* GW_H */

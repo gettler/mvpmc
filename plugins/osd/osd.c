@@ -58,12 +58,17 @@ osd_input_read(void)
 }
 
 static int
-widget_draw(gw_t *widget)
+widget_draw(gw_t *widget, gw_console_t *console)
 {
 	osd_widget_t *cur;
 
-	if (!widget->realized)
+	if (!widget->realized) {
 		return 0;
+	}
+
+	if (widget->console != console) {
+		return 0;
+	}
 
 	/*
 	 * Draw the widgets in wlist
@@ -78,7 +83,7 @@ widget_draw(gw_t *widget)
 
 		list = cur->child;
 		while (list) {
-			widget_draw(list->gw);
+			widget_draw(list->gw, console);
 
 			list = list->next;
 		}
@@ -103,9 +108,14 @@ static int
 osd_generate(gw_t *root)
 {
 	int count;
+	char *console = gw_get_console();
 
-	if (root == NULL) {
+	if ((root == NULL) || (console == NULL)) {
 		return -1;
+	}
+
+	if (strcmp(console, root->console->name) != 0) {
+		return 0;
 	}
 
 	if (root->type != GW_TYPE_CONTAINER) {
@@ -125,7 +135,7 @@ osd_generate(gw_t *root)
 		return 0;
 	}
 
-	if (widget_draw(root) < 0) {
+	if (widget_draw(root, root->console) < 0) {
 		return -1;
 	}
 
