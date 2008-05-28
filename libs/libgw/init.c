@@ -171,6 +171,7 @@ gw_load_plugins(unsigned int dev)
 	loaded |= GW_DEV_OSD;
 
 	if ((dev & GW_DEV_OSD) && ss) {
+		ss->enable();
 		ss->feed(SS_TIMEOUT);
 	}
 	if ((dev & GW_DEV_HTTP) && http) {
