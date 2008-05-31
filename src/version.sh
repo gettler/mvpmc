@@ -61,4 +61,5 @@ mv $DIR/version_new.c $DIR/$OUTPUT
 echo char compile_time[] = \"`LANG=C date`\" \; >> "$DIR/$OUTPUT"
 echo char version_number[] =  \"$VERSION\"\; >> "$DIR/$OUTPUT"
 echo char build_user[] =  \"$USER\"\; >> "$DIR/$OUTPUT"
+echo char build_target[] =  \"$TARGET\"\; >> "$DIR/$OUTPUT"
 

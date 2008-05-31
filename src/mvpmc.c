@@ -368,13 +368,26 @@ main_display(void)
 	gw_output();
 }
 
+void
+usage(char *path)
+{
+	char *prog = basename(path);
+
+	printf("Usage: %s [options]\n", prog);
+	printf("\t-c server \tslimdevices musicClient server IP address\n");
+	printf("\t-h        \tprint this help\n");
+	printf("\t-s server \tmythtv server IP address\n");
+	printf("\t-r path   \tpath to NFS mounted mythtv recordings\n");
+}
+
 /*
  * main()
  */
 int
 mvpmc_main(int argc, char **argv)
 {
-	extern char compile_time[], version_number[], build_user[];
+	extern char compile_time[], version_number[];
+	extern char build_user[], build_target[];
 	extern char git_revision[], git_diffs[];
 	extern int do_plugin_setup(void);
 	int c, i;
@@ -385,10 +398,11 @@ mvpmc_main(int argc, char **argv)
 	 * Ensure the build info is easily found in any corefile.
 	 */
 	snprintf(build_info, sizeof(build_info),
-		 "BUILD_INFO: '%s' '%s' '%s' '%s' '%s'\n",
+		 "BUILD_INFO: '%s' '%s' '%s' '%s' '%s' '%s'\n",
 		 version_number,
 		 compile_time,
 		 build_user,
+		 build_target,
 		 git_revision,
 		 git_diffs);
 
@@ -414,6 +428,7 @@ mvpmc_main(int argc, char **argv)
 			mclient_server = strdup(optarg);
 			break;
 		case 'h':
+			usage(argv[0]);
 			exit(0);
 			break;
 		case 'r':
@@ -422,11 +437,11 @@ mvpmc_main(int argc, char **argv)
 		case 's':
 			mythtv_server = strdup(optarg);
 			break;
-		case 'F':
-			printf("Ignoring option: '%c'\n", c);
+		case '?':
+			exit(1);
 			break;
 		default:
-			exit(1);
+			printf("Ignoring option: '%c'\n", c);
 			break;
 		}
 	}
