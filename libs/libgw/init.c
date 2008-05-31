@@ -107,6 +107,7 @@ gw_create_console(char *name)
 		if (consoles[i].name == NULL) {
 			consoles[i].widget = console_create(name, i);
 			consoles[i].name = strdup(name);
+			consoles[i].focus = consoles[i].widget;
 			return consoles[i].widget;
 		}
 	}
@@ -146,6 +147,20 @@ gw_get_console(void)
 			if (root == consoles[i].widget) {
 				return consoles[i].name;
 			}
+		}
+	}
+
+	return NULL;
+}
+
+gw_console_t*
+gw_find_console(char *name)
+{
+	int i;
+
+	for (i=0; i<MAX_CONSOLES; i++) {
+		if (strcmp(name, consoles[i].name) == 0) {
+			return &consoles[i];
 		}
 	}
 

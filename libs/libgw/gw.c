@@ -27,8 +27,6 @@
 
 static mvp_atomic_t events;
 
-static gw_t *focus;
-
 gw_cmd_t focus_input;
 
 static int
@@ -250,12 +248,20 @@ handle_events(void)
 }
 
 static void
-input(int c)
+input(int c, gw_console_t *console)
 {
+	gw_t *focus;
 	int ret = -1;
 
-	if (focus == NULL)
+	if (console == NULL) {
 		return;
+	}
+
+	focus = console->focus;
+
+	if (focus == NULL) {
+		return;
+	}
 
 	if (c == INPUT_CMD_ERROR) {
 		return;
@@ -289,19 +295,17 @@ command(plugin_http_cmd_t *cmd)
 	int ret = -1;
 	int i = 0;
 	gw_menu_t *data;
+	gw_console_t *console;
 
 	printf("HTTP: command received\n");
-
-	if (focus == NULL) {
-		printf("command: no widget focus!\n");
-		return;
-	}
 
 	data = cmd->menu;
 
 	if (ss) {
 		ss->feed(SS_TIMEOUT);
 	}
+
+	console = gw_find_console(ROOT_CONSOLE);
 
 	if (data) {
 		while (i < data->n) {
@@ -316,11 +320,11 @@ command(plugin_http_cmd_t *cmd)
 
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(focus, INPUT_CMD_SELECT);
+		ret = gw_menu_input(console->focus, INPUT_CMD_SELECT);
 	} else {
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(focus, INPUT_CMD_LEFT);
+		ret = gw_menu_input(console->focus, INPUT_CMD_LEFT);
 	}
 
 	if (ret == 0) {
@@ -369,6 +373,8 @@ gw_loop(struct timeval *to)
 			FD_SET(fdh, &fds);
 		FD_SET(pipefds[0], &fds);
 		if (select(fd+1, &fds, NULL, NULL, NULL) > 0) {
+			gw_console_t *console;
+
 			if (osd && (fdo >= 0) && FD_ISSET(fdo, &fds)) {
 				c = osd->input_read();
 				printf("key pressed: 0x%x!\n", c);
@@ -378,12 +384,15 @@ gw_loop(struct timeval *to)
 					ss->feed(SS_TIMEOUT);
 
 					if (r) {
-						update(focus);
+						console = gw_find_console(SCREENSAVER_CONSOLE);
+						update(console->focus);
 					} else {
-						input(c);
+						console = gw_find_console(ROOT_CONSOLE);
+						input(c, console);
 					}
 				} else {
-					input(c);
+					console = gw_find_console(ROOT_CONSOLE);
+					input(c, console);
 				}
 			}
 			if (http && (fdh >= 0) && FD_ISSET(fdh, &fds)) {
@@ -453,11 +462,14 @@ update(gw_t *widget)
 int
 gw_focus_set(gw_t *widget)
 {
+	gw_console_t *console;
+
 	if ((widget != NULL) && (!widget->realized)) {
 		return -1;
 	}
 
-	focus = widget;
+	console = widget->console;
+	console->focus = widget;
 
 	return 0;
 }

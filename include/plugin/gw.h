@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -99,11 +99,6 @@ typedef struct {
 typedef struct {
 	int timeout;
 } gw_screensaver_t;
-
-typedef struct {
-	char *name;
-	gw_t *widget;
-} gw_console_t;
 
 struct gw_s {
 	gw_type_t type;

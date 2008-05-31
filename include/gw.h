@@ -54,6 +54,12 @@ typedef enum {
 	GW_TYPE_BUSY,
 } gw_type_t;
 
+typedef struct {
+	char *name;
+	gw_t *widget;
+	gw_t *focus;
+} gw_console_t;
+
 #define ROOT_CONSOLE		"root"
 #define VIDEO_CONSOLE		"video"
 #define SCREENSAVER_CONSOLE	"screensaver"
@@ -71,6 +77,7 @@ extern int gw_device_remove(unsigned int dev);
 extern gw_t *gw_create_console(char *name);
 extern int gw_set_console(char *name);
 extern char *gw_get_console(void);
+extern gw_console_t *gw_find_console(char *name);
 
 extern gw_t* gw_create(gw_type_t type, gw_t *parent);
 
