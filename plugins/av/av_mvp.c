@@ -52,10 +52,14 @@ static pthread_mutex_t mutex_video = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond_status = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t mutex_status = PTHREAD_MUTEX_INITIALIZER;
 
-static pthread_t thread_audio, thread_video, thread_status;
+static pthread_cond_t cond_list = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t mutex_list = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_t thread_audio, thread_video, thread_status, thread_list;
 
 static char *pathname;
 static volatile int stop_request;
+static char **playlist;
 
 static demux_handle_t *handle;
 
@@ -120,6 +124,7 @@ loop_audio(void *arg)
 			mp3_play(fd);
 			close(fd);
 		}
+		pthread_cond_broadcast(&cond_list);
 	}
 
 	return NULL;
@@ -213,6 +218,7 @@ loop_video(void *arg)
 			gw_ss_enable();
 			close(fd);
 		}
+		pthread_cond_broadcast(&cond_list);
 	}
 
 	return NULL;
@@ -225,6 +231,28 @@ loop_status(void *arg)
 
 	while (1) {
 		pthread_cond_wait(&cond_status, &mutex_status);
+	}
+
+	return NULL;
+}
+
+static void*
+loop_list(void *arg)
+{
+	int i;
+
+	pthread_mutex_lock(&mutex_list);
+
+	while (1) {
+		pthread_cond_wait(&cond_list, &mutex_list);
+		i = 0;
+		while (playlist && (playlist[i] != NULL)) {
+			do_play_file(playlist[i++]);
+			pthread_cond_wait(&cond_list, &mutex_list);
+		}
+		if (playlist) {
+			playlist = NULL;
+		}
 	}
 
 	return NULL;
@@ -247,6 +275,7 @@ arch_init(void)
 
 	pthread_create(&thread_audio, &attr, loop_audio, NULL);
 	pthread_create(&thread_video, &attr, loop_video, NULL);
+	pthread_create(&thread_list, &attr, loop_list, NULL);
 	pthread_create(&thread_status, &attr, loop_status, NULL);
 
 	return 0;
@@ -287,13 +316,15 @@ is_video(char *file)
 int
 do_play_file(char *path)
 {
+	int ret = -1;
+
 	if (is_audio(path)) {
 		if (pathname)
 			free(pathname);
 		pathname = strdup(path);
 		printf("%s(): kick playback thread\n", __FUNCTION__);
 		pthread_cond_broadcast(&cond_audio);
-		return 0;
+		ret = 0;
 	} else if (is_video(path)) {
 		if (pathname)
 			free(pathname);
@@ -302,10 +333,10 @@ do_play_file(char *path)
 		gw_ss_disable();
 		printf("%s(): kick playback thread\n", __FUNCTION__);
 		pthread_cond_broadcast(&cond_video);
-		return 0;
+		ret = 0;
 	}
 
-	return -1;
+	return ret;
 }
 
 int
@@ -323,7 +354,23 @@ do_play_url(char *path)
 int
 do_play_list(char **list)
 {
-	return -1;
+	int i;
+
+	if ((playlist=malloc(sizeof(char*)*128)) == NULL) {
+		return -1;
+	}
+
+	for (i=0; i<127; i++) {
+		if (list[i] == NULL) {
+			break;
+		}
+		playlist[i] = strdup(list[i]);
+	}
+	playlist[i] = NULL;
+
+	pthread_cond_broadcast(&cond_list);
+
+	return 0;
 }
 
 int
