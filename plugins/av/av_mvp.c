@@ -153,7 +153,7 @@ mpg_play(int fd)
 	av_set_audio_output(AV_AUDIO_MPEG);
 	av_play();
 
-	while (1) {
+	while (!stop_request) {
 		if (n == len) {
 			len = read(fd, buf, sizeof(buf));
 			n = 0;
@@ -332,7 +332,9 @@ do_stop(void)
 	stop_request = 1;
 
 	pthread_mutex_lock(&mutex_audio);
+	pthread_mutex_lock(&mutex_video);
 	stop_request = 0;
+	pthread_mutex_unlock(&mutex_video);
 	pthread_mutex_unlock(&mutex_audio);
 
 	return 0;
