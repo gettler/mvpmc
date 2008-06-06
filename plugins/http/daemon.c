@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <microhttpd.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
 #include <mvp_string.h>
 #include <plugin.h>
@@ -72,6 +73,8 @@ static struct MHD_Daemon *mhd;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static volatile int port;
+
+static char *prefix = "";
 
 #if defined(MVPMC_MG35)
 static pthread_t thread;
@@ -350,7 +353,14 @@ callback(void *cls, struct MHD_Connection *connection,
 
 	printf("%s(): %d\n", __FUNCTION__, __LINE__);
 	if (strcmp(url, "/web.css") == 0) {
-		ret = text_response(connection, CSS_DEFAULT, MHD_NO);
+		char path[512];
+		snprintf(path, sizeof(path), "%s/usr/share/mvpmc/%s",
+			 prefix, "web.css");
+		if (access(path, F_OK) == 0) {
+			ret = cat_file(connection, path);
+		} else {
+			ret = text_response(connection, CSS_DEFAULT, MHD_NO);
+		}
 	} else if (strcmp(url, "/cmd.html") == 0) {
 		ret = send_command(connection, &data);
 	} else if ((strcmp(url, "/") == 0) ||
@@ -412,6 +422,8 @@ httpd_thread(void *arg)
 int
 httpd_start(int p)
 {
+	char path[512], link[512];
+
 	if (port != 0) {
 		return -1;
 	}
@@ -423,6 +435,11 @@ httpd_start(int p)
 	}
 
 	printf("starting httpd daemon on port %d\n", port);
+
+	snprintf(path, sizeof(path), "/proc/%d/exe", getpid());
+	if (readlink(path, link, sizeof(link)) > 0) {
+		prefix = strdup(dirname(dirname(link)));
+	}
 
 #if defined(MVPMC_MG35)
 	pthread_create(&thread, NULL, httpd_thread, NULL);

@@ -1,0 +1,44 @@
+body
+{
+  background: green;
+  color: white;
+}
+
+#root
+{
+  background: black;
+  color: white;
+}
+
+#commands
+{
+  background: white;
+  color: red;
+}
+
+a
+{
+  text-decoration: none;
+}
+
+a, a:link, a:visited, a:acted
+{
+  color: white;
+}
+
+a:hover
+{
+  background: green;
+  color: white;
+}
+
+.title
+{
+  background: blue;
+  color: white;
+}
+
+#image_viewer img
+{
+  max-width: 100%;
+}

@@ -11,6 +11,7 @@ libdir = env['INSTLIBDIR']
 ldflags = env['LDFLAGS']
 linkmode = env['LINKMODE']
 bindir = env['INSTBINDIR']
+webdir = env['INSTSHAREDIR']
 
 if linkmode == 'dynamic':
 	env.Append(CCFLAGS = ' -DPLUGIN_SUPPORT')
@@ -25,8 +26,12 @@ if linkmode == 'dynamic':
     shared = env.SharedLibrary('mvpmc_html.plugin', src,
                                CPPPATH = [env['INCDIR'], env['INSTINCDIR']],
                                LINKFLAGS = ldflags)
-    inst = env.Install(libdir, [ static, shared ])
+    libs = env.Install(libdir, [ static, shared ])
 else:
-    inst = env.Install(libdir, [ static ])
+    libs = env.Install(libdir, [ static ])
+
+css = env.Install(webdir, 'web.css')
+
+inst = [ libs, css ]
 
 Return('inst')
