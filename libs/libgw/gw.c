@@ -247,46 +247,51 @@ handle_events(void)
 	gw_output();
 }
 
-static void
-input(int c, gw_console_t *console)
+static int
+widget_input(gw_t *widget, int c)
 {
-	gw_t *focus;
 	int ret = -1;
 
-	if (console == NULL) {
-		return;
-	}
-
-	focus = console->focus;
-
-	if (focus == NULL) {
-		return;
+	if (widget == NULL) {
+		return -1;
 	}
 
 	if (c == INPUT_CMD_ERROR) {
-		return;
+		return -1;
 	}
 
-	switch (focus->type) {
+	switch (widget->type) {
 	case GW_TYPE_MENU:
 		printf("Add input to menu...\n");
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(focus, c);
+		ret = gw_menu_input(widget, c);
 		break;
 	case GW_TYPE_TEXT:
 	case GW_TYPE_IMAGE:
 		if (focus_input) {
-			ret = focus_input(focus, c);
+			ret = focus_input(widget, c);
 		}
 		break;
 	default:
-		return;
+		break;
 	}
 
 	if (ret == 0) {
 		mvp_atomic_inc(&events);
 	}
+
+	return ret;
+}
+
+static void
+input(int c, gw_console_t *console)
+{
+	if (console == NULL) {
+		return;
+	}
+
+	widget_input(console->focus, c);
 }
 
 static void
@@ -320,11 +325,11 @@ command(plugin_http_cmd_t *cmd)
 
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(console->focus, INPUT_CMD_SELECT);
+		ret = widget_input(console->focus, INPUT_CMD_SELECT);
 	} else {
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(console->focus, cmd->input);
+		ret = widget_input(console->focus, cmd->input);
 	}
 
 	if (ret == 0) {
