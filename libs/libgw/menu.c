@@ -155,6 +155,10 @@ gw_menu_input(gw_t *widget, int c)
 	int i = 0, cur = -1;
 	int delta;
 
+	if (widget->type != GW_TYPE_MENU) {
+		return -1;
+	}
+
 	data = widget->data.menu;
 
 	if (data->n < 0) {
@@ -173,6 +177,11 @@ gw_menu_input(gw_t *widget, int c)
 	case INPUT_CMD_SELECT:
 		return menu_select(widget);
 	case INPUT_CMD_ERROR:
+		return -1;
+	case INPUT_CMD_STOP:
+		av->stop();
+		return 0;
+	case INPUT_CMD_PAUSE:
 		return -1;
 	default:
 		if (focus_input) {

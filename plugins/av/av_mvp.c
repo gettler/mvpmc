@@ -63,6 +63,15 @@ static char **playlist;
 
 static demux_handle_t *handle;
 
+static void
+video_clear(void)
+{
+	av_stop();
+	av_video_blank();
+	av_reset();
+	av_reset_stc();
+}
+
 static int
 mp3_play(int fd)
 {
@@ -70,6 +79,8 @@ mp3_play(int fd)
 	int n = 0, w = 0;
 	int t;
 	int afd;
+
+	av_reset();
 
 	afd = av_get_audio_fd();
 
@@ -103,6 +114,10 @@ mp3_play(int fd)
 				n = w = 0;
 			}
 		}
+	}
+
+	if (stop_request) {
+		av_stop();
 	}
 
 	printf("%s(): finished\n", __FUNCTION__);
@@ -150,10 +165,7 @@ mpg_play(int fd)
 	fda = av_get_audio_fd();
 	fdv = av_get_video_fd();
 
-	av_stop();
-	av_video_blank();
-	av_reset();
-	av_reset_stc();
+	video_clear();
 
 	av_set_audio_output(AV_AUDIO_MPEG);
 	av_play();
@@ -190,15 +202,6 @@ mpg_play(int fd)
 	}
 
 	return 0;
-}
-
-static void
-video_clear(void)
-{
-	av_stop();
-	av_video_blank();
-	av_reset();
-	av_reset_stc();
 }
 
 static void*

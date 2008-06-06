@@ -24,6 +24,7 @@
 #include <plugin/osd.h>
 #include <plugin/http.h>
 #include <plugin/screensaver.h>
+#include <plugin/av.h>
 
 #define SS_TIMEOUT	(1*60)
 
@@ -35,12 +36,15 @@
 #define update		__gw_update
 #define focus_input	__gw_focus_input
 #define pipefds		__gw_pipefds
+#define av		__gw_av
 
 extern gw_t *root;
 extern plugin_osd_t *osd;
 extern plugin_http_t *http;
 extern plugin_screensaver_t *ss;
 extern gw_cmd_t focus_input;
+
+extern plugin_av_t *av;
 
 extern int update(gw_t *widget);
 

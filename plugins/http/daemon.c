@@ -64,6 +64,7 @@ typedef struct {
 	const char *menu;
 	const char *key;
 	const char *page;
+	const char *cmd;
 } get_data_t;
 
 static struct MHD_Daemon *mhd;
@@ -90,6 +91,8 @@ get_args(void *cls, enum MHD_ValueKind kind,
 		data->page = value;
 	} else if (strcmp(key, "key") == 0) {
 		data->key = (void*)strtoul(value, NULL, 0);
+	} else if (strcmp(key, "cmd") == 0) {
+		data->cmd = value;
 	} else {
 		return MHD_NO;
 	}
@@ -293,6 +296,16 @@ send_command(struct MHD_Connection *connection, get_data_t *data)
 	cmd->key = (void*)data->key;
 	cmd->data = (void*)&cond;
 	cmd->callback = cmd_callback;
+	cmd->input = INPUT_CMD_ERROR;
+	if (data->cmd) {
+		if (strcmp(data->cmd, "pause") == 0) {
+			cmd->input = INPUT_CMD_PAUSE;
+		} else if (strcmp(data->cmd, "return") == 0) {
+			cmd->input = INPUT_CMD_LEFT;
+		} else if (strcmp(data->cmd, "stop") == 0) {
+			cmd->input = INPUT_CMD_STOP;
+		}
+	}
 
 	printf("COMMAND: %p %p\n", data->menu, data->key);
 

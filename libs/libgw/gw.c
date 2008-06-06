@@ -324,7 +324,7 @@ command(plugin_http_cmd_t *cmd)
 	} else {
 		if (http)
 			http->update_widget(NULL);
-		ret = gw_menu_input(console->focus, INPUT_CMD_LEFT);
+		ret = gw_menu_input(console->focus, cmd->input);
 	}
 
 	if (ret == 0) {

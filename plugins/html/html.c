@@ -385,6 +385,7 @@ html_generate_commands(plugin_html_resp_t *resp)
 	char *foot = "</ul></div>\n";
 	char *cmd[] = {
 		"return",
+		"stop",
 	};
 
 	WRITE(resp, head, strlen(head));

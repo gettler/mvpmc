@@ -127,9 +127,13 @@ av_play_list(char **list, av_cb_t *callback)
 static int
 av_stop(void)
 {
+	int ret;
+
+	ret = do_stop();
+
 	info.playing = 0;
 
-	return do_stop();
+	return ret;
 }
 
 static plugin_av_t av = {

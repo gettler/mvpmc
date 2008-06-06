@@ -21,6 +21,7 @@
 #define PLUGIN_HTTP_H
 
 #include <gw.h>
+#include <input.h>
 #include <plugin/gw.h>
 
 typedef struct {
@@ -36,6 +37,7 @@ typedef struct {
 	gw_menu_t *menu;
 	void *key;
 	void *data;
+	input_cmd_t input;
 	void (*callback)(void*);
 } plugin_http_cmd_t;
 

@@ -88,9 +88,9 @@ int
 do_stop(void)
 {
 	if (info.playing) {
-		info.playing = 0;
 		kill(info.child, SIGKILL);
 		waitpid(info.child, NULL, 0);
+		info.child = -1;
 	}
 
 	return 0;

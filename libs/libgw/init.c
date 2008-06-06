@@ -45,6 +45,8 @@ int pipefds[2];
 
 static gw_console_t consoles[MAX_CONSOLES];
 
+plugin_av_t *av;
+
 gw_t*
 gw_root(char *name)
 {
@@ -284,6 +286,10 @@ gw_device_remove(unsigned int dev)
 int
 gw_init(void)
 {
+	if ((av=plugin_load("av")) == NULL) {
+		return -1;
+	}
+
 	pipe(pipefds);
 
 	return 0;
