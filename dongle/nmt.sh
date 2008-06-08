@@ -20,6 +20,7 @@ LIB="libinput.so libgw.so librefmem.so libosd.so libcurl.so libcurl.so.4 libcurl
 TLIB="libc.so.0 libm.so.0 libcrypt.so.0 libpthread.so.0 libthread_db.so.1 libutil.so.0 libdl.so.0 libresolv.so.0"
 LDLIB="ld-uClibc-0.9.28.so ld-uClibc.so.0 libdl-0.9.28.so"
 GCCLIB="libgcc_s.so.1"
+WEB="web.css"
 
 rm -rf $FS/install
 
@@ -33,6 +34,10 @@ cd $TOP
 
 for i in $PLUGINS ; do
     cp -d install/nmt/lib/$i $FS/install/usr/share/mvpmc/plugins
+done
+
+for i in $WEB ; do
+    cp -d install/nmt/usr/share/mvpmc/$i $FS/install/usr/share/mvpmc
 done
 
 for i in $BIN ; do
