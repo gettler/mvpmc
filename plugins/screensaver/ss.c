@@ -125,12 +125,12 @@ draw_logo(osd_surface_t *surface)
 	image.blue = linux_logo_blue;
 	image.image = linux_logo;
 
-	if ((s=osd_create_surface(image.width, image.height,
+	if ((s=osd_create_surface(image.width+4, image.height+4,
 				  bg, OSD_GFX)) == NULL) {
 		goto err;
 	}
 
-	if (osd_draw_indexed_image(s, &image, 0, 0) < 0) {
+	if (osd_draw_indexed_image(s, &image, 2, 2) < 0) {
 		goto err;
 	}
 
@@ -161,27 +161,12 @@ draw_logo(osd_surface_t *surface)
 		       (y > 0) && (y < height-image.height) &&
 		       (timeout && (timeout <= time(NULL)))) {
 			pthread_testcancel();
-			if (ox > 0) {
-				osd_fill_rect(surface, x, y,
-					      ox, image.height, bg);
-			}
-			if (ox < 0) {
-				osd_fill_rect(surface, x+image.width-ox, y,
-					      ox, image.height, bg);
-			}
-			if (oy > 0) {
-				osd_fill_rect(surface, x, y,
-					      image.width, oy, bg);
-			}
-			if (oy < 0) {
-				osd_fill_rect(surface, x, y+image.height-oy,
-					      image.width, oy, bg);
-			}
 
 			x += ox;
 			y += oy;
 
-			osd_blit(surface, x, y, s, 0, 0, image.width, image.height);
+			osd_blit(surface, x, y, s, 0, 0,
+				 image.width+4, image.height+4);
 			pthread_testcancel();
 			usleep(10000);
 		}
