@@ -223,6 +223,8 @@ int
 gtk_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	 osd_surface_t *srcsfc, int srcx, int srcy, int w, int h)
 {
+	gdk_threads_enter();
+
 	gdk_draw_drawable(dstsfc->data.drawable,
 			gc, srcsfc->data.drawable,
 			srcx, srcy, dstx, dsty, w, h);
@@ -230,6 +232,8 @@ gtk_blit(osd_surface_t *dstsfc, int dstx, int dsty,
 	if (dstsfc->data.drawable == drawable) {
 		expose_callback(NULL, NULL);
 	}
+
+	gdk_threads_leave();
 
 	return 0;
 }
@@ -245,6 +249,8 @@ static int
 gtk_destroy_surface(osd_surface_t *surface)
 {
 	int i;
+
+	gdk_threads_enter();
 
 #if 0
 	gdk_window_destroy(surface->data.drawable);
@@ -264,6 +270,8 @@ gtk_destroy_surface(osd_surface_t *surface)
 
 	free(surface);
 
+	gdk_threads_leave();
+
 	return 0;
 }
 
@@ -282,12 +290,16 @@ gtk_destroy_all_surfaces(void)
 static int
 gtk_display_surface(osd_surface_t *surface)
 {
+	gdk_threads_enter();
+
 	if (drawable != surface->data.drawable) {
 		drawable = surface->data.drawable;
 		expose_callback(NULL, NULL);
 	}
 
 	visible = surface;
+
+	gdk_threads_leave();
 
 	return 0;
 }
@@ -341,6 +353,8 @@ gtk_create(int w, int h, unsigned long color)
 			return NULL;
 	}
 
+	gdk_threads_enter();
+
 	if ((surface=(osd_surface_t*)malloc(sizeof(*surface))) == NULL)
 		return NULL;
 
@@ -360,6 +374,8 @@ gtk_create(int w, int h, unsigned long color)
 
 	surface->width = w;
 	surface->height = h;
+
+	gdk_threads_leave();
 
 	return surface;
 }
@@ -391,6 +407,8 @@ gtk_open(void)
 	g_thread_init(NULL);
 	gdk_threads_init();
     
+	gdk_threads_enter();
+
     	gtk_init(0, NULL);
     
 	/*
@@ -441,6 +459,8 @@ gtk_open(void)
 	pthread_create(&t, NULL, thread, NULL);
 
 	gtk_init_done = 1;
+
+	gdk_threads_leave();
 
 	return 0;
 }
