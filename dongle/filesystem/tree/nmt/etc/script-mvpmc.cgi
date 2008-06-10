@@ -1,6 +1,7 @@
 #!/bin/sh
 
 export ROOT="/opt/sybhttpd/localhost.drives/${SCRIPT_NAME%%etc*}"
+export MVPMC_ROOT=$ROOT
 
 export PATH="$ROOT/bin:$ROOT/usr/bin:$ROOT/sbin:$ROOT/usr/sbin:$PATH"
 export PLUGIN_PATH="$ROOT/usr/share/mvpmc/plugins"

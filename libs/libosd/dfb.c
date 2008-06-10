@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <wait.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #include "mvp_osd.h"
 
@@ -408,6 +409,38 @@ dfb_create(int w, int h, unsigned long color)
 }
 
 static int
+load_font(void)
+{
+	int i;
+	char path[PATH_MAX];
+	char *root;
+	char *list[] = {
+		"/usr/share/mvpmc/decker.ttf",
+		PCH_DATADIR"/decker.ttf",
+		ISTAR_DATADIR"/decker.ttf",
+		NULL,
+	};
+
+	if ((root=getenv("MVPMC_ROOT")) != NULL) {
+		snprintf(path, sizeof(path),
+			 "%s/usr/share/mvpmc/decker.ttf", root);
+		if (dfb->CreateFont(dfb, path, &font_dsc, &font) == DFB_OK) {
+			return 0;
+		}
+	}
+
+	i = 0;
+	while (list[i] != NULL) {
+		if (dfb->CreateFont(dfb, list[i], &font_dsc, &font) == DFB_OK) {
+			return 0;
+		}
+		i++;
+	}
+
+	return -1;
+}
+
+static int
 get_video_mode(void)
 {
 	FILE *f;
@@ -667,10 +700,9 @@ dfb_init(void)
 	font_dsc.flags = DFDESC_HEIGHT;
 	font_dsc.height = 26;
 
-	if (access(PCH_DATADIR, F_OK) == 0) {
-		DFBCHECK(dfb->CreateFont(dfb, PCH_DATADIR"/decker.ttf", &font_dsc, &font));
-	} else {
-		DFBCHECK(dfb->CreateFont(dfb, ISTAR_DATADIR"/decker.ttf", &font_dsc, &font));
+	if (load_font() < 0) {
+		fprintf(stderr, "failed to load a font file!\n");
+		goto err;
 	}
 
 	return 0;
