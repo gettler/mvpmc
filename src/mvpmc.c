@@ -368,31 +368,13 @@ main_display(void)
 	gw_output();
 }
 
-void
-usage(char *path)
-{
-	char *prog = basename(path);
-
-	printf("Usage: %s [options]\n", prog);
-	printf("\t-c server \tslimdevices musicClient server IP address\n");
-	printf("\t-h        \tprint this help\n");
-	printf("\t-s server \tmythtv server IP address\n");
-	printf("\t-r path   \tpath to NFS mounted mythtv recordings\n");
-}
-
-/*
- * main()
- */
-int
-mvpmc_main(int argc, char **argv)
+static void
+early_init(void)
 {
 	extern char compile_time[], version_number[];
 	extern char build_user[], build_target[];
 	extern char git_revision[], git_diffs[];
-	extern int do_plugin_setup(void);
-	int c, i;
-	int opt_index;
-	char *saved_argv[32];
+	char *root;
 
 	/*
 	 * Ensure the build info is easily found in any corefile.
@@ -412,13 +394,60 @@ mvpmc_main(int argc, char **argv)
 		version = git_revision;
 	}
 
+	/*
+	 * Ensure MVPMC_ROOT is set to the top of the build filesystem.
+	 */
+	if ((root=getenv("MVPMC_ROOT")) == NULL) {
+		char path[512], buf[512];
+		char *bin, *p;
+
+		snprintf(buf, sizeof(buf), "/proc/%d/exe", getpid());
+
+		if (readlink(buf, path, sizeof(path)) > 0) {
+			if ((bin=dirname(path)) != NULL) {
+				snprintf(buf, sizeof(buf), "%s/../", bin);
+				if ((p=strdup(buf)) != NULL) {
+					setenv("MVPMC_ROOT", p, 1);
+				}
+			}
+		}
+	}
+}
+
+void
+usage(char *path)
+{
+	char *prog = basename(path);
+
+	printf("Usage: %s [options]\n", prog);
+	printf("\t-c server \tslimdevices musicClient server IP address\n");
+	printf("\t-h        \tprint this help\n");
+	printf("\t-s server \tmythtv server IP address\n");
+	printf("\t-r path   \tpath to NFS mounted mythtv recordings\n");
+}
+
+/*
+ * main()
+ */
+int
+mvpmc_main(int argc, char **argv)
+{
+	extern int do_plugin_setup(void);
+	int c, i;
+	int opt_index;
+	char *saved_argv[32];
+
+	early_init();
+
 	if (argc > 32) {
 		fprintf(stderr, "too many arguments\n");
 
 		exit(1);
 	}
-	for (i=0; i<argc; i++)
+
+	for (i=0; i<argc; i++) {
 		saved_argv[i] = strdup(argv[i]);
+	}
 
 	while ((c=getopt_long(argc, argv,
 			      "a:b:C:c:d:D:f:F:hHi:m:Mo:r:R:s:S:y:t:u:p:T:",
