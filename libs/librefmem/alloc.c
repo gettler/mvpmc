@@ -267,10 +267,10 @@ __ref_alloc(size_t len, const char *file, const char *func, int line)
  * Failure: A NULL pointer.
  */
 void *
-ref_realloc(void *p, size_t len)
+__ref_realloc(void *p, size_t len, const char *file, const char *func, int line)
 {
 	refcounter_t *ref = REF_REFCNT(p);
-	void *ret = ref_alloc(len);
+	void *ret = __ref_alloc(len, file, func, line);
 
 	refmem_dbg(REF_DBG_DEBUG, "%s(%d, ret = %p, ref = %p) {\n",
 		   __FUNCTION__, len, ret, ref);
@@ -342,7 +342,8 @@ ref_set_destroy(void *data, ref_destroy_t func)
  * Failure: A NULL pointer.
  */
 char *
-ref_strdup(char *str)
+__ref_strdup(char *str,
+	     const char *file, const char *func, int line)
 {
 	size_t len;
 	char *ret = NULL;
@@ -351,7 +352,7 @@ ref_strdup(char *str)
 		   __FUNCTION__, str);
 	if (str) {
 		len = strlen(str) + 1;
-		ret = ref_alloc(len);
+		ret = __ref_alloc(len, file, func, line);
 		if (ret) {
 			strncpy(ret, str, len);
 			ret[len - 1] = '\0';
@@ -460,7 +461,7 @@ ref_release(void *p)
 #ifdef DEBUG
 			ref->magic = 0;
 			guard->magic = 0;
-			refmem_ref_remove(ref);
+			ref_remove(ref);
 			ref->next = NULL;
 #endif /* DEBUG */
 			free(block);

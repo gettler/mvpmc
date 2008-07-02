@@ -50,7 +50,14 @@ extern void *ref_hold(void *p);
  * \param str string to duplicate
  * \return reference to the duplicated string
  */
-extern char *ref_strdup(char *str);
+extern char *__ref_strdup(char *str,
+			  const char *file, const char *func, int line);
+
+#if defined(DEBUG)
+#define ref_strdup(s) (__ref_strdup((s), __FILE__, __FUNCTION__, __LINE__))
+#else
+#define ref_strdup(s) (__ref_strdup((s), (char *)0, (char *)0, 0))
+#endif
 
 /**
  * Allocate reference counted memory. (PRIVATE)
@@ -61,9 +68,7 @@ extern char *ref_strdup(char *str);
  * \return reference counted memory
  */
 extern void *__ref_alloc(size_t len,
-				 const char *file,
-				 const char *func,
-				 int line);
+			 const char *file, const char *func, int line);
 
 /**
  * Allocate a block of reference counted memory.
@@ -71,7 +76,7 @@ extern void *__ref_alloc(size_t len,
  * \return pointer to reference counted memory block
  */
 #if defined(DEBUG)
-#define ref_alloc(l) (__ref_alloc((l), __FILE__, __FUNC__, __LINE__))
+#define ref_alloc(l) (__ref_alloc((l), __FILE__, __FUNCTION__, __LINE__))
 #else
 #define ref_alloc(l) (__ref_alloc((l), (char *)0, (char *)0, 0))
 #endif
@@ -81,7 +86,14 @@ extern void *__ref_alloc(size_t len,
  * \param len new allocation size
  * \return reference counted memory
  */
-extern void *ref_realloc(void *p, size_t len);
+extern void *__ref_realloc(void *p, size_t len,
+			   const char *file, const char *func, int line);
+
+#if defined(DEBUG)
+#define ref_realloc(p,len) (__ref_realloc(p, len, __FILE__, __FUNCTION__, __LINE__))
+#else
+#define ref_realloc(p,len) (__ref_realloc(p, len, (char *)0, (char *)0, 0))
+#endif
 
 typedef void (*ref_destroy_t)(void *p);
 

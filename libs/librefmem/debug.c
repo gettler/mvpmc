@@ -66,7 +66,7 @@ refmem_dbg_level(int l)
  * None.
  */
 void
-refmem_dbg_all()
+refmem_dbg_all(void)
 {
 	mvp_dbg_setlevel(&refmem_debug_ctx, REF_DBG_ALL);
 }
