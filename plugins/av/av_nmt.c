@@ -164,18 +164,18 @@ is_dvd(char *path)
 {
 	char *dvd_path;
 
-	if ((dvd_path=malloc(strlen(path)+32)) != NULL) {
+	if ((dvd_path=ref_alloc(strlen(path)+32)) != NULL) {
 		sprintf(dvd_path, "%s/VIDEO_TS/VIDEO_TS.IFO", path);
 		if (access(dvd_path, R_OK) == 0) {
-			free(dvd_path);
+			ref_release(dvd_path);
 			return 1;
 		}
 		sprintf(dvd_path, "%s/video_ts/video_ts.ifo", path);
 		if (access(dvd_path, R_OK) == 0) {
-			free(dvd_path);
+			ref_release(dvd_path);
 			return 1;
 		}
-		free(dvd_path);
+		ref_release(dvd_path);
 	}
 
 	return 0;

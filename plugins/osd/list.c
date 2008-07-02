@@ -87,6 +87,7 @@ list_remove(osd_widget_t **head, gw_t *gw)
 				*head = cur->next;
 			}
 			ret = cur;
+			ref_release(gw);
 			break;
 		}
 

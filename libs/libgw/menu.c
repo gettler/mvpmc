@@ -219,6 +219,7 @@ gw_menu_clear(gw_t *widget)
 	while (i < data->n) {
 		gw_menu_item_t *item = data->items[i];
 		ref_release(item->text);
+		ref_release(item);
 		i++;
 	}
 

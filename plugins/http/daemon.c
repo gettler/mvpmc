@@ -33,6 +33,7 @@
 #include <libgen.h>
 
 #include <mvp_string.h>
+#include <mvp_refmem.h>
 #include <plugin.h>
 #include <plugin/html.h>
 #include <plugin/http.h>
@@ -128,7 +129,7 @@ notfound(struct MHD_Connection *connection, const char *url)
 
 	len = strlen(NOT_FOUND) + strlen(url) + 128;
 
-	if ((str=malloc(len)) == NULL) {
+	if ((str=ref_alloc(len)) == NULL) {
 		return -1;
 	}
 
@@ -245,7 +246,7 @@ resp_free(void *cls)
 
 	while (resp) {
 		next = resp->next;
-		free(resp);
+		ref_release(resp);
 		resp = next;
 	}
 }
@@ -291,7 +292,7 @@ send_command(struct MHD_Connection *connection, get_data_t *data)
 	plugin_html_resp_t *resp;
 	int ret;
 
-	if ((cmd=(plugin_http_cmd_t*)malloc(sizeof(*cmd))) == NULL) {
+	if ((cmd=(plugin_http_cmd_t*)ref_alloc(sizeof(*cmd))) == NULL) {
 		return MHD_NO;
 	}
 

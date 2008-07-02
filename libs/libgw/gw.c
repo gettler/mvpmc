@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2008, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <mvp_refmem.h>
 #include "gw_local.h"
 #include "input.h"
 
@@ -339,6 +340,8 @@ command(plugin_http_cmd_t *cmd)
 	if (cmd->callback) {
 		cmd->callback(cmd->data);
 	}
+
+	ref_release(cmd);
 }
 
 int

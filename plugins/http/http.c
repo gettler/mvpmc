@@ -104,7 +104,7 @@ do_request(http_req_t *req)
 	char *data, *line;
 	int len = 0, rc, n;
 
-	if ((data=malloc(2048)) == NULL) {
+	if ((data=ref_alloc(2048)) == NULL) {
 		goto err;
 	}
 
@@ -225,7 +225,7 @@ do_request(http_req_t *req)
 
 	req->done = 1;
 
-	free(data);
+	ref_release(data);
 
 	return;
 
@@ -235,8 +235,7 @@ do_request(http_req_t *req)
 	req->error = 1;
 	req->done = 1;
 
-	if (data)
-		free(data);
+	ref_release(data);
 
 	return;
 }

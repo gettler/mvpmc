@@ -34,6 +34,7 @@
 #include <mvp_string.h>
 #include <mvp_av.h>
 #include <mvp_demux.h>
+#include <mvp_refmem.h>
 #include <plugin.h>
 #include <plugin/av.h>
 
@@ -247,15 +248,19 @@ loop_list(void *arg)
 	pthread_mutex_lock(&mutex_list);
 
 	while (1) {
+		char **pl;
+		char *item;
+
 		pthread_cond_wait(&cond_list, &mutex_list);
 		i = 0;
-		while (playlist && (playlist[i] != NULL)) {
-			do_play_file(playlist[i++]);
+		pl = ref_hold(playlist);
+		while (pl && ((item=ref_hold(pl[i])) != NULL)) {
+			do_play_file(item);
+			ref_release(item);
+			i++;
 			pthread_cond_wait(&cond_list, &mutex_list);
 		}
-		if (playlist) {
-			playlist = NULL;
-		}
+		ref_release(pl);
 	}
 
 	return NULL;
@@ -320,18 +325,23 @@ int
 do_play_file(char *path)
 {
 	int ret = -1;
+	char *p;
 
 	if (is_audio(path)) {
-		if (pathname)
-			free(pathname);
-		pathname = strdup(path);
+		if ((p=pathname)) {
+			pathname = NULL;
+			ref_release(p);
+		}
+		pathname = ref_strdup(path);
 		printf("%s(): kick playback thread\n", __FUNCTION__);
 		pthread_cond_broadcast(&cond_audio);
 		ret = 0;
 	} else if (is_video(path)) {
-		if (pathname)
-			free(pathname);
-		pathname = strdup(path);
+		if ((p=pathname)) {
+			pathname = NULL;
+			ref_release(p);
+		}
+		pathname = ref_strdup(path);
 		gw_set_console(VIDEO_CONSOLE);
 		gw_ss_disable();
 		printf("%s(): kick playback thread\n", __FUNCTION__);
@@ -357,9 +367,20 @@ do_play_url(char *path)
 int
 do_play_list(char **list)
 {
+	char **p;
 	int i;
 
-	if ((playlist=malloc(sizeof(char*)*128)) == NULL) {
+	if ((p = playlist)) {
+		playlist = NULL;
+		for (i=0; i<127; i++) {
+			if (p[i] == NULL) {
+				ref_release(p[i]);
+			}
+		}
+		ref_release(p);
+	}
+
+	if ((playlist=ref_alloc(sizeof(char*)*128)) == NULL) {
 		return -1;
 	}
 
@@ -367,7 +388,7 @@ do_play_list(char **list)
 		if (list[i] == NULL) {
 			break;
 		}
-		playlist[i] = strdup(list[i]);
+		playlist[i] = ref_strdup(list[i]);
 	}
 	playlist[i] = NULL;
 

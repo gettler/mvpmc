@@ -101,7 +101,7 @@ write_resp_guts(plugin_html_resp_t *resp, char *buf, int len)
 			memcpy(cur->data+cur->len, buf, len);
 			cur->len += len;
 		} else {
-			if ((new=malloc(sizeof(*new))) == NULL) {
+			if ((new=ref_alloc(sizeof(*new))) == NULL) {
 				return -1;
 			}
 			memcpy(new->data, buf, len);
@@ -440,8 +440,9 @@ html_generate(void)
 	return resp;
 
  err:
-	if (resp)
-		free(resp);
+	if (resp) {
+		ref_release(resp);
+	}
 
 	return NULL;
 }

@@ -566,6 +566,8 @@ do_key_image(gw_t *widget, int key)
 void
 fb_display(void)
 {
+	gw_menu_clear(fb);
+
 	gw_menu_title_set(fb, cwd);
 
 	add_dirs();

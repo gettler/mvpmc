@@ -30,6 +30,7 @@
 #include <pthread.h>
 
 #include <mvp_string.h>
+#include <mvp_refmem.h>
 #include <plugin.h>
 #include <plugin/av.h>
 
@@ -79,22 +80,22 @@ av_play_dvd(char *path, av_cb_t *callback)
 {
 	char *dvd_path;
 
-	if ((dvd_path=malloc(strlen(path)+32)) != NULL) {
+	if ((dvd_path=ref_alloc(strlen(path)+32)) != NULL) {
 		sprintf(dvd_path, "%s/VIDEO_TS/VIDEO_TS.IFO", path);
 		if (access(dvd_path, R_OK) == 0) {
-			free(dvd_path);
+			ref_release(dvd_path);
 			printf("playing dvd...\n");
 			play_dvd(path);
 			return 0;
 		}
 		sprintf(dvd_path, "%s/video_ts/video_ts.ifo", path);
 		if (access(dvd_path, R_OK) == 0) {
-			free(dvd_path);
+			ref_release(dvd_path);
 			printf("playing dvd...\n");
 			play_dvd(path);
 			return 0;
 		}
-		free(dvd_path);
+		ref_release(dvd_path);
 	}
 
 	return -1;
