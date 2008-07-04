@@ -37,7 +37,7 @@ if target == 'mg35':
     pt = env.SConscript('libpthread_nommu/SConscript',
                         build_dir='libpthread_nommu/'+dir, duplicate=0)
     libs = common + [ pt ]
-elif target == 'mvpmc':
+elif target == 'mvp':
     demux = SConscript('libdemux/SConscript',
                        build_dir='libdemux/'+dir, duplicate=0)
     libs = common + [ demux ]
