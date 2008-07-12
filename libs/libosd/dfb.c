@@ -673,9 +673,12 @@ dfb_init(void)
 	if (dfb_connector)
 		DFBCHECK(dl_DirectFBSetOption ("component-connector",
 					       dfb_connector));
-	if (dfb_analog_mode)
+	if (dfb_analog_mode) {
 		DFBCHECK(dl_DirectFBSetOption ("analog-tv-standard",
 					       dfb_analog_mode));
+		DFBCHECK(dl_DirectFBSetOption ("analog-signal",
+					       dfb_analog_mode));
+	}
 
 	/* create the super interface */
 	if ((r=dl_DirectFBCreate( &dfb )) != DFB_OK) {
