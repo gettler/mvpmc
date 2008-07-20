@@ -300,7 +300,7 @@ is_image(char *item)
 static int
 is_video(char *file)
 {
-	char *wc[] = { ".mpg", ".mpeg", ".mts", ".nuv", NULL };
+	char *wc[] = { ".avi", ".mpg", ".mpeg", ".mts", ".nuv", NULL };
 	int i = 0;
 
 	while (wc[i] != NULL) {
@@ -503,11 +503,12 @@ add_files(void)
 {
 	char *wc[] = { "*.mpg", "*.mpeg", "*.mp3", "*.nuv", "*.vob", "*.gif",
 		       "*.bmp", "*.m3u", "*.pls", "*.jpg", "*.jpeg", "*.png",
-		       "*.wav", "*.mts",
+		       "*.wav", "*.mts", "*.avi",
 		       "*.ac3", "*.ogg", "*.ts", "*.flac", NULL };
 	char *WC[] = { "*.MPG", "*.MPEG", "*.MP3", "*.NUV", "*.VOB", "*.GIF",
 		       "*.BMP", "*.M3U", "*.JPG", "*.JPEG", "*.PNG", "*.WAV",
-		       "*.AC3", "*.OGG", "*.TS", "*.FLAC", "*.MTS", NULL };
+		       "*.AC3", "*.OGG", "*.TS", "*.FLAC", "*.MTS",
+		       "*.AVI", NULL };
 
 
 	file_count = 0;
