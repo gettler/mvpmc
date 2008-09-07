@@ -71,21 +71,52 @@ extern plugin_av_t *av;
 typedef struct {
 	char *path;
 	char *opt;
+	char *name;
 } servlink_t;
 
 static servlink_t sl[16];
 
 #if defined(MVPMC_NMT)
 static char*
+get_servlink_name(char *cmd, int n)
+{
+	char *name = NULL;
+	FILE *f;
+	char line[256];
+
+	if ((f=fopen("/tmp/setting.txt", "r")) != NULL) {
+		while (fgets(line, sizeof(line), f) != NULL) {
+			char *p;
+			if ((p=strchr(line, '=')) != NULL) {
+				*(p++) = '\0';
+				if (strncmp(line, "servname", 8) == 0) {
+					if (atoi(line+8) == n) {
+						name = strdup(p);
+						name[strlen(name)-1] = '\0';
+						break;
+					}
+				}
+			}
+		}
+		fclose(f);
+	}
+
+	return name;
+}
+
+static char*
 get_servlink_path(char *cmd)
 {
 	char *c;
-	char *root = "/opt/sybhttpd/localhost.drives/";
+	char *root[] = { "/opt/sybhttpd/localhost.drives/NETWORK_SHARE/",
+			 "/opt/sybhttpd/localhost.drives/",
+			 NULL };
 	char *proto = NULL;
 	char *host = NULL;
 	char *path = NULL;
 	char *type = NULL;
 	char buf[256];
+	int i;
 
 	if ((c=strchr(cmd, '&')) != NULL) {
 		*c = '\0';
@@ -123,9 +154,21 @@ get_servlink_path(char *cmd)
 		*c = ':';
 	}
 
-	snprintf(buf, sizeof(buf), "%s[%s] %s:%s/", root, type, host, path);
+	i = 0;
+	while (root[i]) {
+		if (access(root[i], F_OK) == 0) {
+			snprintf(buf, sizeof(buf),
+				 "%s[%s] %s:%s/", root[i], type, host, path);
+			break;
+		}
+		i++;
+	}
 
-	return strdup(buf);
+	if (root[i] == NULL) {
+		return NULL;
+	} else {
+		return strdup(buf);
+	}
 }
 #endif /* MVPMC_NMT */
 
@@ -137,17 +180,22 @@ get_servlink(void)
 	FILE *f;
 	char line[256];
 
+	printf("%s(): find network shares\n", __FUNCTION__);
+
 	if ((f=fopen("/tmp/setting.txt", "r")) == NULL) {
 		return -1;
 	}
 
 	while (fgets(line, sizeof(line), f) != NULL) {
 		char *p;
+		int c;
 
 		if ((p=strchr(line, '=')) != NULL) {
 			*(p++) = '\0';
 			if (strncmp(line, "servlink", 8) == 0) {
+				c = atoi(line+8);
 				sl[n].opt = strdup(p);
+				sl[n].name = get_servlink_name(p, c);
 				if ((sl[n].path=get_servlink_path(p)) != NULL) {
 					n++;
 				}
@@ -201,10 +249,16 @@ mount_share(char *dir)
 	i = 0;
 	while (sl[i].path) {
 		char buf[256];
+		char buf2[256];
+		char *root = "/opt/sybhttpd/localhost.drives/NETWORK_SHARE/";
 
 		snprintf(buf, sizeof(buf), "%s%s", cwd, dir);
+		snprintf(buf2, sizeof(buf2), "%s/", sl[i].name);
 
-		if (strcmp(buf, sl[i].path) == 0) {
+		printf("%s(): buf2 '%s'\n", __FUNCTION__, buf2);
+
+		if ((strcmp(buf, sl[i].path) == 0) ||
+		    ((strcmp(cwd, root) == 0) && (strcmp(dir, buf2) == 0))) {
 			pid_t child;
 
 			printf("Mounting directory %s\n", dir);
@@ -212,9 +266,15 @@ mount_share(char *dir)
 			if ((child=fork()) == 0) {
 				char *argv[3];
 
-				snprintf(buf, sizeof(buf),
-					 "smb.cmd=mount&smb.opt=%s",
-					 sl[i].opt);
+				if (sl[i].name) {
+					snprintf(buf, sizeof(buf),
+						 "smb.cmd=mount&smb.opt=%s&smb.name=%s",
+						 sl[i].opt, sl[i].name);
+				} else {
+					snprintf(buf, sizeof(buf),
+						 "smb.cmd=mount&smb.opt=%s",
+						 sl[i].opt);
+				}
 
 				argv[0] = "/opt/sybhttpd/default/smbclient.cgi";
 				argv[1] = buf;
@@ -300,7 +360,8 @@ is_image(char *item)
 static int
 is_video(char *file)
 {
-	char *wc[] = { ".avi", ".mpg", ".mpeg", ".mts", ".nuv", NULL };
+	char *wc[] = { ".avi", ".mpg", ".mpeg", ".mp4", ".mts", ".mt2s",
+		       ".nuv", NULL };
 	int i = 0;
 
 	while (wc[i] != NULL) {
@@ -503,12 +564,12 @@ add_files(void)
 {
 	char *wc[] = { "*.mpg", "*.mpeg", "*.mp3", "*.nuv", "*.vob", "*.gif",
 		       "*.bmp", "*.m3u", "*.pls", "*.jpg", "*.jpeg", "*.png",
-		       "*.wav", "*.mts", "*.avi",
+		       "*.wav", "*.mts", "*.mt2s", "*.avi", "*.mp4", "*.m2v",
 		       "*.ac3", "*.ogg", "*.ts", "*.flac", NULL };
 	char *WC[] = { "*.MPG", "*.MPEG", "*.MP3", "*.NUV", "*.VOB", "*.GIF",
 		       "*.BMP", "*.M3U", "*.JPG", "*.JPEG", "*.PNG", "*.WAV",
-		       "*.AC3", "*.OGG", "*.TS", "*.FLAC", "*.MTS",
-		       "*.AVI", NULL };
+		       "*.AC3", "*.OGG", "*.TS", "*.FLAC", "*.MTS", "*.MT2S",
+		       "*.AVI", "*.MP4", "*.M2V", NULL };
 
 
 	file_count = 0;
