@@ -417,6 +417,7 @@ load_font(void)
 	char *list[] = {
 		"/usr/share/mvpmc/decker.ttf",
 		PCH_DATADIR"/decker.ttf",
+		PCH2_DATADIR"/decker.ttf",
 		ISTAR_DATADIR"/decker.ttf",
 		NULL,
 	};
