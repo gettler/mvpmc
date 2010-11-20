@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2007-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -504,8 +504,7 @@ add_dirs(void)
 		snprintf(buf, sizeof(buf), "%s%s", cwd, d->d_name);
 		STAT(buf, &sb);
 		if (S_ISDIR(sb.st_mode) && (access(buf, X_OK|R_OK) == 0)) {
-			sprintf(buf, d->d_name);
-			strcat(buf, "/");
+			snprintf(buf, sizeof(buf), "%s/", d->d_name);
 			gw_menu_item_add(fb, buf,
 					 (void*)dir_count++,
 					 select_dir, NULL);

@@ -98,7 +98,10 @@ def build_action(source, target, env):
     tar = tarfile.open(src, 'r:%s' % ext)
     for i in tar:
         j = i.name.find('/')
-        dir = '%s/%s/%s' % (path,buildtarget,i.name[:j])
+        if j == -1:
+            dir = '%s/%s/%s' % (path,buildtarget,i.name)
+        else:
+            dir = '%s/%s/%s' % (path,buildtarget,i.name[:j])
         break
     if os.path.exists(dir):
         os.system('rm -rf %s' % dir)

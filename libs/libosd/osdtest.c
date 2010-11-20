@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2008, Jon Gettler
+ *  Copyright (C) 2004-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -73,9 +73,9 @@ struct timeval start, end, delta;
 #define timer_start()	fflush(stdout); gettimeofday(&start, NULL)
 #define timer_end()	gettimeofday(&end, NULL)
 #define timer_print()	timersub(&end,&start,&delta); \
-			snprintf(buf, sizeof(buf), "%lu.%.2lu seconds\n", \
+			snprintf(buf, sizeof(buf), "%lu.%.2lu seconds", \
 			         delta.tv_sec, delta.tv_usec/10000); \
-			printf(buf)
+			puts(buf)
 #else
 struct timeval start, end, delta;
 
@@ -84,9 +84,9 @@ struct timeval start, end, delta;
 #define timer_end()	gettimeofday(&end, NULL)
 
 #define timer_print()	timersub(&end,&start,&delta); \
-			snprintf(buf, sizeof(buf), "%5.2f seconds\n", \
+			snprintf(buf, sizeof(buf), "%5.2f seconds", \
 			         delta.tv_sec + (delta.tv_usec/1000000.0)); \
-			printf(buf)
+			puts(buf)
 #endif
 
 #define FAIL		{ \

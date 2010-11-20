@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008, Jon Gettler
+ *  Copyright (C) 2008-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -332,7 +332,9 @@ init_http(void)
 {
 	pthread_attr_t attr;
 
-	pipe(pipefds);
+	if (pipe(pipefds) != 0) {
+		return NULL;
+	}
 
 	if ((html=plugin_load("html")) == NULL) {
 		return NULL;

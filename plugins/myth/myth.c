@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008, Jon Gettler
+ *  Copyright (C) 2008-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -139,7 +139,7 @@ static plugin_app_t reloc = {
 static int
 top(gw_t *widget, char *text, void *key)
 {
-	int item = (int)key;
+	intptr_t item = (intptr_t)key;
 
 	level++;
 	gw_menu_clear(widget);

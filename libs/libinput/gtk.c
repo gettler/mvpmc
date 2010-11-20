@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2007-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -49,6 +49,7 @@ input_release_local(void)
 static gint
 snoop(GtkWidget *grab_widget, GdkEventKey *event, gpointer func_data)
 {
+	gint rc = 0;
 	input_t *input;
 
 	input = (input_t*)func_data;
@@ -57,13 +58,17 @@ snoop(GtkWidget *grab_widget, GdkEventKey *event, gpointer func_data)
 		input->down = event->keyval;
 	} else if (event->type == GDK_KEY_RELEASE) {
 		if (input->down == event->keyval) {
-			write(input->fd_write, &event->keyval,
-			      sizeof(event->keyval));
+			int n;
+			n = write(input->fd_write, &event->keyval,
+				  sizeof(event->keyval));
+			if (n != sizeof(event->keyval)) {
+				rc = -1;
+			}
 		}
 		input->down = 0;
 	}
 
-	return 0;
+	return rc;
 }
 
 input_t*
@@ -77,7 +82,9 @@ input_open_kbd(int flags)
 	}
 	memset(input, 0, sizeof(*input));
 
-	pipe(fds);
+	if (pipe(fds) != 0) {
+		return NULL;
+	}
 
 	input->type = INPUT_KEYBOARD;
 	input->fd = fds[0];
@@ -94,7 +101,9 @@ input_read_kbd(input_t *handle, int raw)
 	guint c;
 	int cmd;
 
-	read(handle->fd, &c, sizeof(guint));
+	if (read(handle->fd, &c, sizeof(guint)) != sizeof(guint)) {
+		return INPUT_CMD_ERROR;
+	}
 
 	switch (c) {
 	case GDK_Return:

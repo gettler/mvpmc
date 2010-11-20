@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008, Jon Gettler
+ *  Copyright (C) 2008-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -316,7 +316,9 @@ send_command(struct MHD_Connection *connection, get_data_t *data)
 	addr = (unsigned long)cmd;
 
 	pthread_mutex_lock(&mutex);
-	write(pipefds[1], &addr, sizeof(addr));
+	if (write(pipefds[1], &addr, sizeof(addr)) != sizeof(addr)) {
+		/* make the compiler happy... */
+	}
 	pthread_cond_wait(&cond, &mutex);
 	pthread_mutex_unlock(&mutex);
 

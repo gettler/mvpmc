@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2007-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -258,7 +258,9 @@ gw_device_add(unsigned int dev)
 		}
 	}
 
-	write(pipefds[1], " ", 1);
+	if (write(pipefds[1], " ", 1) != 1) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -278,7 +280,9 @@ gw_device_remove(unsigned int dev)
 
 	current &= ~dev;
 
-	write(pipefds[1], " ", 1);
+	if (write(pipefds[1], " ", 1) != 1) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -290,7 +294,9 @@ gw_init(void)
 		return -1;
 	}
 
-	pipe(pipefds);
+	if (pipe(pipefds) != 0) {
+		return -1;
+	}
 
 	return 0;
 }

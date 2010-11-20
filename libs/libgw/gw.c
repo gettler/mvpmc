@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008, Jon Gettler
+ *  Copyright (C) 2007-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -405,12 +405,16 @@ gw_loop(struct timeval *to)
 			}
 			if (http && (fdh >= 0) && FD_ISSET(fdh, &fds)) {
 				printf("http input!\n");
-				read(fdh, &addr, sizeof(addr));
-				command((plugin_http_cmd_t*)addr);
+				if (read(fdh, &addr, sizeof(addr)) ==
+				    sizeof(addr)) {
+					command((plugin_http_cmd_t*)addr);
+				}
 			}
 			if (FD_ISSET(pipefds[0], &fds)) {
 				char c;
-				read(pipefds[0], &c, 1);
+				if (read(pipefds[0], &c, 1) < 0) {
+					continue;
+				}
 			}
 		}
 	}

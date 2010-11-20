@@ -1,6 +1,6 @@
 %{
 /*
- *  Copyright (C) 2007, Jon Gettler
+ *  Copyright (C) 2007-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -61,4 +61,12 @@ yyerror(char *str)
 	}
 
 	return -1;
+}
+
+int
+unused_function(void)
+{
+	/* make the compiler happy by referencing input()... */
+
+	return input();
 }
