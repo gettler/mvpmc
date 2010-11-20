@@ -1,0 +1,11 @@
+--- gcc-4.0.4/gcc/collect2.c-orig	2005-06-06 14:21:03.000000000 -0500
++++ gcc-4.0.4/gcc/collect2.c	2010-11-20 12:24:28.000000000 -0600
+@@ -1577,7 +1577,7 @@
+   if (redir)
+     {
+       /* Open response file.  */
+-      redir_handle = open (redir, O_WRONLY | O_TRUNC | O_CREAT);
++      redir_handle = open (redir, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+ 
+       /* Duplicate the stdout and stderr file handles
+ 	 so they can be restored later.  */

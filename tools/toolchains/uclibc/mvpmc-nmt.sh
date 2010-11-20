@@ -40,6 +40,7 @@ tar -xzf $DOWNLOADS/termcap-1.3.1.tar.gz
 
 cd gcc-4.0.4
 patch -p1 < $TOP/gcc-uclibc-mips.patch
+patch -p1 < $TOP/gcc-uclibc-mips-2.patch
 patch -p1 < $TOP/libstdc++-3.4.0-uclibc.patch
 cd $TOP
 
@@ -103,7 +104,6 @@ make CROSS=mipsel-linux-uclibc-
 # Copy the new include files
 rsync -arvL include/ $TOOLCHAIN/$ARCH/$CTARGET/sys-include
 
-
 cd $BUILD
 rm -rf *
 
@@ -128,7 +128,6 @@ make install
 
 # Remove the temporary headers, and compile it properly.
 rm -rf $TOOLCHAIN/$ARCH/$CTARGET/sys-include
-
 
 cd $SOURCE/uClibc-0.9.28.3/
 
