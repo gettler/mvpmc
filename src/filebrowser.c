@@ -187,7 +187,7 @@ get_servlink(void)
 	}
 
 	while (fgets(line, sizeof(line), f) != NULL) {
-		char *p;
+		char *p, *s;
 		int c;
 
 		if ((p=strchr(line, '=')) != NULL) {
@@ -195,6 +195,9 @@ get_servlink(void)
 			if (strncmp(line, "servlink", 8) == 0) {
 				c = atoi(line+8);
 				sl[n].opt = strdup(p);
+				if ((s=strchr(sl[n].opt, '\n')) != NULL) {
+					*s = '\0';
+				}
 				sl[n].name = get_servlink_name(p, c);
 				if ((sl[n].path=get_servlink_path(p)) != NULL) {
 					n++;
