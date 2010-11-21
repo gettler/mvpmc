@@ -25,7 +25,7 @@ elif build_target == 'mg35':
   config = '--host=arm-linux --disable-shared'
   patches = []
   lib = 'libcurl.a'
-elif build_target == 'nmt':
+elif (build_target == 'nmt') or (build_target == 'mvphd'):
   cross = env['CROSS']
   config = '--host=mips-linux'
   patches = []

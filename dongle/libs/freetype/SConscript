@@ -20,7 +20,7 @@ if build_target == 'mvp':
 elif build_target == 'mg35':
   cross = env['CROSS']
   config = '--host=arm-linux --disable-shared'
-elif build_target == 'nmt':
+elif (build_target == 'nmt') or (build_target == 'mvphd'):
   cross = env['CROSS']
   config = '--host=mips-linux'
 

@@ -3,10 +3,13 @@
 # http://www.mvpmc.org/
 #
 
-all: mvp nmt mg35 host
+all: mvp mvphd nmt mg35 host
 
 mvp:
 	scons -Q -j 2 TARGET=mvp
+
+mvphd:
+	scons -Q -j 2 TARGET=mvphd
 
 host:
 	scons -Q -j 2 TARGET=host
@@ -54,7 +57,13 @@ nmt_clean:
 	rm -rf `find dongle/apps -name nmt -type d`
 	rm -rf `find dongle/libs -name nmt -type d`
 
-clean: mvp_clean host_clean mg35_clean nmt_clean
+mvphd_clean:
+	scons -c TARGET=mvphd
+	rm -rf dongle/install/mvphd
+	rm -rf `find dongle/apps -name mvphd -type d`
+	rm -rf `find dongle/libs -name mvphd -type d`
+
+clean: mvp_clean host_clean mg35_clean nmt_clean mvphd_clean
 	rm -rf `find libs -name obj -type d`
 	rm -rf `find src -name obj -type d`
 	rm -rf `find plugins -name obj -type d`
@@ -65,6 +74,7 @@ distclean: clean
 	rm -rf dongle/filesystem/install_wrapper
 	rm -rf dongle/filesystem/mvp
 	rm -rf dongle/filesystem/nmt
+	rm -rf dongle/filesystem/mvphd
 	rm -rf dongle/kernel/filesystem
 	rm -rf dongle/kernel/linux-2.4.31/linux-2.4.31
 	rm -rf dongle/kernel/linux-2.4.31/unionfs-1.0.14

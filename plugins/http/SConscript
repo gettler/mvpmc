@@ -18,7 +18,7 @@ if linkmode == 'dynamic':
 if target == 'mg35':
 	mhlib = libdir + '/libmicrohttpd.a'
 	clib = libdir + '/libcurl.a'
-elif target == 'nmt':
+elif (target == 'nmt') or (target == 'mvphd'):
 	mhlib = libdir + '/libmicrohttpd.a'
 	clib = libdir + '/libcurl.so'
 else:

@@ -6,14 +6,17 @@ doc/latex
 dongle.bin.mvpmc
 dongle.bin.mvpmc.ver
 dongle/apps/*/mvp
+dongle/apps/*/mvphd
 dongle/apps/*/nmt
 dongle/filesystem/install
 dongle/filesystem/install_wrapper
 dongle/filesystem/mvp
+dongle/filesystem/mvphd
 dongle/filesystem/nmt
 dongle/install
 dongle/libs/*/host
 dongle/libs/*/mvp
+dongle/libs/*/mvphd
 dongle/libs/*/mg35
 dongle/libs/*/nmt
 dongle/kernel/linux-2.4.31/linux-2.4.31
@@ -23,6 +26,7 @@ dongle/kernel/linux-2.4.31/ac3
 dongle/kernel/filesystem
 libs/*/obj
 nmtfs.tar.gz
+mvphdfs.tar.gz
 plugins/*/obj
 src/obj
 src/version*.c
@@ -34,6 +38,7 @@ tools/mvprelay/mvprelay
 tools/squashfs/squashfs2.2-r2
 tools/toolchains/uclibc/source
 tools/toolchains/uclibc/build
+tools/toolchains/uclibc/buildroot
 *~
 *.a
 core

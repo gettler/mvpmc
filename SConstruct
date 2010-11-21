@@ -43,6 +43,7 @@ if os.path.exists(toolchains) == 0:
 #
 # parse the TARGET= option
 #    mvp
+#    mvphd
 #    mg35
 #    nmt
 #    host
@@ -85,6 +86,19 @@ elif target == 'nmt':
 		crossroot = toolchains + '/mips/' + gcc + '/'
 		cross = crossroot + '/bin/' + prefix
 	cppflags = '-DMVPMC_NMT'
+	cc = cross + 'gcc'
+	ldflags = ''
+	env.Replace(LINKMODE = 'dynamic')
+	env.Replace(GTKCFLAGS = '')
+	env.Replace(GTKLDFLAGS = '')
+elif target == 'mvphd':
+	if cross == '':
+		arch = 'mips'
+		prefix = 'mipsel-linux-uclibc-'
+		gcc = ''
+		crossroot = toolchains + '/mips/' + gcc + '/'
+		cross = crossroot + '/bin/' + prefix
+	cppflags = '-DMVPMC_MVPHD'
 	cc = cross + 'gcc'
 	ldflags = ''
 	env.Replace(LINKMODE = 'dynamic')
@@ -191,7 +205,7 @@ elif target == 'mg35':
 	env.Depends(mvpmc, plugins)
 	env.Depends(mvpmc, mvplibs)
 	env.Depends(mvpmc, libs)
-elif target == 'nmt':
+elif (target == 'nmt') or (target == 'mvphd'):
 	dir = env['BUILD_DIR']
 	libs = env.SConscript('dongle/libs/SConscript')
 	mvplibs = env.SConscript('libs/SConscript')

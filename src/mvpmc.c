@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2008, Jon Gettler
+ *  Copyright (C) 2004-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -493,11 +493,13 @@ mvpmc_main(int argc, char **argv)
 
 	if (gw_device_add(GW_DEV_OSD) < 0) {
 		fprintf(stderr, "failed to initialize OSD!\n");
+#if !defined(MVPMC_MVPHD)
 #if defined(MVPMC_NMT)
 		/* directfb causes a segfault if exit() is used... */
 		_exit(1);
 #else
 		exit(1);
+#endif
 #endif
 	}
 
@@ -538,7 +540,7 @@ mvpmc_main(int argc, char **argv)
 
 	gw_loop(NULL);
     
-#if defined(MVPMC_NMT)
+#if defined(MVPMC_NMT) || defined(MVPMC_MVPHD)
 	/*
 	 * XXX: Here's the deal about this...
 	 *

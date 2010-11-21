@@ -11,11 +11,11 @@ target = env['TARG']
 
 apps = []
 
-if target == 'nmt':
+if target == 'nmt' or target == 'mvphd':
     smart = env.SConscript(['smartmontools/SConscript'])
     apps = [ smart ]
 
-if target == 'nmt' or target == 'mvp':
+if target == 'nmt' or target == 'mvp' or target == 'mvphd':
     busybox = env.SConscript(['busybox/SConscript'])
     strace = env.SConscript(['strace/SConscript'])
     dropbear = env.SConscript(['dropbear/SConscript'])

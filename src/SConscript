@@ -57,7 +57,7 @@ common = [ 'builtin.c', 'filebrowser.c', 'mvpmc.c', 'version_%s.c' % target ]
 if target == 'mg35':
 	src = [ common ]
 	plibs = [ 'av', 'pthread_nommu' ]
-elif target == 'nmt':
+elif target == 'nmt' or target == 'mvphd':
 	src = [ common ]
 	plibs = [ 'pthread', 'microhttpd' ]
 elif target == 'mvp':
@@ -86,7 +86,10 @@ mvpmc = env.Program('mvpmc', src,
                     LIBPATH = [ libdir ],
                     LINKFLAGS = ldflags + ' ' + linkflags + ' ' + gtkldflags)
 
-if target == 'nmt' or target == 'host':
+hw = env.Program('hw', 'hw.c',
+		 LINKFLAGS = '-static')
+
+if target == 'nmt' or target == 'host' or target == 'mvphd':
 	fuse = env.Program('mythfuse', 'mythfuse.c',
 			   CPPPATH = [ env['INCDIR'], env['INSTINCDIR'] ],
 			   LIBS = [ 'cmyth', 'fuse', 'pthread', 'refmem' ],
@@ -105,9 +108,9 @@ if linkmode == 'static':
 	env.Depends(mvpmc, libdir + '/libcurl.a')
 
 if target == 'mvp':
-	inst = env.Install(bindir, [ mvpmc, splash ])
-elif target == 'nmt' or target == 'host':
-	inst = env.Install(bindir, [ mvpmc, fuse ])
+	inst = env.Install(bindir, [ mvpmc, splash, hw ])
+elif target == 'nmt' or target == 'host' or target == 'mvphd':
+	inst = env.Install(bindir, [ mvpmc, fuse, hw ])
 else:
 	inst = env.Install(bindir, mvpmc)
 

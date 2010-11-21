@@ -30,6 +30,11 @@ elif target == 'nmt':
 	dl = 'dl'
 	libs = [ 'pthread' ]
 	env.Append(CCFLAGS = ' -DUSE_LIBDL')
+elif target == 'mvphd':
+	src = [ common ]
+	dl = 'dl'
+	libs = [ 'pthread' ]
+	env.Append(CCFLAGS = ' -DUSE_LIBDL')
 else:
 	src = [ common, 'gtk.c' ]
 	dl = ''

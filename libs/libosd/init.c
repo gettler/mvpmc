@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006, Jon Gettler
+ *  Copyright (C) 2004-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -180,7 +180,9 @@ yuv2rgb(unsigned char y, unsigned char u, unsigned char v,
 int
 osd_open(void)
 {
+#if defined(MVPMC_NMT)
 	extern int dfb_init(void);
+#endif
 
 	gfx_init();
 

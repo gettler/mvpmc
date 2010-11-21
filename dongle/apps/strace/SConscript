@@ -17,7 +17,7 @@ e = Environment()
 
 if build_target == 'mvp':
     config = '--host=powerpc-linux'
-elif build_target == 'nmt':
+elif (build_target == 'nmt') or (build_target == 'mvphd'):
     config = '--host=mips-linux'
 
 url = [ 'http://www.mvpmc.org/dl/strace-4.5.16.tar.bz2' ]

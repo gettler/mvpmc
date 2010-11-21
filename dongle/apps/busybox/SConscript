@@ -26,7 +26,7 @@ if build_target == 'mvp':
             'make install',
             'cp -a _install/* %s' % instdir ]
     patches = [ 'patches/clientsocket.patch' ]
-elif build_target == 'nmt':
+elif (build_target == 'nmt') or (build_target == 'mvphd'):
     cmd = [ 'cp ../../patches/busybox_config.nmt .config',
             'make oldconfig',
             'make install',
@@ -35,7 +35,7 @@ elif build_target == 'nmt':
 
 build = mvpmc.OSSBuild(target, url, env, e, cmd, patches)
 
-if build_target == 'nmt':
+if (build_target == 'nmt') or (build_target == 'mvphd'):
     env.Depends(build, 'patches/busybox_config.nmt')
 if build_target == 'mvp':
     env.Depends(build, 'patches/busybox_config.mvp')

@@ -45,5 +45,7 @@ elif target == 'host':
     libs = common
 elif target == 'mg35':
     libs = common + [ freetype ]
+elif target == 'mvphd':
+    libs = common + [ freetype ]
 
 Return('libs')

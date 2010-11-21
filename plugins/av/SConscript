@@ -26,6 +26,9 @@ elif target == 'mg35':
 elif target == 'nmt':
 	src = [ common, 'av_nmt.c' ]
 	libs = ''
+elif target == 'mvphd':
+	src = [ common, 'av_mvphd.c' ]
+	libs = ''
 elif target == 'mvp':
 	src = [ common, 'av_mvp.c' ]
 	libs = [ 'libav', 'libdemux' ]

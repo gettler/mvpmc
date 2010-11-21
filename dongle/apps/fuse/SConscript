@@ -17,7 +17,7 @@ prefix = '%s/dongle/install/%s' % (topdir,build_target)
 
 e = Environment()
 
-if build_target == 'nmt':
+if (build_target == 'nmt') or (build_target == 'mvphd'):
     url = [ 'http://www.mvpmc.org/dl/fuse-2.7.2.tar.gz' ]
     config = '--host=mipsel-linux-uclibc'
     shared = '--enable-shared'

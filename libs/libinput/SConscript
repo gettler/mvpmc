@@ -28,6 +28,10 @@ elif target == 'nmt':
     src = [ common, 'nmt.c' ]
     dl = 'dl'
     pt = 'pthread'
+elif target == 'mvphd':
+    src = [ common, 'mvphd.c' ]
+    dl = 'dl'
+    pt = 'pthread'
 else:
     src = [ common, 'gtk.c']
     dl = ''

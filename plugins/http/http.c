@@ -42,6 +42,8 @@
 
 #if defined(MVPMC_MEDIAMVP)
 #define PLATFORM	"MediaMVP"
+#elif defined(MVPMC_MVPHD)
+#define PLATFORM	"MediaMVP-HD"
 #elif defined(MVPMC_NMT)
 #define PLATFORM	"Networked Media Tank"
 #elif defined(MVPMC_MG35)

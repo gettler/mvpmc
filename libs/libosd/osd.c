@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2008, BtB, Jon Gettler
+ *  Copyright (C) 2004-2010, BtB, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -59,6 +59,9 @@ osd_font_t *osd_default_font = &font_CaslonRoman_1_25;
 #elif defined(MVPMC_HOST)
 #define OSD_MAX_WIDTH	960
 #define OSD_MAX_HEIGHT	540
+#elif defined(MVPMC_MVPHD)
+#define OSD_MAX_WIDTH	720
+#define OSD_MAX_HEIGHT	576
 #else
 #error unknown max OSD size
 #endif

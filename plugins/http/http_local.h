@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008, Jon Gettler
+ *  Copyright (C) 2008-2010, Jon Gettler
  *  http://www.mvpmc.org/
  *
  *  This library is free software; you can redistribute it and/or
@@ -74,6 +74,8 @@ extern int pipefds[];
 
 #if defined(MVPMC_MEDIAMVP)
 #define PLATFORM	"MediaMVP"
+#elif defined(MVPMC_MVPHD)
+#define PLATFORM	"MediaMVP-HD"
 #elif defined(MVPMC_NMT)
 #define PLATFORM	"Networked Media Tank"
 #elif defined(MVPMC_MG35)

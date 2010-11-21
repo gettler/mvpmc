@@ -20,5 +20,9 @@ elif target == 'nmt':
     dongle = env.Command('../nmtfs.tar.gz', 0,
                          'cd ' + pwd + ' && CROSS=' + cross + ' ./nmt.sh')
     env.Depends(dongle, 'nmt.sh')
+elif target == 'mvphd':
+    dongle = env.Command('../mvphd.tar.gz', 0,
+                         'cd ' + pwd + ' && CROSS=' + cross + ' ./mvphd.sh')
+    env.Depends(dongle, 'mvphd.sh')
 
 Return('dongle')
